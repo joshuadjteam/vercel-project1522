@@ -1,16 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 
+// User-provided API Key to ensure the AI feature is functional as requested.
+// In a production environment, this should be managed via secure environment variables.
+const GEMINI_API_KEY = "AIzaSyCvPM3A1IdxuczsncLX9RgmbuxytnC5yE0";
+
 export const geminiService = {
     getHelpResponse: async (prompt: string): Promise<string> => {
-        if (!process.env.API_KEY) {
-            console.error("Gemini API key is not configured in Vercel environment variables.");
+        if (!GEMINI_API_KEY) {
+            console.error("Gemini API key is not configured.");
             return "The AI help service is not configured. Please contact the administrator.";
         }
         
         try {
-            // Initialize the client here, only when it's actually needed.
-            // This prevents the entire application from crashing on load if the API key is missing.
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
