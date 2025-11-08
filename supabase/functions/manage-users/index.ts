@@ -1,4 +1,3 @@
-
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, linting, and type checking.
@@ -58,6 +57,48 @@ serve(async (req) => {
           .single();
 
         if (profileError) throw profileError;
+
+        return new Response(JSON.stringify({ user: profileData }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+
+      case 'updateUser': {
+        const { id, auth_id, email, password, username, role, sip_voice, features } = payload;
+
+        // 1. Update user profile in public.users table
+        const { data: profileData, error: profileError } = await supabaseAdmin
+          .from('users')
+          .update({
+            username: username,
+            email: email,
+            role: role,
+            sip_voice: sip_voice,
+            features: features,
+          })
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (profileError) throw profileError;
+
+        // 2. If auth_id and email are provided, update email in the auth system
+        if (auth_id && email) {
+            const { error: authEmailError } = await supabaseAdmin.auth.admin.updateUserById(
+                auth_id, { email: email }
+            );
+            if(authEmailError) throw authEmailError;
+        }
+
+        // 3. If password and auth_id are provided, update it in the auth system
+        if (auth_id && password) {
+          const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+            auth_id,
+            { password: password }
+          );
+          if (authError) throw authError;
+        }
 
         return new Response(JSON.stringify({ user: profileData }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

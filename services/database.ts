@@ -118,24 +118,30 @@ export const database = {
         return { user: mapDbUserToUser(data.user), error: null };
     },
 
-    updateUser: async (userData: Partial<User>): Promise<User | null> => {
-        const { data, error } = await supabase
-            .from('users')
-            .update({
+    updateUser: async (userData: Partial<User> & { password?: string }): Promise<{ user: User | null; error: string | null }> => {
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+            body: {
+                action: 'updateUser',
+                id: userData.id,
+                auth_id: userData.auth_id,
+                email: userData.email,
+                password: userData.password, // Will be undefined if not set
                 username: userData.username,
                 role: userData.role,
                 sip_voice: userData.sipVoice,
                 features: userData.features,
-            })
-            .eq('id', userData.id)
-            .select()
-            .single();
+            }
+        });
 
         if (error) {
-            console.error('Error updating user:', error);
-            return null;
+            console.error('Error invoking manage-users function (updateUser):', error);
+            return { user: null, error: error.message };
         }
-        return mapDbUserToUser(data);
+        if (data.error) {
+            console.error('Error from manage-users function (updateUser):', data.error);
+            return { user: null, error: data.error };
+        }
+        return { user: mapDbUserToUser(data.user), error: null };
     },
     
     deleteUser: async (userToDelete: User): Promise<{ error: string | null }> => {
