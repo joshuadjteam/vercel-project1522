@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page, UserRole } from '../types';
-import { HomeIcon, InformationCircleIcon, SunIcon, MoonIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightEndOnRectangleIcon, ArrowLeftStartOnRectangleIcon, CircleStackIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
+import { HomeIcon, InformationCircleIcon, SunIcon, MoonIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightIcon, ArrowLeftIcon, CubeIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
 
 
 interface HeaderProps {
@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                     {/* Apps Menu */}
                      {isLoggedIn && (
                          <div className="relative" ref={appsMenuRef}>
-                            <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" icon={<CircleStackIcon className="h-5 w-5"/>}/>
+                            <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" icon={<CubeIcon className="h-5 w-5"/>}/>
                             {appsMenuOpen && (
                                 <div className="absolute top-full mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2">
                                     <button onClick={() => { navigate('app-phone'); setAppsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Phone</button>
@@ -105,12 +105,12 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                     
                     {isLoggedIn ? (
                         <button onClick={handleSignOut} title="Sign Out" className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-red-600 text-white hover:bg-red-700 flex items-center space-x-2">
-                           <ArrowLeftStartOnRectangleIcon className="h-5 w-5"/>
+                           <ArrowLeftIcon className="h-5 w-5"/>
                            <span>Sign Out</span>
                         </button>
                     ) : (
                         <button onClick={() => navigate('signin')} title="Sign On" className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700 flex items-center space-x-2">
-                            <ArrowRightEndOnRectangleIcon className="h-5 w-5"/>
+                            <ArrowRightIcon className="h-5 w-5"/>
                             <span>Sign On</span>
                         </button>
                     )}

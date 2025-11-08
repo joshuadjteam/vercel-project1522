@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
 import { supabaseService } from '../services/supabaseService';
 import AddUserModal from '../components/AddUserModal';
-import { UsersIcon, ChatBubbleLeftIcon, EnvelopeIcon, ClipboardDocumentListIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { UsersIcon, ChatBubbleLeftIcon, EnvelopeIcon, ClipboardIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 const AdminPortal: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
@@ -70,7 +70,7 @@ const AdminPortal: React.FC = () => {
                 <StatCard title="Total Users" value={users.length} icon={<UsersIcon className="h-8 w-8"/>} />
                 <StatCard title="Chat Messages" value={0} icon={<ChatBubbleLeftIcon className="h-8 w-8"/>} />
                 <StatCard title="Local Mails" value={0} icon={<EnvelopeIcon className="h-8 w-8"/>} />
-                <StatCard title="Saved Contacts" value={0} icon={<ClipboardDocumentListIcon className="h-8 w-8"/>} />
+                <StatCard title="Saved Contacts" value={0} icon={<ClipboardIcon className="h-8 w-8"/>} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
