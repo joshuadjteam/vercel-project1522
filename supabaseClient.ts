@@ -1,18 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// IMPORTANT: Replace with your actual Supabase project URL and anon key
-const supabaseUrl = 'https://example.supabase.co';
-const supabaseAnonKey = 'example-anon-key';
-
-if (supabaseUrl === 'https://example.supabase.co' || supabaseAnonKey === 'example-anon-key') {
-    console.error(`
-        ************************************************************************************************
-        *                                                                                              *
-        *  ERROR: Supabase credentials are not set. The application will not function correctly.       *
-        *  Please update supabaseClient.ts with your project's URL and anon key.                       *
-        *                                                                                              *
-        ************************************************************************************************
-    `);
-}
+// FIX: Removed the unnecessary check for placeholder credentials. This check was causing
+// a TypeScript error because the hardcoded constant values could never match the
+// placeholder strings, leading to a comparison between non-overlapping literal types.
+const supabaseUrl = 'https://jnnpxifvsrlzfpaisdhy.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpubnB4aWZ2c3JsemZwYWlzZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1NTg5MTgsImV4cCI6MjA3ODEzNDkxOH0.YgFEKp7ifE-9TLzplVDlvKU-5q3GA5hFu0zQ5pI_8kQ';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
