@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabaseClient';
 import { User, UserRole, Mail, Contact, Note } from '../types';
 
@@ -11,23 +12,34 @@ export const supabaseService = {
 
         if (authError || !authData.user) {
             // Try with username as well
-            const { data: userProfile } = await supabase.from('users').select('*').eq('username', id).single();
-            if(!userProfile) return null;
+            const { data: userByUsername, error: usernameError } = await supabase.from('users').select('*').eq('username', id).single();
+            if(usernameError || !userByUsername) {
+                console.error('Login Error: Could not find user by email or username.', { authError, usernameError });
+                return null;
+            }
 
             const { data: secondAuthAttempt, error: secondAuthError } = await supabase.auth.signInWithPassword({
-                email: userProfile.email,
+                email: userByUsername.email,
                 password: pass
             });
-            if(secondAuthError || !secondAuthAttempt.user) return null;
+            if(secondAuthError || !secondAuthAttempt.user) {
+                console.error('Login Error: Password incorrect for user found by username.', secondAuthError);
+                return null;
+            };
 
-            return userProfile as User;
+            return userByUsername as User;
         }
 
-        const { data: userProfile } = await supabase
+        const { data: userProfile, error: profileError } = await supabase
             .from('users')
             .select('*')
             .eq('auth_id', authData.user.id)
             .single();
+
+        if (profileError) {
+            console.error('Login Error: Could not fetch user profile after successful login.', profileError);
+            return null;
+        }
 
         return userProfile as User | null;
     },
@@ -50,13 +62,19 @@ export const supabaseService = {
             .select('*')
             .eq('auth_id', auth_id)
             .single();
-        if (error) return null;
+        if (error) {
+            console.error('Error fetching user profile:', error);
+            return null;
+        }
         return data as User;
     },
 
     getUsers: async (): Promise<User[]> => {
         const { data, error } = await supabase.from('users').select('*');
-        if (error) return [];
+        if (error) {
+            console.error('Error fetching users:', error);
+            return [];
+        }
         return data as User[];
     },
     
@@ -74,13 +92,18 @@ export const supabaseService = {
                 }
             }
         });
-        if (error) return { user: null, error: error.message };
-        if (data.error) return { user: null, error: data.error };
+        if (error) {
+            console.error('Error invoking manage-users function (addUser):', error);
+            return { user: null, error: error.message };
+        }
+        if (data.error) {
+             console.error('Error from manage-users function (addUser):', data.error);
+            return { user: null, error: data.error };
+        }
         return { user: data.user, error: null };
     },
 
     updateUser: async (userData: Partial<User>): Promise<User | null> => {
-        // We only update the profile data, not auth data like email/password here.
         const updateData = {
             username: userData.username,
             role: userData.role,
@@ -88,13 +111,18 @@ export const supabaseService = {
             features: userData.features,
         }
         const { data, error } = await supabase.from('users').update(updateData).eq('id', userData.id).select();
-        if (error || !data) return null;
+        if (error || !data) {
+            console.error('Error updating user:', error);
+            return null;
+        }
         return data[0] as User;
     },
     
     deleteUser: async (userToDelete: User): Promise<{ error: string | null }> => {
         if (!userToDelete.auth_id) {
-            return { error: 'Cannot delete user without an authentication ID.' };
+            const err = 'Cannot delete user without an authentication ID.';
+            console.error(err);
+            return { error: err };
         }
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: {
@@ -102,21 +130,33 @@ export const supabaseService = {
                 auth_id: userToDelete.auth_id
             }
         });
-        if (error) return { error: error.message };
-        if (data.error) return { error: data.error };
+        if (error) {
+            console.error('Error invoking manage-users function (deleteUser):', error);
+            return { error: error.message };
+        }
+        if (data.error) {
+            console.error('Error from manage-users function (deleteUser):', data.error);
+            return { error: data.error };
+        }
         return { error: null };
     },
 
     getUserByUsername: async (username: string): Promise<User | null> => {
         const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
-        if (error) return null;
+        if (error) {
+             console.error(`Error fetching user by username '${username}':`, error);
+            return null;
+        }
         return data as User;
     },
 
     // --- Mail Service Functions ---
     getMailsForUser: async (username: string): Promise<{ inbox: Mail[], sent: Mail[] }> => {
         const { data, error } = await supabase.from('mails').select('*').or(`recipient.eq.${username},sender.eq.${username}`);
-        if (error) return { inbox: [], sent: [] };
+        if (error) {
+             console.error('Error fetching mails for user:', error);
+            return { inbox: [], sent: [] };
+        }
         
         const inbox = data.filter(m => m.recipient === username).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         const sent = data.filter(m => m.sender === username).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -126,41 +166,56 @@ export const supabaseService = {
 
     sendMail: async (mailData: Omit<Mail, 'id' | 'timestamp' | 'read'>): Promise<Mail | null> => {
         const { data, error } = await supabase.from('mails').insert([mailData]).select();
-        if (error || !data) return null;
+        if (error || !data) {
+            console.error('Error sending mail:', error);
+            return null;
+        }
         return data[0] as Mail;
     },
     
     markMailAsRead: async (mailId: number): Promise<boolean> => {
         const { error } = await supabase.from('mails').update({ read: true }).eq('id', mailId);
+        if (error) console.error('Error marking mail as read:', error);
         return !error;
     },
 
     deleteMail: async (mailId: number): Promise<boolean> => {
         const { error } = await supabase.from('mails').delete().eq('id', mailId);
+        if (error) console.error('Error deleting mail:', error);
         return !error;
     },
 
     // --- Contacts Service Functions ---
     getContactsForUser: async (username: string): Promise<Contact[]> => {
         const { data, error } = await supabase.from('contacts').select('*').eq('owner', username);
-        if (error) return [];
+        if (error) {
+            console.error('Error fetching contacts:', error);
+            return [];
+        }
         return data;
     },
 
     addContact: async (contactData: Omit<Contact, 'id'>): Promise<Contact | null> => {
         const { data, error } = await supabase.from('contacts').insert([contactData]).select();
-        if (error || !data) return null;
+        if (error || !data) {
+            console.error('Error adding contact:', error);
+            return null;
+        }
         return data[0];
     },
 
     updateContact: async (contactData: Contact): Promise<Contact | null> => {
         const { data, error } = await supabase.from('contacts').update(contactData).eq('id', contactData.id).select();
-        if (error || !data) return null;
+        if (error || !data) {
+            console.error('Error updating contact:', error);
+            return null;
+        }
         return data[0];
     },
 
     deleteContact: async (contactId: number): Promise<boolean> => {
         const { error } = await supabase.from('contacts').delete().eq('id', contactId);
+        if (error) console.error('Error deleting contact:', error);
         return !error;
     },
 
@@ -174,15 +229,20 @@ export const supabaseService = {
             .gte('created_at', threeDaysAgo)
             .order('created_at', { ascending: false });
 
-        if (error) return [];
-        // Map created_at to createdAt for type consistency
+        if (error) {
+            console.error('Error fetching notes:', error);
+            return [];
+        }
         return data.map(n => ({...n, createdAt: new Date(n.created_at)}));
     },
 
     addNote: async (noteData: Omit<Note, 'id' | 'createdAt'>): Promise<Note | null> => {
         const payload = { owner: noteData.owner, title: noteData.title, content: noteData.content };
         const { data, error } = await supabase.from('notes').insert([payload]).select();
-        if (error || !data) return null;
+        if (error || !data) {
+            console.error('Error adding note:', error);
+            return null;
+        }
         return {...data[0], createdAt: new Date(data[0].created_at)};
     },
 
@@ -192,12 +252,16 @@ export const supabaseService = {
             .update({ title: noteData.title, content: noteData.content })
             .eq('id', noteData.id)
             .select();
-        if (error || !data) return null;
+        if (error || !data) {
+            console.error('Error updating note:', error);
+            return null;
+        }
         return {...data[0], createdAt: new Date(data[0].created_at)};
     },
 
     deleteNote: async (noteId: number): Promise<boolean> => {
         const { error } = await supabase.from('notes').delete().eq('id', noteId);
+        if (error) console.error('Error deleting note:', error);
         return !error;
     },
 };
