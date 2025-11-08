@@ -91,7 +91,7 @@ export const database = {
             username: userData.username,
             role: userData.role,
             sip_voice: userData.sipVoice,
-            features: JSON.stringify(userData.features), // FIX: Explicitly stringify the features object for robust transport.
+            features: userData.features, // Pass the features object directly.
         };
         
         const { data, error } = await supabase.functions.invoke('manage-users', {

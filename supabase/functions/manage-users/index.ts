@@ -52,7 +52,7 @@ serve(async (req) => {
             username: username,
             role: role,
             sip_voice: sip_voice,
-            features: JSON.parse(features), // FIX: Parse the features string back into an object.
+            features: features, // The features object is now passed directly.
           })
           .select()
           .single();
