@@ -26,12 +26,16 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
     
-    const { action, ...payload } = await req.json();
+    const payload = await req.json();
+    const { action } = payload;
 
     switch (action) {
       case 'createUser': {
-        const { email, password, username, role, sip_voice, features } = payload;
+        const { email, password, username, role, sip_voice, features: featuresString } = payload;
         
+        // Safely parse the features string
+        const features = typeof featuresString === 'string' ? JSON.parse(featuresString) : featuresString;
+
         // 1. Create the user in the auth system
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: email,

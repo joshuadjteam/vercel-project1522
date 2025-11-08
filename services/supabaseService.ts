@@ -92,7 +92,7 @@ export const supabaseService = {
                 username: userData.username,
                 role: userData.role,
                 sip_voice: userData.sipVoice,
-                features: userData.features,
+                features: JSON.stringify(userData.features),
             }
         });
         if (error) {
