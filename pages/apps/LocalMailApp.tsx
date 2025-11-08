@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
@@ -17,7 +16,7 @@ const LocalMailApp: React.FC = () => {
     const fetchMails = useCallback(async () => {
         if (!currentUser) return;
         setIsLoading(true);
-        const { inbox, sent } = await database.getMailsForUser(currentUser.username);
+        const { inbox, sent } = await database.getMailsForUser();
         setInbox(inbox);
         setSent(sent);
         setIsLoading(false);
@@ -156,7 +155,6 @@ const ComposeMail: React.FC<ComposeMailProps> = ({ onMailSent }) => {
         }
         setStatus('Sending...');
         await database.sendMail({
-            sender: currentUser.username,
             recipient,
             subject,
             body,

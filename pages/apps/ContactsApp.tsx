@@ -14,7 +14,7 @@ const ContactsApp: React.FC = () => {
     const fetchContacts = useCallback(async () => {
         if (!user) return;
         setIsLoading(true);
-        const userContacts = await database.getContactsForUser(user.username);
+        const userContacts = await database.getContactsForUser();
         setContacts(userContacts);
         setIsLoading(false);
     }, [user]);
@@ -42,11 +42,11 @@ const ContactsApp: React.FC = () => {
 
     const handleSaveContact = async (contactData: Omit<Contact, 'id' | 'owner'> & { id?: number }) => {
         if (!user) return;
-        const payload = { ...contactData, owner: user.username };
-        if (payload.id) {
-            await database.updateContact(payload as Contact);
+
+        if (contactData.id) {
+            await database.updateContact(contactData as Contact);
         } else {
-            await database.addContact(payload);
+            await database.addContact(contactData);
         }
         fetchContacts();
     };

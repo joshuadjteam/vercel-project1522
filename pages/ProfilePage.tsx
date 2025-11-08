@@ -99,17 +99,18 @@ const LynxAITabContent = () => {
 
     const handleSend = async () => {
         if (input.trim() === '' || isLoading) return;
-        const userMessage = { sender: 'user', text: input };
+        // FIX: Explicitly type message objects to ensure their 'sender' property conforms to the '"user" | "ai"' literal type, resolving TypeScript type inference issues.
+        const userMessage: Message = { sender: 'user', text: input };
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setIsLoading(true);
 
         try {
             const response = await geminiService.getHelpResponse(input);
-            const aiMessage = { sender: 'ai', text: response };
+            const aiMessage: Message = { sender: 'ai', text: response };
             setMessages(prev => [...prev, aiMessage]);
         } catch (error) {
-            const errorMessage = { sender: 'ai', text: "Sorry, I couldn't connect to the AI service." };
+            const errorMessage: Message = { sender: 'ai', text: "Sorry, I couldn't connect to the AI service." };
             setMessages(prev => [...prev, errorMessage]);
         } finally {
             setIsLoading(false);

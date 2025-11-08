@@ -31,7 +31,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'createUser': {
-        const { email, password, username, role, sip_voice, features } = payload;
+        const { email, password, username, role, sipVoice, features } = payload;
 
         // 1. Create the user in the auth system
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -50,7 +50,7 @@ serve(async (req) => {
             email: email,
             username: username,
             role: role,
-            sip_voice: sip_voice,
+            sip_voice: sipVoice,
             features: features,
           })
           .select()
@@ -65,7 +65,7 @@ serve(async (req) => {
       }
 
       case 'updateUser': {
-        const { id, auth_id, email, password, username, role, sip_voice, features } = payload;
+        const { id, auth_id, email, password, username, role, sipVoice, features } = payload;
 
         // 1. Update user profile in public.users table
         const { data: profileData, error: profileError } = await supabaseAdmin
@@ -74,7 +74,7 @@ serve(async (req) => {
             username: username,
             email: email,
             role: role,
-            sip_voice: sip_voice,
+            sip_voice: sipVoice,
             features: features,
           })
           .eq('id', id)
@@ -116,6 +116,35 @@ serve(async (req) => {
         if (error) throw error;
         
         return new Response(JSON.stringify({ message: `User ${auth_id} deleted successfully.` }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+      
+      case 'getUsers': {
+        const { data, error } = await supabaseAdmin.from('users').select('*');
+        if (error) throw error;
+        return new Response(JSON.stringify({ users: data }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+
+      case 'getUserByUsername': {
+        const { username } = payload;
+        if (!username) throw new Error('Username is required.');
+        const { data, error } = await supabaseAdmin.from('users').select('*').eq('username', username).single();
+        if (error) {
+            // Specifically handle not found case to return 404
+             if (error.code === 'PGRST116') {
+                 return new Response(JSON.stringify({ error: 'User not found' }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    status: 404,
+                });
+            }
+            throw error;
+        }
+        return new Response(JSON.stringify({ user: data }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         });

@@ -15,6 +15,12 @@ const mapDbUserToUser = (dbUser: any): User | null => {
     };
 };
 
+const invokeAppService = async (resource: string, action: string, payload?: any) => {
+    return await supabase.functions.invoke('app-service', {
+        body: { resource, action, payload }
+    });
+};
+
 export const database = {
     // --- Auth & User Functions (using Supabase) ---
     login: async (email: string, pass: string): Promise<{ user: User | null, error: string | null }> => {
@@ -47,8 +53,6 @@ export const database = {
             return { user: null, error: authError?.message || 'Invalid login credentials.' };
         }
 
-        // After successful sign-in, the session is set. Now, fetch the profile
-        // using the secure edge function to bypass RLS.
         const userProfile = await database.getUserProfile();
         if (!userProfile) {
             return { user: null, error: 'User profile not found after successful authentication.' };
@@ -69,16 +73,10 @@ export const database = {
     },
     
     getUserProfile: async (): Promise<User | null> => {
-        // Invokes a secure edge function to fetch the user's profile.
-        // This bypasses client-side RLS policies that might prevent profile access.
         const { data, error } = await supabase.functions.invoke('get-user-profile');
     
-        if (error) {
-            console.error('Error invoking get-user-profile function:', error);
-            return null;
-        }
-        if (data.error) {
-            console.error('Error from get-user-profile function:', data.error);
+        if (error || data.error) {
+            console.error('Error getting user profile:', error || data.error);
             return null;
         }
     
@@ -86,60 +84,36 @@ export const database = {
     },
 
     getUsers: async (): Promise<User[]> => {
-        const { data, error } = await supabase.from('users').select('*');
-        if (error) {
-            console.error('Error fetching users:', error);
+        const { data, error } = await supabase.functions.invoke('manage-users', { body: { action: 'getUsers' } });
+        if (error || data.error) {
+            console.error('Error fetching users:', error || data.error);
             return [];
         }
-        return data.map(mapDbUserToUser).filter((user): user is User => user !== null);
+        return data.users.map(mapDbUserToUser).filter((user): user is User => user !== null);
     },
     
     addUser: async (userData: Partial<User> & { password?: string }): Promise<{ user: User | null; error: string | null }> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: {
-                action: 'createUser',
-                email: userData.email,
-                password: userData.password,
-                username: userData.username,
-                role: userData.role,
-                sip_voice: userData.sipVoice,
-                features: userData.features,
-            }
+            body: { action: 'createUser', ...userData }
         });
 
-        if (error) {
-            console.error('Error invoking manage-users function (addUser):', error);
-            return { user: null, error: error.message };
-        }
-        if (data.error) {
-            console.error('Error from manage-users function (addUser):', data.error);
-            return { user: null, error: data.error };
+        if (error || data.error) {
+            const err = error?.message || data.error;
+            console.error('Error adding user:', err);
+            return { user: null, error: err };
         }
         return { user: mapDbUserToUser(data.user), error: null };
     },
 
     updateUser: async (userData: Partial<User> & { password?: string }): Promise<{ user: User | null; error: string | null }> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: {
-                action: 'updateUser',
-                id: userData.id,
-                auth_id: userData.auth_id,
-                email: userData.email,
-                password: userData.password, // Will be undefined if not set
-                username: userData.username,
-                role: userData.role,
-                sip_voice: userData.sipVoice,
-                features: userData.features,
-            }
+            body: { action: 'updateUser', ...userData }
         });
 
-        if (error) {
-            console.error('Error invoking manage-users function (updateUser):', error);
-            return { user: null, error: error.message };
-        }
-        if (data.error) {
-            console.error('Error from manage-users function (updateUser):', data.error);
-            return { user: null, error: data.error };
+        if (error || data.error) {
+            const err = error?.message || data.error;
+            console.error('Error updating user:', err);
+            return { user: null, error: err };
         }
         return { user: mapDbUserToUser(data.user), error: null };
     },
@@ -153,147 +127,128 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: { action: 'deleteUser', auth_id: userToDelete.auth_id }
         });
-        if (error) {
-            console.error('Error invoking manage-users function (deleteUser):', error);
-            return { error: error.message };
-        }
-        if (data.error) {
-            console.error('Error from manage-users function (deleteUser):', data.error);
-            return { error: data.error };
+        if (error || data.error) {
+             const err = error?.message || data.error;
+            console.error('Error deleting user:', err);
+            return { error: err };
         }
         return { error: null };
     },
 
     getUserByUsername: async (username: string): Promise<User | null> => {
-        const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
-        if (error) {
-            console.error('Error getting user by username:', error);
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+            body: { action: 'getUserByUsername', username }
+        });
+
+        if (error || data.error) {
+            // This can fail if user not found, which is not a critical error.
             return null;
         }
-        return mapDbUserToUser(data);
+        return mapDbUserToUser(data.user);
     },
 
     // --- Mail Service Functions ---
-    getMailsForUser: async (username: string): Promise<{ inbox: Mail[], sent: Mail[] }> => {
-        const { data, error } = await supabase
-            .from('mails')
-            .select('*')
-            .or(`recipient.eq.${username},sender.eq.${username}`)
-            .order('timestamp', { ascending: false });
-        
-        if (error) {
-            console.error("Error fetching mails:", error);
+    getMailsForUser: async (): Promise<{ inbox: Mail[], sent: Mail[] }> => {
+        const { data, error } = await invokeAppService('mails', 'get');
+        if (error || data.error) {
+            console.error("Error fetching mails:", error || data.error);
             return { inbox: [], sent: [] };
         }
-        const inbox = data.filter(m => m.recipient === username);
-        const sent = data.filter(m => m.sender === username);
+        // The edge function gets the current user's username, so we need it here to sort
+        const sessionUser = await database.getUserProfile();
+        if (!sessionUser) return {inbox: [], sent: []};
+
+        const inbox = data.mails.filter((m: Mail) => m.recipient === sessionUser.username);
+        const sent = data.mails.filter((m: Mail) => m.sender === sessionUser.username);
         return { inbox, sent };
     },
 
-    sendMail: async (mailData: Omit<Mail, 'id' | 'timestamp' | 'read'>): Promise<Mail | null> => {
-        const { data, error } = await supabase.from('mails').insert(mailData).select().single();
-        if (error) {
-            console.error('Error sending mail:', error);
+    sendMail: async (mailData: Omit<Mail, 'id' | 'timestamp' | 'read' | 'sender'>): Promise<Mail | null> => {
+        const { data, error } = await invokeAppService('mails', 'send', mailData);
+        if (error || data.error) {
+            console.error('Error sending mail:', error || data.error);
             return null;
         }
-        return data;
+        return data.mail;
     },
     
     markMailAsRead: async (mailId: number): Promise<boolean> => {
-        const { error } = await supabase.from('mails').update({ read: true }).eq('id', mailId);
-        if (error) console.error('Error marking mail as read:', error);
-        return !error;
+        const { error, data } = await invokeAppService('mails', 'markAsRead', { id: mailId });
+        if (error || data.error) console.error('Error marking mail as read:', error || data.error);
+        return !error && !data.error;
     },
 
     deleteMail: async (mailId: number): Promise<boolean> => {
-        const { error } = await supabase.from('mails').delete().eq('id', mailId);
-        if (error) console.error('Error deleting mail:', error);
-        return !error;
+        const { error, data } = await invokeAppService('mails', 'delete', { id: mailId });
+        if (error || data.error) console.error('Error deleting mail:', error || data.error);
+        return !error && !data.error;
     },
 
     // --- Contacts Service Functions ---
-    getContactsForUser: async (username: string): Promise<Contact[]> => {
-        const { data, error } = await supabase.from('contacts').select('*').eq('owner', username);
-        if (error) {
-            console.error('Error fetching contacts:', error);
+    getContactsForUser: async (): Promise<Contact[]> => {
+        const { data, error } = await invokeAppService('contacts', 'get');
+        if (error || data.error) {
+            console.error('Error fetching contacts:', error || data.error);
             return [];
         }
-        return data;
+        return data.contacts;
     },
 
-    addContact: async (contactData: Omit<Contact, 'id'>): Promise<Contact | null> => {
-        const { data, error } = await supabase.from('contacts').insert(contactData).select().single();
-        if (error) {
-            console.error('Error adding contact:', error);
+    addContact: async (contactData: Omit<Contact, 'id' | 'owner'>): Promise<Contact | null> => {
+        const { data, error } = await invokeAppService('contacts', 'add', contactData);
+        if (error || data.error) {
+            console.error('Error adding contact:', error || data.error);
             return null;
         }
-        return data;
+        return data.contact;
     },
 
     updateContact: async (contactData: Contact): Promise<Contact | null> => {
-        const { data, error } = await supabase.from('contacts').update(contactData).eq('id', contactData.id).select().single();
-        if (error) {
-            console.error('Error updating contact:', error);
+        const { data, error } = await invokeAppService('contacts', 'update', contactData);
+        if (error || data.error) {
+            console.error('Error updating contact:', error || data.error);
             return null;
         }
-        return data;
+        return data.contact;
     },
 
     deleteContact: async (contactId: number): Promise<boolean> => {
-        const { error } = await supabase.from('contacts').delete().eq('id', contactId);
-        if (error) console.error('Error deleting contact:', error);
-        return !error;
+        const { error, data } = await invokeAppService('contacts', 'delete', { id: contactId });
+        if (error || data.error) console.error('Error deleting contact:', error || data.error);
+        return !error && !data.error;
     },
 
     // --- Notepad Service Functions ---
-    getNotesForUser: async (username: string): Promise<Note[]> => {
-        const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
-        const { data, error } = await supabase
-            .from('notes')
-            .select('*')
-            .eq('owner', username)
-            .gte('created_at', threeDaysAgo)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching notes:', error);
+    getNotesForUser: async (): Promise<Note[]> => {
+        const { data, error } = await invokeAppService('notes', 'get');
+        if (error || data.error) {
+            console.error('Error fetching notes:', error || data.error);
             return [];
         }
-        return data.map(n => ({ ...n, createdAt: new Date(n.created_at), content: n.content || '' }));
+        return data.notes.map((n: any) => ({ ...n, createdAt: new Date(n.created_at), content: n.content || '' }));
     },
 
-    addNote: async (noteData: Omit<Note, 'id' | 'createdAt'>): Promise<Note | null> => {
-        const { data, error } = await supabase
-            .from('notes')
-            .insert({ owner: noteData.owner, title: noteData.title, content: noteData.content })
-            .select()
-            .single();
-        
-        if (error) {
-            console.error('Error adding note:', error);
+    addNote: async (noteData: Omit<Note, 'id' | 'createdAt' | 'owner'>): Promise<Note | null> => {
+        const { data, error } = await invokeAppService('notes', 'add', noteData);
+        if (error || data.error) {
+            console.error('Error adding note:', error || data.error);
             return null;
         }
-        return { ...data, createdAt: new Date(data.created_at), content: data.content || '' };
+        return { ...data.note, createdAt: new Date(data.note.created_at), content: data.note.content || '' };
     },
 
     updateNote: async (noteData: Note): Promise<Note | null> => {
-        const { data, error } = await supabase
-            .from('notes')
-            .update({ title: noteData.title, content: noteData.content })
-            .eq('id', noteData.id)
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error updating note:', error);
+        const { data, error } = await invokeAppService('notes', 'update', noteData);
+        if (error || data.error) {
+            console.error('Error updating note:', error || data.error);
             return null;
         }
-        return { ...data, createdAt: new Date(data.created_at), content: data.content || '' };
+        return { ...data.note, createdAt: new Date(data.note.created_at), content: data.note.content || '' };
     },
 
     deleteNote: async (noteId: number): Promise<boolean> => {
-        const { error } = await supabase.from('notes').delete().eq('id', noteId);
-        if (error) console.error('Error deleting note:', error);
-        return !error;
+        const { error, data } = await invokeAppService('notes', 'delete', { id: noteId });
+        if (error || data.error) console.error('Error deleting note:', error || data.error);
+        return !error && !data.error;
     },
 };
