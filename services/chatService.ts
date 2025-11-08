@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 import { ChatMessage, User } from '../types';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -6,8 +5,9 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 const activeChannels = new Map<string, RealtimeChannel>();
 
 // Helper to map DB user to app User, assuming snake_case from DB
-const mapDbUserToUser = (dbUser: any): User => {
-    if (!dbUser) return {} as User;
+// Corrected to handle null inputs gracefully, aligning with the database service.
+const mapDbUserToUser = (dbUser: any): User | null => {
+    if (!dbUser) return null;
     return {
         id: dbUser.id,
         auth_id: dbUser.auth_id,
@@ -30,6 +30,7 @@ export const chatService = {
     /**
      * Retrieves the message history for a chat using Supabase, including sender and receiver user data.
      * Uses snake_case for foreign key columns.
+     * This is updated to be more resilient to data inconsistencies or RLS policies.
      */
     async getChatHistory(userId1: number, userId2: number): Promise<ChatMessage[]> {
         const chatId = this.getChatId(userId1, userId2);
@@ -50,15 +51,28 @@ export const chatService = {
         }
 
         // Map snake_case from DB to camelCase for the app
-        return data.map((msg: any) => ({
-            id: msg.id,
-            senderId: msg.sender_id,
-            receiverId: msg.receiver_id,
-            text: msg.text,
-            timestamp: new Date(msg.timestamp),
-            sender: mapDbUserToUser(msg.sender),
-            receiver: mapDbUserToUser(msg.receiver),
-        }));
+        // Filter out any messages where the sender or receiver user could not be fetched.
+        const messages = data.map((msg: any) => {
+            const sender = mapDbUserToUser(msg.sender);
+            const receiver = mapDbUserToUser(msg.receiver);
+
+            if (!sender || !receiver) {
+                console.warn(`Skipping chat message with ID ${msg.id} due to missing sender or receiver profile.`);
+                return null;
+            }
+
+            return {
+                id: msg.id,
+                senderId: msg.sender_id,
+                receiverId: msg.receiver_id,
+                text: msg.text,
+                timestamp: new Date(msg.timestamp),
+                sender,
+                receiver,
+            };
+        }).filter((msg): msg is ChatMessage => msg !== null);
+
+        return messages;
     },
     
     /**
