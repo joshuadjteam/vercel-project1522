@@ -251,4 +251,13 @@ export const database = {
         if (error || data.error) console.error('Error deleting note:', error || data.error);
         return !error && !data.error;
     },
+
+    getAdminStats: async (): Promise<{ messages: number, mails: number, contacts: number } | null> => {
+        const { data, error } = await invokeAppService('stats', 'get');
+        if (error || data.error) {
+            console.error('Error fetching admin stats:', error || data.error);
+            return null;
+        }
+        return data.stats;
+    }
 };

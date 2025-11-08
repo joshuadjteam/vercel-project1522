@@ -21,6 +21,18 @@ serve(async (req) => {
   }
 
   try {
+    // This client authenticates the request and gets the auth user
+    const userClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    )
+    const { data: { user: authUser }, error: authError } = await userClient.auth.getUser();
+    if (authError || !authUser) {
+         return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }})
+    }
+    
+    // This client uses the service role key for admin operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -28,6 +40,25 @@ serve(async (req) => {
     
     const payload = await req.json();
     const { action } = payload;
+    
+    // Fetch the profile of the user making the request to check their role.
+    // This is required for all admin actions.
+    if (action !== 'getUserByUsername') {
+        const { data: requestingUserProfile, error: profileError } = await supabaseAdmin
+            .from('users')
+            .select('role')
+            .eq('auth_id', authUser.id)
+            .single();
+    
+        if (profileError) {
+             return new Response(JSON.stringify({ error: 'Could not verify user role.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }})
+        }
+
+        if (requestingUserProfile.role !== 'Admin') {
+             return new Response(JSON.stringify({ error: 'Permission denied: Admin role required.' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }})
+        }
+    }
+
 
     switch (action) {
       case 'createUser': {
@@ -122,7 +153,7 @@ serve(async (req) => {
       }
       
       case 'getUsers': {
-        const { data, error } = await supabaseAdmin.from('users').select('*');
+        const { data, error } = await supabaseAdmin.from('users').select('*').order('id', { ascending: true });
         if (error) throw error;
         return new Response(JSON.stringify({ users: data }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

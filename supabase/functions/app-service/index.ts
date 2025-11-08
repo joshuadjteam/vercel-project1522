@@ -36,7 +36,7 @@ serve(async (req) => {
     
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('users')
-      .select('id, username')
+      .select('id, username, role')
       .eq('auth_id', authUser.id)
       .single();
     if (profileError || !userProfile) throw new Error('User profile not found');
@@ -128,6 +128,28 @@ serve(async (req) => {
         if (error) throw error;
         return new Response(JSON.stringify({ history: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       
+      case 'stats':
+        if (userProfile.role !== 'Admin') {
+            throw new Error('Permission denied: Admin role required.');
+        }
+
+        const { count: messagesCount, error: messagesError } = await supabaseAdmin.from('chat_messages').select('*', { count: 'exact', head: true });
+        const { count: mailsCount, error: mailsError } = await supabaseAdmin.from('mails').select('*', { count: 'exact', head: true });
+        const { count: contactsCount, error: contactsError } = await supabaseAdmin.from('contacts').select('*', { count: 'exact', head: true });
+
+        if (messagesError || mailsError || contactsError) {
+            console.error({ messagesError, mailsError, contactsError });
+            throw new Error('Failed to retrieve one or more statistics.');
+        }
+
+        const stats = {
+            messages: messagesCount || 0,
+            mails: mailsCount || 0,
+            contacts: contactsCount || 0,
+        };
+
+        return new Response(JSON.stringify({ stats }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+
       default:
         throw new Error(`Invalid resource: ${resource}`);
     }

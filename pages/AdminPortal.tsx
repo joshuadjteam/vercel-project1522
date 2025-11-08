@@ -9,6 +9,7 @@ const AdminPortal: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
+    const [stats, setStats] = useState({ messages: 0, mails: 0, contacts: 0 });
 
     const fetchUsers = useCallback(async () => {
         const userList = await database.getUsers();
@@ -16,8 +17,15 @@ const AdminPortal: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        // Only fetch users if logged in with a real account
+        const fetchStats = async () => {
+            const adminStats = await database.getAdminStats();
+            if (adminStats) {
+                setStats(adminStats);
+            }
+        };
+
         if (user?.auth_id) {
+            fetchStats();
             fetchUsers();
         }
     }, [fetchUsers, user]);
@@ -85,9 +93,9 @@ const AdminPortal: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <StatCard title="Total Users" value={users.length} />
-                <StatCard title="Chat Messages" value={0} />
-                <StatCard title="Local Mails" value={0} />
-                <StatCard title="Saved Contacts" value={0} />
+                <StatCard title="Chat Messages" value={stats.messages} />
+                <StatCard title="Local Mails" value={stats.mails} />
+                <StatCard title="Saved Contacts" value={stats.contacts} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

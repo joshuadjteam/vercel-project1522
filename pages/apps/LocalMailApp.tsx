@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { Mail } from '../../types';
+import { supabase } from '../../supabaseClient';
 
 type MailView = 'inbox' | 'sent' | 'compose';
 
@@ -26,11 +28,32 @@ const LocalMailApp: React.FC = () => {
         fetchMails();
     }, [fetchMails]);
 
+    // Listen for new incoming emails in real-time
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const channel = supabase
+            .channel('public:mails')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'mails', filter: `recipient=eq.${currentUser.username}` },
+                (payload) => {
+                    const newMail = payload.new as Mail;
+                    // Add new mail to the top of the inbox
+                    setInbox(prevInbox => [newMail, ...prevInbox]);
+                }
+            )
+            .subscribe();
+        
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [currentUser]);
+
     const handleSelectMail = async (mail: Mail) => {
         setSelectedMail(mail);
         if (!mail.read && mail.recipient === currentUser?.username) {
             await database.markMailAsRead(mail.id);
-            // Optimistically update UI
             setInbox(prev => prev.map(m => m.id === mail.id ? { ...m, read: true } : m));
         }
     };
@@ -39,7 +62,7 @@ const LocalMailApp: React.FC = () => {
         if (window.confirm("Are you sure you want to delete this email?")) {
             await database.deleteMail(mailId);
             setSelectedMail(null);
-            fetchMails(); // Refresh mail lists
+            fetchMails();
         }
     };
 
@@ -53,7 +76,6 @@ const LocalMailApp: React.FC = () => {
 
     return (
         <div className="w-full max-w-7xl h-[80vh] bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl text-light-text dark:text-white flex overflow-hidden">
-            {/* Sidebar */}
             <div className="w-1/5 border-r border-gray-200 dark:border-teal-700/50 bg-black/5 dark:bg-black/10 flex flex-col">
                 <div className="p-4 border-b border-gray-200 dark:border-teal-700/50">
                     <h2 className="text-xl font-bold">LocalMail</h2>
@@ -78,7 +100,6 @@ const LocalMailApp: React.FC = () => {
                 <ComposeMail onMailSent={handleMailSent} />
             ) : (
                 <>
-                    {/* Mail List */}
                     <div className="w-2/5 border-r border-gray-200 dark:border-teal-700/50 bg-black/5 dark:bg-black/10 overflow-y-auto">
                         {isLoading ? <p className="p-4 text-gray-500 dark:text-gray-400">Loading...</p> : (
                             currentMailList.length > 0 ? (
@@ -101,7 +122,6 @@ const LocalMailApp: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Mail Content */}
                     <div className="w-3/5 overflow-y-auto p-6">
                         {selectedMail ? (
                             <div>

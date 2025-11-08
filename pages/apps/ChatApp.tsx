@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { chatService } from '../../services/chatService';
 import { User, ChatMessage } from '../../types';
+import { supabase } from '../../supabaseClient';
 
 const ChatApp: React.FC = () => {
     const { user: currentUser } = useAuth();
@@ -10,6 +12,7 @@ const ChatApp: React.FC = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
+    const [unreadSenders, setUnreadSenders] = useState<Set<number>>(new Set());
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const currentChatId = useRef<string | null>(null);
 
@@ -20,6 +23,29 @@ const ChatApp: React.FC = () => {
         };
         fetchUsers();
     }, [currentUser]);
+    
+    // Global listener for unread messages
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const channel = supabase
+            .channel('public:chat_messages:unread')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUser.id}` },
+                (payload) => {
+                    const newMsg = payload.new as { sender_id: number };
+                    if (newMsg.sender_id !== selectedUser?.id) {
+                        setUnreadSenders(prev => new Set(prev).add(newMsg.sender_id));
+                    }
+                }
+            )
+            .subscribe();
+        
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [currentUser, selectedUser]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,6 +59,13 @@ const ChatApp: React.FC = () => {
         if (currentChatId.current) {
             chatService.unsubscribe(currentChatId.current);
         }
+
+        // Clear unread indicator for this user
+        setUnreadSenders(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(user.id);
+            return newSet;
+        });
         
         setSelectedUser(user);
         const chatId = chatService.getChatId(currentUser.id, user.id);
@@ -42,7 +75,6 @@ const ChatApp: React.FC = () => {
         setMessages(history);
 
         chatService.subscribe(chatId, (newMessagePayload) => {
-            // Reconstruct the message object with full user details for display
             const sender = users.find(u => u.id === newMessagePayload.sender_id) || (currentUser.id === newMessagePayload.sender_id ? currentUser : null);
             const receiver = users.find(u => u.id === newMessagePayload.receiver_id) || (currentUser.id === newMessagePayload.receiver_id ? currentUser : null);
 
@@ -65,9 +97,8 @@ const ChatApp: React.FC = () => {
         e.preventDefault();
         if (newMessage.trim() === '' || !currentUser || !selectedUser) return;
 
-        // Optimistically update the UI
         const optimisticMessage: ChatMessage = {
-            id: Date.now(), // temp ID
+            id: Date.now(),
             text: newMessage,
             timestamp: new Date(),
             senderId: currentUser.id,
@@ -88,7 +119,6 @@ const ChatApp: React.FC = () => {
 
     return (
         <div className="w-full max-w-6xl h-[80vh] bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl text-light-text dark:text-white flex overflow-hidden">
-            {/* User List Sidebar */}
             <div className="w-1/3 border-r border-gray-200 dark:border-teal-700/50 bg-black/5 dark:bg-black/10 overflow-y-auto">
                 <div className="p-4 border-b border-gray-200 dark:border-teal-700/50">
                     <h2 className="text-xl font-bold">Contacts</h2>
@@ -100,15 +130,21 @@ const ChatApp: React.FC = () => {
                                 onClick={() => handleUserSelect(user)}
                                 className={`w-full text-left p-4 hover:bg-gray-100 dark:hover:bg-teal-700/40 transition-colors ${selectedUser?.id === user.id ? 'bg-teal-100 dark:bg-teal-600/50' : ''}`}
                             >
-                                <p className="font-semibold">{user.username}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{user.role}</p>
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <p className="font-semibold">{user.username}</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{user.role}</p>
+                                    </div>
+                                    {unreadSenders.has(user.id) && (
+                                        <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                                    )}
+                                </div>
                             </button>
                         </li>
                     ))}
                 </ul>
             </div>
 
-            {/* Chat Window */}
             <div className="w-2/3 flex flex-col">
                 {selectedUser ? (
                     <>

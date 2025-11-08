@@ -6,7 +6,7 @@ import { database } from '../../services/database';
 
 const PhoneApp: React.FC = () => {
     const { user: currentUser } = useAuth();
-    const { startCall, isCalling, receiveCall, incomingCall } = useCall();
+    const { startCall, isCalling, incomingCall } = useCall();
     const [calleeInput, setCalleeInput] = useState('');
     const [errorStatus, setErrorStatus] = useState('');
 
@@ -26,16 +26,10 @@ const PhoneApp: React.FC = () => {
 
         if (userToCall) {
             setErrorStatus('');
-            startCall(userToCall.username);
+            startCall(userToCall);
         } else {
             setErrorStatus(`Error 570 : The Username ${calleeInput.trim()} cannot be dialed as it's invalid or not existing`);
         }
-    };
-    
-    const handleSimulateIncomingCall = () => {
-        // In a real app, this would be triggered by a push notification or WebSocket event.
-        // Here, we simulate a call from 'Jane Doe'.
-        receiveCall('Jane Doe');
     };
 
 
@@ -61,11 +55,6 @@ const PhoneApp: React.FC = () => {
                             Call
                         </button>
                         {errorStatus && <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">{errorStatus}</p>}
-                         <div className="pt-4">
-                            <button onClick={handleSimulateIncomingCall} className="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 transition-colors text-sm">
-                                Simulate Incoming Call
-                            </button>
-                        </div>
                     </div>
                 )}
             </div>
