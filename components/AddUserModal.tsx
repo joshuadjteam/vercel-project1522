@@ -41,36 +41,45 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
 
     const handleSave = async () => {
         setError('');
-        setIsLoading(true);
 
         if (!userToEdit && !password) {
             setError('Password is required for new users.');
-            setIsLoading(false);
             return;
         }
-
-        const userData: Partial<User> & { password?: string } = {
-            username,
-            email,
-            sipVoice: sip,
-            role,
-            features,
-        };
         
-        if (userToEdit) {
-            userData.id = userToEdit.id;
-            await supabaseService.updateUser(userData);
-            onSaveSuccess();
-        } else {
-            userData.password = password;
-            const { error } = await supabaseService.addUser(userData);
-            if (error) {
-                setError(error);
+        setIsLoading(true);
+
+        try {
+            const userData: Partial<User> & { password?: string } = {
+                username,
+                email,
+                sipVoice: sip || null,
+                role,
+                features,
+            };
+            
+            if (userToEdit) {
+                userData.id = userToEdit.id;
+                const updatedUser = await supabaseService.updateUser(userData);
+                if (updatedUser) {
+                    onSaveSuccess();
+                } else {
+                    setError('Failed to update user.');
+                }
             } else {
-                onSaveSuccess();
+                userData.password = password;
+                const { error: addUserError } = await supabaseService.addUser(userData);
+                if (addUserError) {
+                    setError(addUserError);
+                } else {
+                    onSaveSuccess();
+                }
             }
+        } catch (e: any) {
+            setError(e.message || 'An unexpected error occurred.');
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
     if (!isOpen) return null;
