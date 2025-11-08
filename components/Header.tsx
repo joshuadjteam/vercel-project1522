@@ -2,6 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page, UserRole } from '../types';
+import { HomeIcon, InformationCircleIcon, SunIcon, MoonIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, ArrowLeftOnRectangleIcon, Squares2X2Icon, GlobeAltIcon } from '@heroicons/react/24/solid';
+
 
 interface HeaderProps {
     navigate: (page: Page) => void;
@@ -36,12 +38,14 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
     }, []);
 
 
-    const NavButton: React.FC<{ onClick: () => void, text: string, isActive?: boolean, isIconStyle?: boolean }> = ({ onClick, text, isActive, isIconStyle }) => (
+    const NavButton: React.FC<{ onClick: () => void, text: string, icon: React.ReactNode, isActive?: boolean, isIconStyle?: boolean }> = ({ onClick, text, icon, isActive, isIconStyle }) => (
         <button
             onClick={onClick}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/20 hover:text-gray-900 dark:hover:text-white'} ${isIconStyle ? 'aspect-square p-2' : ''}`}
+            title={text}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 flex items-center space-x-2 ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/20 hover:text-gray-900 dark:hover:text-white'} ${isIconStyle ? 'aspect-square p-2 !space-x-0' : ''}`}
         >
-            {text}
+            {icon}
+            {!isIconStyle && <span>{text}</span>}
         </button>
     );
     
@@ -55,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                 <div className="flex items-center space-x-2">
                     {/* Web Menu */}
                     <div className="relative" ref={webMenuRef}>
-                        <NavButton onClick={() => setWebMenuOpen(!webMenuOpen)} text="Web"/>
+                        <NavButton onClick={() => setWebMenuOpen(!webMenuOpen)} text="Web" icon={<GlobeAltIcon className="h-5 w-5"/>} />
                         {webMenuOpen && (
                              <div className="absolute top-full mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2">
                                 <a href="https://darshanjoshuakesavaruban.fwscheckout.com/" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">
@@ -71,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                     {/* Apps Menu */}
                      {isLoggedIn && (
                          <div className="relative" ref={appsMenuRef}>
-                            <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" />
+                            <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" icon={<Squares2X2Icon className="h-5 w-5"/>}/>
                             {appsMenuOpen && (
                                 <div className="absolute top-full mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2">
                                     <button onClick={() => { navigate('app-phone'); setAppsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Phone</button>
@@ -85,27 +89,29 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                             )}
                         </div>
                      )}
-                    <NavButton onClick={() => navigate('contact')} text="Contact" />
-                    <NavButton onClick={() => navigate('home')} text="Home" />
+                    <NavButton onClick={() => navigate('contact')} text="Contact" icon={<InformationCircleIcon className="h-5 w-5"/>} />
+                    <NavButton onClick={() => navigate('home')} text="Home" icon={<HomeIcon className="h-5 w-5"/>} />
                    
                     <div className="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
 
-                    <NavButton onClick={() => setIsDark(!isDark)} text={isDark ? "Light" : "Dark"} />
+                    <NavButton onClick={() => setIsDark(!isDark)} text={isDark ? "Light" : "Dark"} icon={isDark ? <SunIcon className="h-5 w-5"/> : <MoonIcon className="h-5 w-5"/>} isIconStyle />
 
                     {isLoggedIn && user?.role === UserRole.Admin && (
-                        <NavButton onClick={() => navigate('admin')} text="Admin" />
+                        <NavButton onClick={() => navigate('admin')} text="Admin" icon={<Cog6ToothIcon className="h-5 w-5"/>} isIconStyle />
                     )}
                      {isLoggedIn && (
-                        <NavButton onClick={() => navigate('profile')} text="Profile" />
+                        <NavButton onClick={() => navigate('profile')} text="Profile" icon={<UserCircleIcon className="h-5 w-5"/>} isIconStyle />
                     )}
                     
                     {isLoggedIn ? (
-                        <button onClick={handleSignOut} className="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-red-600 text-white hover:bg-red-700">
-                           Sign Out
+                        <button onClick={handleSignOut} title="Sign Out" className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-red-600 text-white hover:bg-red-700 flex items-center space-x-2">
+                           <ArrowLeftOnRectangleIcon className="h-5 w-5"/>
+                           <span>Sign Out</span>
                         </button>
                     ) : (
-                        <button onClick={() => navigate('signin')} className="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700">
-                            Sign On
+                        <button onClick={() => navigate('signin')} title="Sign On" className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700 flex items-center space-x-2">
+                            <ArrowRightOnRectangleIcon className="h-5 w-5"/>
+                            <span>Sign On</span>
                         </button>
                     )}
                 </div>

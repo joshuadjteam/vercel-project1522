@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
 import { supabaseService } from '../services/supabaseService';
 import AddUserModal from '../components/AddUserModal';
+import { UsersIcon, ChatBubbleOvalLeftEllipsisIcon, EnvelopeIcon, ClipboardIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 const AdminPortal: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
@@ -44,10 +45,13 @@ const AdminPortal: React.FC = () => {
         fetchUsers();
     };
 
-    const StatCard: React.FC<{ title: string, value: string | number }> = ({ title, value }) => (
-        <div className="bg-gray-100 dark:bg-teal-700/50 p-4 rounded-lg">
-            <p className="text-gray-600 dark:text-gray-300 text-sm">{title}</p>
-            <p className="text-3xl font-bold">{value}</p>
+    const StatCard: React.FC<{ title: string, value: string | number, icon: React.ReactNode }> = ({ title, value, icon }) => (
+        <div className="bg-gray-100 dark:bg-teal-700/50 p-4 rounded-lg flex items-center space-x-4">
+            <div className="text-teal-500">{icon}</div>
+            <div>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">{title}</p>
+                <p className="text-3xl font-bold">{value}</p>
+            </div>
         </div>
     );
     
@@ -63,10 +67,10 @@ const AdminPortal: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-300 mb-6">System overview and user management.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <StatCard title="Total Users" value={users.length} />
-                <StatCard title="Chat Messages" value={0} />
-                <StatCard title="Local Mails" value={0} />
-                <StatCard title="Saved Contacts" value={0} />
+                <StatCard title="Total Users" value={users.length} icon={<UsersIcon className="h-8 w-8"/>} />
+                <StatCard title="Chat Messages" value={0} icon={<ChatBubbleOvalLeftEllipsisIcon className="h-8 w-8"/>} />
+                <StatCard title="Local Mails" value={0} icon={<EnvelopeIcon className="h-8 w-8"/>} />
+                <StatCard title="Saved Contacts" value={0} icon={<ClipboardIcon className="h-8 w-8"/>} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -84,8 +88,9 @@ const AdminPortal: React.FC = () => {
                 <div className="lg:col-span-2 bg-black/5 dark:bg-black/20 p-6 rounded-lg">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-semibold">User Management</h2>
-                        <button onClick={handleAddUser} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                            Add User
+                        <button onClick={handleAddUser} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center space-x-2">
+                            <PlusIcon className="h-5 w-5"/>
+                            <span>Add User</span>
                         </button>
                     </div>
                     <div className="overflow-x-auto">
@@ -110,8 +115,8 @@ const AdminPortal: React.FC = () => {
                                         <td className="p-2 text-center"><FeatureIndicator enabled={user.features.mail} /></td>
                                         <td className="p-2">
                                             <div className="flex space-x-2">
-                                                <button onClick={() => handleEditUser(user)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Edit</button>
-                                                <button onClick={() => handleDeleteUser(user.id)} className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm">Delete</button>
+                                                <button onClick={() => handleEditUser(user)} className="p-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white"><PencilIcon className="h-4 w-4"/></button>
+                                                <button onClick={() => handleDeleteUser(user.id)} className="p-2 rounded-md bg-red-600 hover:bg-red-700 text-white"><TrashIcon className="h-4 w-4"/></button>
                                             </div>
                                         </td>
                                     </tr>

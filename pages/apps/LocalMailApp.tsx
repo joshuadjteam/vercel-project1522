@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabaseService } from '../../services/supabaseService';
 import { Mail } from '../../types';
+import { PencilIcon, InboxIcon, PaperAirplaneIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 type MailView = 'inbox' | 'sent' | 'compose';
 
@@ -37,9 +38,11 @@ const LocalMailApp: React.FC = () => {
     };
     
     const handleDeleteMail = async (mailId: number) => {
-        await supabaseService.deleteMail(mailId);
-        setSelectedMail(null);
-        fetchMails(); // Refresh mail lists
+        if (window.confirm("Are you sure you want to delete this email?")) {
+            await supabaseService.deleteMail(mailId);
+            setSelectedMail(null);
+            fetchMails(); // Refresh mail lists
+        }
     };
 
     const handleMailSent = () => {
@@ -59,15 +62,18 @@ const LocalMailApp: React.FC = () => {
                 </div>
                 <div className="p-2 space-y-1">
                     <button onClick={() => { setView('compose'); setSelectedMail(null); }} className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        <PencilIcon className="h-5 w-5"/>
                         <span>Compose</span>
                     </button>
                 </div>
                 <nav className="flex-grow p-2">
                     <button onClick={() => { setView('inbox'); setSelectedMail(null); }} className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors font-semibold ${view === 'inbox' ? 'bg-teal-100 dark:bg-teal-600/50' : 'hover:bg-gray-100 dark:hover:bg-teal-700/40'}`}>
+                        <InboxIcon className="h-6 w-6"/>
                         <span>Inbox</span>
                         <span className="ml-auto text-xs bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-white rounded-full px-2 py-0.5">{inbox.filter(m => !m.read).length}</span>
                     </button>
                     <button onClick={() => { setView('sent'); setSelectedMail(null); }} className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors font-semibold ${view === 'sent' ? 'bg-teal-100 dark:bg-teal-600/50' : 'hover:bg-gray-100 dark:hover:bg-teal-700/40'}`}>
+                        <PaperAirplaneIcon className="h-6 w-6"/>
                         <span>Sent</span>
                     </button>
                 </nav>
@@ -112,8 +118,8 @@ const LocalMailApp: React.FC = () => {
                                         </p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(selectedMail.timestamp).toLocaleString()}</p>
                                     </div>
-                                    <button onClick={() => handleDeleteMail(selectedMail.id)} className="px-3 py-1 rounded-md hover:bg-red-600/20 dark:hover:bg-red-600/50 text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-white transition-colors">
-                                        Delete
+                                    <button onClick={() => handleDeleteMail(selectedMail.id)} className="p-2 rounded-full hover:bg-red-600/20 dark:hover:bg-red-600/50 text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-white transition-colors">
+                                        <TrashIcon className="h-5 w-5"/>
                                     </button>
                                 </div>
                                 <div className="mt-6 whitespace-pre-wrap text-gray-800 dark:text-gray-200">
@@ -193,6 +199,7 @@ const ComposeMail: React.FC<ComposeMailProps> = ({ onMailSent }) => {
                      <p className="text-sm text-yellow-600 dark:text-yellow-400">{status}</p>
                     <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center space-x-2">
                         <span>Send</span>
+                        <PaperAirplaneIcon className="h-5 w-5"/>
                     </button>
                 </div>
             </form>

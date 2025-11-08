@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useCall } from '../hooks/useCall';
+import { Squares2X2Icon, PhoneIcon, MicrophoneIcon } from '@heroicons/react/24/solid';
 
 const CallWidget: React.FC = () => {
     const { 
@@ -34,10 +35,11 @@ const CallWidget: React.FC = () => {
         );
     };
 
-    const ActionButton: React.FC<{ onClick: () => void, children: React.ReactNode, className?: string }> = ({ onClick, children, className }) => (
+    const ActionButton: React.FC<{ onClick: () => void, children: React.ReactNode, className?: string, title: string }> = ({ onClick, children, className, title }) => (
         <button
             onClick={onClick}
-            className={`h-12 rounded-lg flex items-center justify-center transition-colors text-sm font-semibold ${className}`}
+            title={title}
+            className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${className}`}
         >
             {children}
         </button>
@@ -57,24 +59,28 @@ const CallWidget: React.FC = () => {
 
             {showKeypad && <Keypad />}
 
-            <div className="grid grid-cols-3 gap-3 mt-4">
+            <div className="grid grid-cols-3 gap-3 mt-4 place-items-center">
                 <ActionButton 
                     onClick={toggleKeypad} 
-                    className={`${showKeypad ? 'bg-blue-600' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-blue-700 text-white`}
+                    title="Keypad"
+                    className={`${showKeypad ? 'bg-blue-600 text-white' : 'bg-gray-500 dark:bg-gray-600 text-white'} hover:bg-blue-700`}
                 >
-                    Keypad
+                    <Squares2X2Icon className="h-6 w-6"/>
                 </ActionButton>
                  <ActionButton 
                     onClick={endCall} 
+                    title="End Call"
                     className="bg-red-600 hover:bg-red-700 text-white"
                 >
-                    End
+                    <PhoneIcon className="h-6 w-6"/>
                 </ActionButton>
                 <ActionButton 
                     onClick={toggleMute} 
-                    className={`${isMuted ? 'bg-yellow-500' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-yellow-600 text-white`}
+                    title={isMuted ? "Unmute" : "Mute"}
+                    className={`${isMuted ? 'bg-yellow-500' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-yellow-600 text-white relative`}
                 >
-                    {isMuted ? "Unmute" : "Mute"}
+                    <MicrophoneIcon className="h-6 w-6"/>
+                    {isMuted && <div className="absolute w-0.5 h-7 bg-white transform rotate-45"></div>}
                 </ActionButton>
             </div>
         </div>

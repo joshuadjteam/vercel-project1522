@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabaseService } from '../../services/supabaseService';
 import { Note } from '../../types';
+import { PlusIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 const NotepadApp: React.FC = () => {
     const { user } = useAuth();
@@ -80,7 +81,10 @@ const NotepadApp: React.FC = () => {
             <div className="w-1/3 border-r border-gray-200 dark:border-teal-700/50 bg-black/5 dark:bg-black/10 flex flex-col">
                 <div className="p-4 border-b border-gray-200 dark:border-teal-700/50 flex justify-between items-center">
                     <h2 className="text-xl font-bold">My Notes</h2>
-                    <button onClick={handleNewNote} className="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white">New</button>
+                    <button onClick={handleNewNote} className="flex items-center space-x-1 px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white">
+                        <PlusIcon className="h-4 w-4"/>
+                        <span>New</span>
+                    </button>
                 </div>
                  <div className="p-2 text-center text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/50">
                     Notes are deleted after 72 hours of inactivity.
@@ -101,8 +105,14 @@ const NotepadApp: React.FC = () => {
                     <>
                         <div className="p-3 border-b border-gray-200 dark:border-teal-700/50 flex justify-end items-center space-x-2 bg-black/5 dark:bg-black/10">
                             {saveStatus && <span className="text-sm text-green-600 dark:text-green-400">{saveStatus}</span>}
-                             <button onClick={handleSaveNote} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Save</button>
-                            <button onClick={handleDeleteNote} className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm">Delete</button>
+                             <button onClick={handleSaveNote} className="flex items-center space-x-1 px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">
+                                <CheckIcon className="h-4 w-4"/>
+                                <span>Save</span>
+                             </button>
+                            <button onClick={handleDeleteNote} className="flex items-center space-x-1 px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm">
+                                <TrashIcon className="h-4 w-4"/>
+                                <span>Delete</span>
+                            </button>
                         </div>
                         <div className="flex-grow flex flex-col p-4">
                             <input
