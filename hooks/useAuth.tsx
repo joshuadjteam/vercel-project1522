@@ -55,25 +55,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const login = async (id: string, pass: string): Promise<User | null> => {
-        // Check for local administrator account
-        if (id.toLowerCase() === 'administrator' && pass === 'DJTeam2013') {
-            const adminUser: User = {
-                id: -1, // Special ID for local admin
-                username: 'administrator',
-                email: 'admin@local',
-                role: UserRole.Admin,
-                sipVoice: 'N/A',
-                features: {
-                    chat: true,
-                    ai: true,
-                    mail: true,
-                },
-            };
-            setUser(adminUser);
-            setIsLoggedIn(true);
-            return adminUser;
-        }
-
         // Proceed with regular database login
         const userProfile = await database.login(id, pass);
         if (userProfile) {
@@ -91,18 +72,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = async () => {
-        if (user?.id === -1) { // Local admin logout
-            setUser(null);
-            setIsLoggedIn(false);
-        } else { // Regular user logout
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                console.error('Error logging out:', error);
-            }
-            // State is also cleared by the onAuthStateChange listener
-            setUser(null);
-            setIsLoggedIn(false);
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error('Error logging out:', error);
         }
+        // State is also cleared by the onAuthStateChange listener
+        setUser(null);
+        setIsLoggedIn(false);
     };
 
     return (

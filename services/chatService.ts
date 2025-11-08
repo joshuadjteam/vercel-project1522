@@ -5,9 +5,9 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 
 const activeChannels = new Map<string, RealtimeChannel>();
 
-// Helper to map DB user to app User
+// Helper to map DB user to app User, assuming snake_case from DB
 const mapDbUserToUser = (dbUser: any): User => {
-    if (!dbUser) return {} as User; // Or handle as an error
+    if (!dbUser) return {} as User;
     return {
         id: dbUser.id,
         auth_id: dbUser.auth_id,
@@ -29,6 +29,7 @@ export const chatService = {
 
     /**
      * Retrieves the message history for a chat using Supabase, including sender and receiver user data.
+     * Uses snake_case for foreign key columns.
      */
     async getChatHistory(userId1: number, userId2: number): Promise<ChatMessage[]> {
         const chatId = this.getChatId(userId1, userId2);
@@ -37,8 +38,8 @@ export const chatService = {
             .from('chat_messages')
             .select(`
                 *,
-                sender:senderId(*),
-                receiver:receiverId(*)
+                sender:sender_id(*),
+                receiver:receiver_id(*)
             `)
             .eq('chat_id', chatId)
             .order('timestamp', { ascending: true });
@@ -48,10 +49,11 @@ export const chatService = {
             return [];
         }
 
+        // Map snake_case from DB to camelCase for the app
         return data.map((msg: any) => ({
             id: msg.id,
-            senderId: msg.senderId,
-            receiverId: msg.receiverId,
+            senderId: msg.sender_id,
+            receiverId: msg.receiver_id,
             text: msg.text,
             timestamp: new Date(msg.timestamp),
             sender: mapDbUserToUser(msg.sender),
@@ -61,6 +63,7 @@ export const chatService = {
     
     /**
      * Sends a new message using Supabase.
+     * Uses snake_case for column names in the insert payload.
      */
     async sendMessage(messageData: { senderId: number; receiverId: number; text: string }): Promise<void> {
         const chatId = this.getChatId(messageData.senderId, messageData.receiverId);
@@ -69,8 +72,8 @@ export const chatService = {
             .from('chat_messages')
             .insert({
                 chat_id: chatId,
-                senderId: messageData.senderId,
-                receiverId: messageData.receiverId,
+                sender_id: messageData.senderId,
+                receiver_id: messageData.receiverId,
                 text: messageData.text,
             });
         
@@ -81,6 +84,7 @@ export const chatService = {
     
     /**
      * Subscribes to real-time messages for a chat from the 'chat_messages' table.
+     * The payload received from Supabase will have snake_case keys.
      */
     subscribe(chatId: string, callback: (message: any) => void): void {
         if (activeChannels.has(chatId)) {
