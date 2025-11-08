@@ -89,12 +89,10 @@ export const supabaseService = {
                 action: 'createUser',
                 email: userData.email,
                 password: userData.password,
-                userData: {
-                    username: userData.username,
-                    role: userData.role,
-                    sip_voice: userData.sipVoice,
-                    features: userData.features,
-                }
+                username: userData.username,
+                role: userData.role,
+                sip_voice: userData.sipVoice,
+                features: userData.features,
             }
         });
         if (error) {

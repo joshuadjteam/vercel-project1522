@@ -30,7 +30,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'createUser': {
-        const { email, password, userData } = payload;
+        const { email, password, username, role, sip_voice, features } = payload;
         
         // 1. Create the user in the auth system
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -47,10 +47,10 @@ serve(async (req) => {
           .insert({
             auth_id: authData.user.id,
             email: email,
-            username: userData.username,
-            role: userData.role,
-            sip_voice: userData.sip_voice,
-            features: userData.features,
+            username: username,
+            role: role,
+            sip_voice: sip_voice,
+            features: features,
           })
           .select()
           .single();
