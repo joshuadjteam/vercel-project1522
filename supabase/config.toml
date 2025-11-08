@@ -1,0 +1,15 @@
+# supabase/config.toml
+
+# This is your project's unique identifier on Supabase.
+# It is used by the command-line tool to link your code to your remote project.
+project_id = "jnnpxifvsrlzfpaisdhy"
+
+# This section tells Supabase which database schemas to manage.
+# 'public' is the default and where all your tables are.
+[db]
+schemas = ["public"]
+
+# This section is for configuring Edge Functions.
+# The Supabase CLI will automatically find any functions you create
+# inside the 'supabase/functions' directory.
+[functions]
