@@ -7,6 +7,7 @@ export enum UserRole {
 
 export interface User {
     id: number;
+    auth_id?: string; // Link to the auth.users table
     username: string;
     email: string;
     role: UserRole;

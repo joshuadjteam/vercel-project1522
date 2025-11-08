@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
 import { supabaseService } from '../services/supabaseService';
@@ -28,19 +27,19 @@ const AdminPortal: React.FC = () => {
         setIsModalOpen(true);
     };
     
-    const handleDeleteUser = async (userId: number) => {
-        if(window.confirm('Are you sure you want to delete this user?')) {
-            await supabaseService.deleteUser(userId);
-            fetchUsers();
+    const handleDeleteUser = async (user: User) => {
+        if(window.confirm(`Are you sure you want to delete this user: ${user.username}? This action is irreversible.`)) {
+            const { error } = await supabaseService.deleteUser(user);
+            if (error) {
+                alert(`Failed to delete user: ${error}`);
+            } else {
+                fetchUsers();
+            }
         }
     };
 
-    const handleSaveUser = async (userData: Partial<User>) => {
-        if (userData.id) {
-            await supabaseService.updateUser(userData);
-        } else {
-            await supabaseService.addUser(userData);
-        }
+    const handleSaveSuccess = () => {
+        setIsModalOpen(false);
         fetchUsers();
     };
 
@@ -113,7 +112,7 @@ const AdminPortal: React.FC = () => {
                                         <td className="p-2">
                                             <div className="flex space-x-2">
                                                 <button onClick={() => handleEditUser(user)} className="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white">Edit</button>
-                                                <button onClick={() => handleDeleteUser(user.id)} className="px-3 py-1 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white">Delete</button>
+                                                <button onClick={() => handleDeleteUser(user)} className="px-3 py-1 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white">Delete</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -123,7 +122,14 @@ const AdminPortal: React.FC = () => {
                     </div>
                 </div>
             </div>
-            <AddUserModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveUser} userToEdit={userToEdit} />
+            {isModalOpen && (
+                <AddUserModal 
+                    isOpen={isModalOpen} 
+                    onClose={() => setIsModalOpen(false)} 
+                    onSaveSuccess={handleSaveSuccess} 
+                    userToEdit={userToEdit} 
+                />
+            )}
         </div>
     );
 };

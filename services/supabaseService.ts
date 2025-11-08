@@ -60,23 +60,51 @@ export const supabaseService = {
         return data as User[];
     },
     
-    // Note: In a real app, adding a user would involve Supabase Auth `signUp` or `inviteUserByEmail`
-    // This simplified version for the admin panel just creates a profile.
-    addUser: async (userData: Partial<User>): Promise<User | null> => {
-        const { data, error } = await supabase.from('users').insert([userData]).select();
-        if (error || !data) return null;
-        return data[0] as User;
+    addUser: async (userData: Partial<User> & { password?: string }): Promise<{ user: User | null; error: string | null }> => {
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+            body: {
+                action: 'createUser',
+                email: userData.email,
+                password: userData.password,
+                userData: {
+                    username: userData.username,
+                    role: userData.role,
+                    sip_voice: userData.sipVoice,
+                    features: userData.features,
+                }
+            }
+        });
+        if (error) return { user: null, error: error.message };
+        if (data.error) return { user: null, error: data.error };
+        return { user: data.user, error: null };
     },
 
     updateUser: async (userData: Partial<User>): Promise<User | null> => {
-        const { data, error } = await supabase.from('users').update(userData).eq('id', userData.id).select();
+        // We only update the profile data, not auth data like email/password here.
+        const updateData = {
+            username: userData.username,
+            role: userData.role,
+            sip_voice: userData.sipVoice,
+            features: userData.features,
+        }
+        const { data, error } = await supabase.from('users').update(updateData).eq('id', userData.id).select();
         if (error || !data) return null;
         return data[0] as User;
     },
     
-    deleteUser: async (userId: number): Promise<boolean> => {
-        const { error } = await supabase.from('users').delete().eq('id', userId);
-        return !error;
+    deleteUser: async (userToDelete: User): Promise<{ error: string | null }> => {
+        if (!userToDelete.auth_id) {
+            return { error: 'Cannot delete user without an authentication ID.' };
+        }
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+            body: {
+                action: 'deleteUser',
+                auth_id: userToDelete.auth_id
+            }
+        });
+        if (error) return { error: error.message };
+        if (data.error) return { error: data.error };
+        return { error: null };
     },
 
     getUserByUsername: async (username: string): Promise<User | null> => {

@@ -1,26 +1,29 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
+import { supabaseService } from '../services/supabaseService';
 
 interface AddUserModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (user: Partial<User>) => void;
+    onSaveSuccess: () => void;
     userToEdit?: User | null;
 }
 
-const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave, userToEdit }) => {
+const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSuccess, userToEdit }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
     const [sip, setSip] = useState('');
     const [role, setRole] = useState<UserRole>(UserRole.Standard);
     const [features, setFeatures] = useState({ chat: true, ai: false, mail: false });
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
+        setError('');
         if (userToEdit) {
             setUsername(userToEdit.username);
-setEmail(userToEdit.email);
+            setEmail(userToEdit.email);
             setSip(userToEdit.sipVoice || '');
             setRole(userToEdit.role);
             setFeatures(userToEdit.features);
@@ -36,23 +39,38 @@ setEmail(userToEdit.email);
         }
     }, [userToEdit, isOpen]);
 
-    const handleSave = () => {
-        const userData: Partial<User> = {
+    const handleSave = async () => {
+        setError('');
+        setIsLoading(true);
+
+        if (!userToEdit && !password) {
+            setError('Password is required for new users.');
+            setIsLoading(false);
+            return;
+        }
+
+        const userData: Partial<User> & { password?: string } = {
             username,
             email,
             sipVoice: sip,
             role,
             features,
         };
-        if(password) {
-            // In a real app, password would be handled securely
-            // For this mock, we are not saving it directly
-        }
+        
         if (userToEdit) {
             userData.id = userToEdit.id;
+            await supabaseService.updateUser(userData);
+            onSaveSuccess();
+        } else {
+            userData.password = password;
+            const { error } = await supabaseService.addUser(userData);
+            if (error) {
+                setError(error);
+            } else {
+                onSaveSuccess();
+            }
         }
-        onSave(userData);
-        onClose();
+        setIsLoading(false);
     };
 
     if (!isOpen) return null;
@@ -88,11 +106,10 @@ setEmail(userToEdit.email);
                              <option value={UserRole.Admin}>Admin</option>
                          </select>
                     </div>
+                     <input type="email" placeholder="Email (used for login)" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <input type="password" placeholder={`Password ${userToEdit ? '(leave blank to keep unchanged)' : '(required)'}`} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        <input type="text" placeholder="SIP" value={sip} onChange={e => setSip(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
+                    <input type="text" placeholder="SIP" value={sip} onChange={e => setSip(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    
                     <div className="border-t border-gray-200 dark:border-slate-700 my-4 pt-4">
                         <h3 className="text-lg font-semibold mb-3 text-center">Features</h3>
                         <div className="flex justify-around items-center">
@@ -102,9 +119,12 @@ setEmail(userToEdit.email);
                         </div>
                     </div>
                 </div>
+                 {error && <p className="text-red-400 text-sm text-center px-6 pb-4">{error}</p>}
                 <div className="flex justify-end p-4 bg-gray-50 dark:bg-slate-900/50 rounded-b-lg space-x-2">
                     <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white transition-colors">Cancel</button>
-                    <button onClick={handleSave} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors">Save</button>
+                    <button onClick={handleSave} disabled={isLoading} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:bg-blue-800">
+                        {isLoading ? 'Saving...' : 'Save'}
+                    </button>
                 </div>
             </div>
         </div>
