@@ -94,8 +94,10 @@ export const database = {
             features: userData.features,
         };
         
+        // FIX: Pass the payload object directly. The Supabase client will handle stringifying it.
+        // Manually stringifying it was causing a double-encoding error.
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: JSON.stringify(payload)
+            body: payload
         });
 
         if (error) {
