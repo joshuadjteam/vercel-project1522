@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { supabaseService } from '../../services/supabaseService';
+import { database } from '../../services/database';
 import { chatService } from '../../services/chatService';
 import { User, ChatMessage } from '../../types';
 
@@ -16,7 +16,7 @@ const ChatApp: React.FC = () => {
 
     useEffect(() => {
         const fetchUsers = async () => {
-            const allUsers = await supabaseService.getUsers();
+            const allUsers = await database.getUsers();
             setUsers(allUsers.filter(u => u.username !== currentUser?.username));
         };
         fetchUsers();

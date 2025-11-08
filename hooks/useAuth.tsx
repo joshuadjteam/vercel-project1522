@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User, UserRole } from '../types';
-import { supabaseService } from '../services/supabaseService';
+import { database } from '../services/database';
 import { supabase } from '../supabaseClient';
 
 interface AuthContextType {
@@ -24,7 +24,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const userProfile = await supabaseService.getUserProfile(session.user.id);
+                const userProfile = await database.getUserProfile(session.user.id);
                 if (userProfile) {
                     setUser(userProfile);
                     setIsLoggedIn(true);
@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {
-                supabaseService.getUserProfile(session.user.id).then((profile) => {
+                database.getUserProfile(session.user.id).then((profile) => {
                     if (profile) {
                         setUser(profile);
                         setIsLoggedIn(true);
@@ -75,7 +75,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         // Proceed with regular database login
-        const userProfile = await supabaseService.login(id, pass);
+        const userProfile = await database.login(id, pass);
         if (userProfile) {
             setUser(userProfile);
             setIsLoggedIn(true);
@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     const loginAsGuest = async (): Promise<User | null> => {
-        const guestUser = await supabaseService.getGuestUser();
+        const guestUser = await database.getGuestUser();
         setUser(guestUser);
         setIsLoggedIn(true);
         return guestUser;

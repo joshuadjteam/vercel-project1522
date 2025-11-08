@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
-import { supabaseService } from '../services/supabaseService';
+import { database } from '../services/database';
 import AddUserModal from '../components/AddUserModal';
 
 const AdminPortal: React.FC = () => {
@@ -9,7 +9,7 @@ const AdminPortal: React.FC = () => {
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
     const fetchUsers = useCallback(async () => {
-        const userList = await supabaseService.getUsers();
+        const userList = await database.getUsers();
         setUsers(userList);
     }, []);
 
@@ -29,7 +29,7 @@ const AdminPortal: React.FC = () => {
     
     const handleDeleteUser = async (user: User) => {
         if(window.confirm(`Are you sure you want to delete this user: ${user.username}? This action is irreversible.`)) {
-            const { error } = await supabaseService.deleteUser(user);
+            const { error } = await database.deleteUser(user);
             if (error) {
                 alert(`Failed to delete user: ${error}`);
             } else {

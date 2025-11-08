@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { supabaseService } from '../../services/supabaseService';
+import { database } from '../../services/database';
 import { Mail } from '../../types';
 
 type MailView = 'inbox' | 'sent' | 'compose';
@@ -17,7 +17,7 @@ const LocalMailApp: React.FC = () => {
     const fetchMails = useCallback(async () => {
         if (!currentUser) return;
         setIsLoading(true);
-        const { inbox, sent } = await supabaseService.getMailsForUser(currentUser.username);
+        const { inbox, sent } = await database.getMailsForUser(currentUser.username);
         setInbox(inbox);
         setSent(sent);
         setIsLoading(false);
@@ -30,7 +30,7 @@ const LocalMailApp: React.FC = () => {
     const handleSelectMail = async (mail: Mail) => {
         setSelectedMail(mail);
         if (!mail.read && mail.recipient === currentUser?.username) {
-            await supabaseService.markMailAsRead(mail.id);
+            await database.markMailAsRead(mail.id);
             // Optimistically update UI
             setInbox(prev => prev.map(m => m.id === mail.id ? { ...m, read: true } : m));
         }
@@ -38,7 +38,7 @@ const LocalMailApp: React.FC = () => {
     
     const handleDeleteMail = async (mailId: number) => {
         if (window.confirm("Are you sure you want to delete this email?")) {
-            await supabaseService.deleteMail(mailId);
+            await database.deleteMail(mailId);
             setSelectedMail(null);
             fetchMails(); // Refresh mail lists
         }
@@ -155,7 +155,7 @@ const ComposeMail: React.FC<ComposeMailProps> = ({ onMailSent }) => {
             return;
         }
         setStatus('Sending...');
-        await supabaseService.sendMail({
+        await database.sendMail({
             sender: currentUser.username,
             recipient,
             subject,

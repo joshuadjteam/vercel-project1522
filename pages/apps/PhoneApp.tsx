@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCall } from '../../hooks/useCall';
-import { supabaseService } from '../../services/supabaseService';
+import { database } from '../../services/database';
 
 const PhoneApp: React.FC = () => {
     const { user: currentUser } = useAuth();
@@ -22,7 +22,7 @@ const PhoneApp: React.FC = () => {
         }
 
         setErrorStatus('Checking user...');
-        const userToCall = await supabaseService.getUserByUsername(calleeInput.trim());
+        const userToCall = await database.getUserByUsername(calleeInput.trim());
 
         if (userToCall) {
             setErrorStatus('');

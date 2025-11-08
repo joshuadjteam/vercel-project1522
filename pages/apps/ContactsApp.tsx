@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { supabaseService } from '../../services/supabaseService';
+import { database } from '../../services/database';
 import { Contact } from '../../types';
 import AddContactModal from '../../components/AddContactModal';
 
@@ -14,7 +14,7 @@ const ContactsApp: React.FC = () => {
     const fetchContacts = useCallback(async () => {
         if (!user) return;
         setIsLoading(true);
-        const userContacts = await supabaseService.getContactsForUser(user.username);
+        const userContacts = await database.getContactsForUser(user.username);
         setContacts(userContacts);
         setIsLoading(false);
     }, [user]);
@@ -35,7 +35,7 @@ const ContactsApp: React.FC = () => {
 
     const handleDeleteContact = async (contactId: number) => {
         if (window.confirm('Are you sure you want to delete this contact?')) {
-            await supabaseService.deleteContact(contactId);
+            await database.deleteContact(contactId);
             fetchContacts();
         }
     };
@@ -44,9 +44,9 @@ const ContactsApp: React.FC = () => {
         if (!user) return;
         const payload = { ...contactData, owner: user.username };
         if (payload.id) {
-            await supabaseService.updateContact(payload as Contact);
+            await database.updateContact(payload as Contact);
         } else {
-            await supabaseService.addContact(payload);
+            await database.addContact(payload);
         }
         fetchContacts();
     };

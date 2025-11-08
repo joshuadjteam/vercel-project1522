@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
-import { supabaseService } from '../services/supabaseService';
+import { database } from '../services/database';
 
 interface AddUserModalProps {
     isOpen: boolean;
@@ -60,7 +60,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
             
             if (userToEdit) {
                 userData.id = userToEdit.id;
-                const updatedUser = await supabaseService.updateUser(userData);
+                const updatedUser = await database.updateUser(userData);
                 if (updatedUser) {
                     onSaveSuccess();
                 } else {
@@ -68,7 +68,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
                 }
             } else {
                 userData.password = password;
-                const { error: addUserError } = await supabaseService.addUser(userData);
+                const { error: addUserError } = await database.addUser(userData);
                 if (addUserError) {
                     setError(addUserError);
                 } else {

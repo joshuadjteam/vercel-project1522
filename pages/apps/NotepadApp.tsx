@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { supabaseService } from '../../services/supabaseService';
+import { database } from '../../services/database';
 import { Note } from '../../types';
 
 const NotepadApp: React.FC = () => {
@@ -16,7 +16,7 @@ const NotepadApp: React.FC = () => {
     const fetchNotes = useCallback(async () => {
         if (!user) return;
         setIsLoading(true);
-        const userNotes = await supabaseService.getNotesForUser(user.username);
+        const userNotes = await database.getNotesForUser(user.username);
         setNotes(userNotes);
         setIsLoading(false);
     }, [user]);
@@ -41,7 +41,7 @@ const NotepadApp: React.FC = () => {
 
     const handleNewNote = async () => {
         if (!user) return;
-        const newNote = await supabaseService.addNote({
+        const newNote = await database.addNote({
             owner: user.username,
             title: 'New Note',
             content: '',
@@ -53,7 +53,7 @@ const NotepadApp: React.FC = () => {
     const handleDeleteNote = async () => {
         if (!selectedNote) return;
         if (window.confirm('Are you sure you want to delete this note?')) {
-            await supabaseService.deleteNote(selectedNote.id);
+            await database.deleteNote(selectedNote.id);
             setSelectedNote(null);
             fetchNotes();
         }
@@ -67,7 +67,7 @@ const NotepadApp: React.FC = () => {
             title: currentTitle,
             content: currentContent,
         };
-        await supabaseService.updateNote(updatedNote);
+        await database.updateNote(updatedNote);
         setSaveStatus('Note saved!');
         fetchNotes(); // to re-sort list if title changed
         setTimeout(() => setSaveStatus(''), 2000);

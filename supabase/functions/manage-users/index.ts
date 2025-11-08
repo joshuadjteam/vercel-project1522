@@ -31,10 +31,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'createUser': {
-        const { email, password, username, role, sip_voice, features: featuresString } = payload;
-        
-        // Safely parse the features string
-        const features = typeof featuresString === 'string' ? JSON.parse(featuresString) : featuresString;
+        const { email, password, username, role, sip_voice, features } = payload;
 
         // 1. Create the user in the auth system
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
