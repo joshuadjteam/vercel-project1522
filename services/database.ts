@@ -17,9 +17,9 @@ const mapDbUserToUser = (dbUser: any): User | null => {
 
 export const database = {
     // --- Auth & User Functions (using Supabase) ---
-    login: async (identifier: string, pass: string): Promise<{ user: User | null, error: string | null }> => {
+    login: async (email: string, pass: string): Promise<{ user: User | null, error: string | null }> => {
         // Special case for local admin login. This user does not exist in the database.
-        if (identifier.toLowerCase() === 'daradmin') {
+        if (email.toLowerCase() === 'daradmin') {
             if (pass === 'admin') {
                 console.warn("Logging in as local administrator. API-dependent features will be disabled.");
                 const adminUser: User = {
@@ -33,42 +33,27 @@ export const database = {
                 };
                 return { user: adminUser, error: null };
             } else {
-                // Provide a specific error for the local admin
                 return { user: null, error: "Incorrect password for user 'daradmin'." };
             }
         }
 
-        let emailToLogin = identifier;
-        if (!identifier.includes('@')) {
-            const { data: userByUsername, error } = await supabase
-                .from('users')
-                .select('email')
-                .ilike('username', identifier)
-                .single();
-            
-            if (error || !userByUsername) {
-                console.warn(`Login attempt for non-existent username: '${identifier}'.`);
-                // Provide a specific error about the user not being found.
-                return { user: null, error: `Could not find user with username '${identifier}'.` };
-            }
-            emailToLogin = userByUsername.email;
-        }
-
+        // Directly use the provided identifier as the email for login.
+        // This avoids a pre-authentication query that is likely blocked by RLS.
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: emailToLogin,
+            email: email,
             password: pass,
         });
 
         if (authError || !authData.user) {
             // Supabase error messages are usually specific enough (e.g., "Invalid login credentials").
             console.error('Login Error:', authError);
-            return { user: null, error: authError?.message || 'Invalid credentials.' };
+            return { user: null, error: authError?.message || 'Invalid login credentials.' };
         }
 
         const userProfile = await database.getUserProfile(authData.user.id);
         if (!userProfile) {
             // This case would be unusual if auth succeeds, but good to handle.
-            return { user: null, error: 'User profile not found.' };
+            return { user: null, error: 'User profile not found after successful authentication.' };
         }
 
         return { user: userProfile, error: null };

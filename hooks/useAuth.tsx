@@ -7,7 +7,7 @@ interface AuthContextType {
     user: User | null;
     isLoggedIn: boolean;
     isLoading: boolean;
-    login: (id: string, pass: string) => Promise<{ user: User | null, error: string | null }>;
+    login: (email: string, pass: string) => Promise<{ user: User | null, error: string | null }>;
     loginAsGuest: () => Promise<User | null>;
     logout: () => void;
 }
@@ -54,9 +54,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, []);
 
-    const login = async (id: string, pass: string): Promise<{ user: User | null, error: string | null }> => {
-        // All login logic, including the special 'daradmin' case, is now handled by the database service.
-        const { user: userProfile, error } = await database.login(id, pass);
+    const login = async (email: string, pass: string): Promise<{ user: User | null, error: string | null }> => {
+        const { user: userProfile, error } = await database.login(email, pass);
         if (userProfile) {
             setUser(userProfile);
             setIsLoggedIn(true);
