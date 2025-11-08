@@ -1,10 +1,9 @@
-
 import { supabase } from '../supabaseClient';
 import { User, UserRole, Mail, Contact, Note } from '../types';
 
 // Helper to map DB user to app User
-const mapDbUserToUser = (dbUser: any): User => {
-    if (!dbUser) return null as unknown as User;
+const mapDbUserToUser = (dbUser: any): User | null => {
+    if (!dbUser) return null;
     return {
         id: dbUser.id,
         auth_id: dbUser.auth_id,
@@ -73,7 +72,7 @@ export const database = {
             console.error('Error fetching users:', error);
             return [];
         }
-        return data.map(mapDbUserToUser);
+        return data.map(mapDbUserToUser).filter((user): user is User => user !== null);
     },
     
     addUser: async (userData: Partial<User> & { password?: string }): Promise<{ user: User | null; error: string | null }> => {
