@@ -1,0 +1,113 @@
+
+import React, { useState, useEffect } from 'react';
+import { User, UserRole } from '../types';
+import { XMarkIcon } from '@heroicons/react/24/solid';
+
+interface AddUserModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (user: Partial<User>) => void;
+    userToEdit?: User | null;
+}
+
+const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave, userToEdit }) => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('');
+    const [sip, setSip] = useState('');
+    const [role, setRole] = useState<UserRole>(UserRole.Standard);
+    const [features, setFeatures] = useState({ chat: true, ai: false, mail: false });
+
+    useEffect(() => {
+        if (userToEdit) {
+            setUsername(userToEdit.username);
+            setEmail(userToEdit.email);
+            setSip(userToEdit.sipVoice || '');
+            setRole(userToEdit.role);
+            setFeatures(userToEdit.features);
+            setPassword(''); // Don't pre-fill password for editing
+        } else {
+            // Reset form for adding new user
+            setUsername('');
+            setPassword('');
+            setEmail('');
+            setSip('');
+            setRole(UserRole.Standard);
+            setFeatures({ chat: true, ai: false, mail: false });
+        }
+    }, [userToEdit, isOpen]);
+
+    const handleSave = () => {
+        const userData: Partial<User> = {
+            username,
+            email,
+            sipVoice: sip,
+            role,
+            features,
+        };
+        if(password) {
+            // In a real app, password would be handled securely
+            // For this mock, we are not saving it directly
+        }
+        if (userToEdit) {
+            userData.id = userToEdit.id;
+        }
+        onSave(userData);
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    const Toggle: React.FC<{ label: string; enabled: boolean; onChange: (enabled: boolean) => void }> = ({ label, enabled, onChange }) => (
+        <div className="flex flex-col items-center">
+             <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">{label}</label>
+            <button
+                type="button"
+                onClick={() => onChange(!enabled)}
+                className={`${enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-800`}
+            >
+                <span className={`${enabled ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}/>
+            </button>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className="bg-light-card dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg text-light-text dark:text-white">
+                <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-slate-700">
+                    <h2 className="text-xl font-bold">{userToEdit ? 'Edit User' : 'Add User'}</h2>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700"><XMarkIcon className="w-6 h-6" /></button>
+                </div>
+                <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                         <select value={role} onChange={e => setRole(e.target.value as UserRole)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                             <option value={UserRole.Standard}>Standard</option>
+                             <option value={UserRole.Trial}>Trial</option>
+                             <option value={UserRole.Admin}>Admin</option>
+                         </select>
+                    </div>
+                    <input type="password" placeholder={`Password ${userToEdit ? '(leave blank to keep unchanged)' : '(required)'}`} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <input type="text" placeholder="SIP" value={sip} onChange={e => setSip(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div className="border-t border-gray-200 dark:border-slate-700 my-4 pt-4">
+                        <h3 className="text-lg font-semibold mb-3 text-center">Features</h3>
+                        <div className="flex justify-around items-center">
+                            <Toggle label="Chat" enabled={features.chat} onChange={(val) => setFeatures(f => ({...f, chat: val}))} />
+                            <Toggle label="AI" enabled={features.ai} onChange={(val) => setFeatures(f => ({...f, ai: val}))} />
+                            <Toggle label="Mail" enabled={features.mail} onChange={(val) => setFeatures(f => ({...f, mail: val}))} />
+                        </div>
+                    </div>
+                </div>
+                <div className="flex justify-end p-4 bg-gray-50 dark:bg-slate-900/50 rounded-b-lg space-x-2">
+                    <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white transition-colors">Cancel</button>
+                    <button onClick={handleSave} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors">Save</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default AddUserModal;

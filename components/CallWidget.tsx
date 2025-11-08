@@ -1,0 +1,93 @@
+import React from 'react';
+import { useCall } from '../hooks/useCall';
+import { PhoneXMarkIcon, TableCellsIcon } from '@heroicons/react/24/solid';
+import { MicrophoneIcon, SpeakerXMarkIcon } from '@heroicons/react/24/outline';
+
+const CallWidget: React.FC = () => {
+    const { 
+        isCalling, callee, callStatus, endCall,
+        isMuted, toggleMute, 
+        showKeypad, toggleKeypad,
+        keypadInput, handleKeypadInput
+    } = useCall();
+
+    if (!isCalling) {
+        return null;
+    }
+
+    const Keypad = () => {
+        const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
+        return (
+            <div className="mt-4">
+                <div className="bg-black/10 dark:bg-white/10 rounded p-2 text-center text-lg h-10 mb-2 truncate">{keypadInput}</div>
+                <div className="grid grid-cols-3 gap-2">
+                    {keys.map(key => (
+                        <button 
+                            key={key} 
+                            onClick={() => handleKeypadInput(key)}
+                            className="bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:hover:bg-white/20 rounded-lg p-2 text-xl font-semibold transition-colors"
+                        >
+                            {key}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const ActionButton: React.FC<{ onClick: () => void, children: React.ReactNode, className?: string, tooltip: string }> = ({ onClick, children, className, tooltip }) => (
+        <div className="relative group flex items-center justify-center">
+            <button
+                onClick={onClick}
+                className={`w-14 h-12 rounded-lg flex items-center justify-center transition-colors ${className}`}
+            >
+                {children}
+            </button>
+            <div className="absolute bottom-full mb-2 hidden group-hover:block bg-light-text dark:bg-dark-card text-light-card dark:text-dark-text text-xs rounded py-1 px-2">
+                {tooltip}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="fixed bottom-10 right-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-300 dark:border-gray-700 rounded-lg shadow-2xl p-4 text-light-text dark:text-white w-72 z-50">
+            <div className="flex items-center space-x-3 mb-3">
+                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center font-bold text-lg text-white shrink-0">
+                    {callee.charAt(0).toUpperCase()}
+                </div>
+                <div className="overflow-hidden">
+                    <p className="font-semibold truncate">{callee}</p>
+                    <p className="text-sm text-green-500 dark:text-green-400 truncate">{callStatus}</p>
+                </div>
+            </div>
+
+            {showKeypad && <Keypad />}
+
+            <div className="grid grid-cols-3 gap-3 mt-4">
+                <ActionButton 
+                    onClick={toggleKeypad} 
+                    tooltip="Keypad"
+                    className={`${showKeypad ? 'bg-blue-600' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-blue-700 text-white`}
+                >
+                    <TableCellsIcon className="w-6 h-6" />
+                </ActionButton>
+                 <ActionButton 
+                    onClick={endCall} 
+                    tooltip="End Call"
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                    <PhoneXMarkIcon className="w-6 h-6" />
+                </ActionButton>
+                <ActionButton 
+                    onClick={toggleMute} 
+                    tooltip={isMuted ? "Unmute" : "Mute"}
+                    className={`${isMuted ? 'bg-yellow-500' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-yellow-600 text-white`}
+                >
+                    {isMuted ? <SpeakerXMarkIcon className="w-6 h-6" /> : <MicrophoneIcon className="w-6 h-6" />}
+                </ActionButton>
+            </div>
+        </div>
+    );
+};
+
+export default CallWidget;
