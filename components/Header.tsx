@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page, UserRole } from '../types';
-import { HomeIcon, InformationCircleIcon, SunIcon, MoonIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightEndOnRectangleIcon, ArrowLeftStartOnRectangleIcon, Squares2X2Icon, GlobeAltIcon } from '@heroicons/react/24/solid';
+import { HomeIcon, InformationCircleIcon, SunIcon, MoonIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightEndOnRectangleIcon, ArrowLeftStartOnRectangleIcon, CircleStackIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
 
 
 interface HeaderProps {
@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                     {/* Apps Menu */}
                      {isLoggedIn && (
                          <div className="relative" ref={appsMenuRef}>
-                            <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" icon={<Squares2X2Icon className="h-5 w-5"/>}/>
+                            <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" icon={<CircleStackIcon className="h-5 w-5"/>}/>
                             {appsMenuOpen && (
                                 <div className="absolute top-full mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2">
                                     <button onClick={() => { navigate('app-phone'); setAppsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Phone</button>

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useCall } from '../hooks/useCall';
-import { Squares2X2Icon, PhoneIcon, MicrophoneIcon } from '@heroicons/react/24/solid';
+import { ViewColumnsIcon, PhoneIcon, MicrophoneIcon } from '@heroicons/react/24/solid';
 
 const CallWidget: React.FC = () => {
     const { 
@@ -65,7 +65,7 @@ const CallWidget: React.FC = () => {
                     title="Keypad"
                     className={`${showKeypad ? 'bg-blue-600 text-white' : 'bg-gray-500 dark:bg-gray-600 text-white'} hover:bg-blue-700`}
                 >
-                    <Squares2X2Icon className="h-6 w-6"/>
+                    <ViewColumnsIcon className="h-6 w-6"/>
                 </ActionButton>
                  <ActionButton 
                     onClick={endCall} 
