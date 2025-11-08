@@ -1,18 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 
-// User-provided API Key to ensure the AI feature is functional as requested.
-// In a production environment, this should be managed via secure environment variables.
-const GEMINI_API_KEY = "AIzaSyCvPM3A1IdxuczsncLX9RgmbuxytnC5yE0";
-
 export const geminiService = {
     getHelpResponse: async (prompt: string): Promise<string> => {
-        if (!GEMINI_API_KEY) {
-            console.error("Gemini API key is not configured.");
-            return "The AI help service is not configured. Please contact the administrator.";
-        }
-        
         try {
-            const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+            // FIX: Initialize GoogleGenAI with the API key from environment variables, removing the hardcoded key and associated checks.
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
