@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
 import { database } from '../services/database';
 import AddUserModal from '../components/AddUserModal';
+import { useAuth } from '../hooks/useAuth';
 
 const AdminPortal: React.FC = () => {
+    const { user } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
@@ -14,8 +16,11 @@ const AdminPortal: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
+        // Only fetch users if logged in with a real account
+        if (user?.auth_id) {
+            fetchUsers();
+        }
+    }, [fetchUsers, user]);
 
     const handleAddUser = () => {
         setUserToEdit(null);
@@ -57,6 +62,21 @@ const AdminPortal: React.FC = () => {
             {enabled ? 'On' : 'Off'}
         </span>
     );
+
+    // Disable portal for local admin as they don't have a Supabase session
+    if (user && !user.auth_id) {
+        return (
+             <div className="w-full max-w-4xl bg-light-card/80 dark:bg-red-900/50 backdrop-blur-sm border border-gray-300 dark:border-red-700/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white">
+                <h1 className="text-3xl font-bold text-center mb-4">User Management Disabled</h1>
+                <p className="text-center text-red-200">
+                    You are logged in as a local administrator. This account does not have the necessary permissions to manage users because it is not authenticated with the backend service.
+                </p>
+                <p className="text-center mt-2 text-gray-300">
+                    Please sign out and use an account created via the 'Add User' feature to access the admin portal.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-7xl bg-light-card/80 dark:bg-teal-900/50 backdrop-blur-sm border border-gray-300 dark:border-teal-700/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white">

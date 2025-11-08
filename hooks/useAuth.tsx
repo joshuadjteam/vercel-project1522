@@ -55,6 +55,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const login = async (id: string, pass: string): Promise<User | null> => {
+        // Special case for local admin login. This user will not have access to Supabase-dependent features.
+        if (id.toLowerCase() === 'daradmin' && pass === 'admin') {
+            console.warn("Logging in as local administrator. API-dependent features will be disabled.");
+            const adminUser: User = {
+                id: -1, // Use a non-DB ID to identify this special user
+                username: 'daradmin',
+                email: 'admin@local.host',
+                role: UserRole.Admin,
+                sipVoice: null,
+                features: { chat: true, ai: true, mail: true },
+                auth_id: undefined,
+            };
+            setUser(adminUser);
+            setIsLoggedIn(true);
+            return adminUser;
+        }
+
         // Proceed with regular database login
         const userProfile = await database.login(id, pass);
         if (userProfile) {
