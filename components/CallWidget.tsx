@@ -1,7 +1,6 @@
+
 import React from 'react';
 import { useCall } from '../hooks/useCall';
-import { PhoneXMarkIcon, TableCellsIcon } from '@heroicons/react/24/solid';
-import { MicrophoneIcon, SpeakerXMarkIcon } from '@heroicons/react/24/outline';
 
 const CallWidget: React.FC = () => {
     const { 
@@ -35,18 +34,13 @@ const CallWidget: React.FC = () => {
         );
     };
 
-    const ActionButton: React.FC<{ onClick: () => void, children: React.ReactNode, className?: string, tooltip: string }> = ({ onClick, children, className, tooltip }) => (
-        <div className="relative group flex items-center justify-center">
-            <button
-                onClick={onClick}
-                className={`w-14 h-12 rounded-lg flex items-center justify-center transition-colors ${className}`}
-            >
-                {children}
-            </button>
-            <div className="absolute bottom-full mb-2 hidden group-hover:block bg-light-text dark:bg-dark-card text-light-card dark:text-dark-text text-xs rounded py-1 px-2">
-                {tooltip}
-            </div>
-        </div>
+    const ActionButton: React.FC<{ onClick: () => void, children: React.ReactNode, className?: string }> = ({ onClick, children, className }) => (
+        <button
+            onClick={onClick}
+            className={`h-12 rounded-lg flex items-center justify-center transition-colors text-sm font-semibold ${className}`}
+        >
+            {children}
+        </button>
     );
 
     return (
@@ -66,24 +60,21 @@ const CallWidget: React.FC = () => {
             <div className="grid grid-cols-3 gap-3 mt-4">
                 <ActionButton 
                     onClick={toggleKeypad} 
-                    tooltip="Keypad"
                     className={`${showKeypad ? 'bg-blue-600' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-blue-700 text-white`}
                 >
-                    <TableCellsIcon className="w-6 h-6" />
+                    Keypad
                 </ActionButton>
                  <ActionButton 
                     onClick={endCall} 
-                    tooltip="End Call"
                     className="bg-red-600 hover:bg-red-700 text-white"
                 >
-                    <PhoneXMarkIcon className="w-6 h-6" />
+                    End
                 </ActionButton>
                 <ActionButton 
                     onClick={toggleMute} 
-                    tooltip={isMuted ? "Unmute" : "Mute"}
                     className={`${isMuted ? 'bg-yellow-500' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-yellow-600 text-white`}
                 >
-                    {isMuted ? <SpeakerXMarkIcon className="w-6 h-6" /> : <MicrophoneIcon className="w-6 h-6" />}
+                    {isMuted ? "Unmute" : "Mute"}
                 </ActionButton>
             </div>
         </div>

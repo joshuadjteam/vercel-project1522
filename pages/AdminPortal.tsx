@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
 import { supabaseService } from '../services/supabaseService';
 import AddUserModal from '../components/AddUserModal';
-import { UsersIcon, ChatBubbleLeftRightIcon, EnvelopeIcon, DocumentDuplicateIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const AdminPortal: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
@@ -45,13 +44,10 @@ const AdminPortal: React.FC = () => {
         fetchUsers();
     };
 
-    const StatCard: React.FC<{ icon: React.ReactNode, title: string, value: string | number }> = ({ icon, title, value }) => (
-        <div className="bg-gray-100 dark:bg-teal-700/50 p-4 rounded-lg flex items-center space-x-4">
-            <div className="bg-teal-200 text-teal-800 dark:bg-teal-600 dark:text-white p-3 rounded-full">{icon}</div>
-            <div>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">{title}</p>
-                <p className="text-2xl font-bold">{value}</p>
-            </div>
+    const StatCard: React.FC<{ title: string, value: string | number }> = ({ title, value }) => (
+        <div className="bg-gray-100 dark:bg-teal-700/50 p-4 rounded-lg">
+            <p className="text-gray-600 dark:text-gray-300 text-sm">{title}</p>
+            <p className="text-3xl font-bold">{value}</p>
         </div>
     );
     
@@ -67,14 +63,14 @@ const AdminPortal: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-300 mb-6">System overview and user management.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <StatCard icon={<UsersIcon className="w-6 h-6"/>} title="Total Users" value={users.length} />
-                <StatCard icon={<ChatBubbleLeftRightIcon className="w-6 h-6"/>} title="Chat Messages" value={0} />
-                <StatCard icon={<EnvelopeIcon className="w-6 h-6"/>} title="Local Mails" value={0} />
-                <StatCard icon={<DocumentDuplicateIcon className="w-6 h-6"/>} title="Saved Contacts" value={0} />
+                <StatCard title="Total Users" value={users.length} />
+                <StatCard title="Chat Messages" value={0} />
+                <StatCard title="Local Mails" value={0} />
+                <StatCard title="Saved Contacts" value={0} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="bg-black/5 dark:bg-black/20 p-6 rounded-lg">
+                <div className="lg:col-span-1 bg-black/5 dark:bg-black/20 p-6 rounded-lg">
                     <h2 className="text-2xl font-semibold mb-4">System Broadcast</h2>
                     <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">Send a direct message to all users.</p>
                     <textarea 
@@ -85,7 +81,7 @@ const AdminPortal: React.FC = () => {
                         Broadcast
                     </button>
                 </div>
-                <div className="bg-black/5 dark:bg-black/20 p-6 rounded-lg">
+                <div className="lg:col-span-2 bg-black/5 dark:bg-black/20 p-6 rounded-lg">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-semibold">User Management</h2>
                         <button onClick={handleAddUser} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
@@ -114,8 +110,8 @@ const AdminPortal: React.FC = () => {
                                         <td className="p-2 text-center"><FeatureIndicator enabled={user.features.mail} /></td>
                                         <td className="p-2">
                                             <div className="flex space-x-2">
-                                                <button onClick={() => handleEditUser(user)} className="p-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white"><PencilIcon className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDeleteUser(user.id)} className="p-2 rounded-md bg-red-600 hover:bg-red-700 text-white"><TrashIcon className="w-4 h-4" /></button>
+                                                <button onClick={() => handleEditUser(user)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Edit</button>
+                                                <button onClick={() => handleDeleteUser(user.id)} className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm">Delete</button>
                                             </div>
                                         </td>
                                     </tr>

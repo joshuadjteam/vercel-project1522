@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
-import { UserCircleIcon, CreditCardIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 interface ProfilePageProps {
     navigate: (page: Page) => void;
@@ -48,14 +47,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ navigate }) => {
         </div>
     );
 
-    const TabButton: React.FC<{ tabName: string, icon: React.ReactNode, label: string }> = ({ tabName, icon, label }) => (
+    const TabButton: React.FC<{ tabName: string, label: string }> = ({ tabName, label }) => (
          <button
             onClick={() => setActiveTab(tabName)}
             className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors font-semibold ${
                 activeTab === tabName ? 'bg-purple-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/10'
             }`}
         >
-            {icon}
             <span>{label}</span>
         </button>
     );
@@ -75,9 +73,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ navigate }) => {
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-1/4">
                     <div className="space-y-2">
-                        <TabButton tabName="info" icon={<UserCircleIcon className="w-6 h-6"/>} label="Info" />
-                        <TabButton tabName="billing" icon={<CreditCardIcon className="w-6 h-6"/>} label="Billing" />
-                        <TabButton tabName="lynxai" icon={<SparklesIcon className="w-6 h-6"/>} label="LynxAI Portal" />
+                        <TabButton tabName="info" label="Info" />
+                        <TabButton tabName="billing" label="Billing" />
+                        <TabButton tabName="lynxai" label="LynxAI Portal" />
                     </div>
                 </div>
                 <div className="w-full md:w-3/4 bg-black/5 dark:bg-black/20 rounded-lg p-6 min-h-[250px]">

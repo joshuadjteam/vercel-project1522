@@ -1,7 +1,6 @@
 
 import React from 'react';
 import Clock from '../components/Clock';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 const HomePage: React.FC = () => {
     return (

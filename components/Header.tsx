@@ -2,8 +2,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page, UserRole } from '../types';
-import { GlobeAltIcon, Squares2X2Icon, PhoneIcon, ChatBubbleLeftRightIcon, EnvelopeIcon, UserGroupIcon, PencilIcon, CalculatorIcon, SunIcon, MoonIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, UserCircleIcon, BuildingStorefrontIcon } from '@heroicons/react/24/outline';
-
 
 interface HeaderProps {
     navigate: (page: Page) => void;
@@ -38,27 +36,13 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
     }, []);
 
 
-    const NavButton: React.FC<{ onClick: () => void, text: string, isActive?: boolean }> = ({ onClick, text, isActive }) => (
+    const NavButton: React.FC<{ onClick: () => void, text: string, isActive?: boolean, isIconStyle?: boolean }> = ({ onClick, text, isActive, isIconStyle }) => (
         <button
             onClick={onClick}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/20 hover:text-gray-900 dark:hover:text-white'}`}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/20 hover:text-gray-900 dark:hover:text-white'} ${isIconStyle ? 'aspect-square p-2' : ''}`}
         >
             {text}
         </button>
-    );
-
-    const IconNavButton: React.FC<{ onClick: () => void, children: React.ReactNode, tooltip: string }> = ({ onClick, children, tooltip }) => (
-        <div className="relative group flex items-center">
-            <button
-                onClick={onClick}
-                className="p-2 text-gray-700 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-colors duration-200"
-            >
-                {children}
-            </button>
-            <div className="absolute top-full mt-2 hidden group-hover:block bg-light-text dark:bg-dark-card text-light-card dark:text-dark-text text-xs rounded py-1 px-2">
-                {tooltip}
-            </div>
-        </div>
     );
     
     return (
@@ -74,11 +58,11 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                         <NavButton onClick={() => setWebMenuOpen(!webMenuOpen)} text="Web"/>
                         {webMenuOpen && (
                              <div className="absolute top-full mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2">
-                                <a href="https://darshanjoshuakesavaruban.fwscheckout.com/" target="_blank" rel="noopener noreferrer" className="flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">
-                                    <BuildingStorefrontIcon className="w-5 h-5 mr-3"/> Buy a Product
+                                <a href="https://darshanjoshuakesavaruban.fwscheckout.com/" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">
+                                    Buy a Product
                                 </a>
-                                <a href="https://sites.google.com/gcp.lynixity.x10.bz/myportal/home" target="_blank" rel="noopener noreferrer" className="flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">
-                                    <GlobeAltIcon className="w-5 h-5 mr-3"/> MyPortal
+                                <a href="https://sites.google.com/gcp.lynixity.x10.bz/myportal/home" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">
+                                    MyPortal
                                 </a>
                              </div>
                         )}
@@ -90,13 +74,13 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                             <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" />
                             {appsMenuOpen && (
                                 <div className="absolute top-full mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2">
-                                    <button onClick={() => { navigate('app-phone'); setAppsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700"> <PhoneIcon className="w-5 h-5 mr-3"/> Phone </button>
-                                    <button onClick={() => { navigate('app-chat'); setAppsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700"> <ChatBubbleLeftRightIcon className="w-5 h-5 mr-3"/> Chat </button>
-                                    <button onClick={() => { navigate('app-localmail'); setAppsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700"> <EnvelopeIcon className="w-5 h-5 mr-3"/> LocalMail </button>
+                                    <button onClick={() => { navigate('app-phone'); setAppsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Phone</button>
+                                    <button onClick={() => { navigate('app-chat'); setAppsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Chat</button>
+                                    <button onClick={() => { navigate('app-localmail'); setAppsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">LocalMail</button>
                                     <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
-                                    <button onClick={() => { navigate('app-contacts'); setAppsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700"> <UserGroupIcon className="w-5 h-5 mr-3"/> Contacts </button>
-                                    <button onClick={() => { navigate('app-notepad'); setAppsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700"> <PencilIcon className="w-5 h-5 mr-3"/> Notepad </button>
-                                    <button onClick={() => { navigate('app-calculator'); setAppsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700"> <CalculatorIcon className="w-5 h-5 mr-3"/> Calculator </button>
+                                    <button onClick={() => { navigate('app-contacts'); setAppsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Contacts</button>
+                                    <button onClick={() => { navigate('app-notepad'); setAppsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Notepad</button>
+                                    <button onClick={() => { navigate('app-calculator'); setAppsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">Calculator</button>
                                 </div>
                             )}
                         </div>
@@ -106,19 +90,13 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                    
                     <div className="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
 
-                    <IconNavButton onClick={() => setIsDark(!isDark)} tooltip={isDark ? "Light Mode" : "Dark Mode"}>
-                        {isDark ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
-                    </IconNavButton>
+                    <NavButton onClick={() => setIsDark(!isDark)} text={isDark ? "Light" : "Dark"} />
 
                     {isLoggedIn && user?.role === UserRole.Admin && (
-                        <IconNavButton onClick={() => navigate('admin')} tooltip="Admin Portal">
-                            <Cog6ToothIcon className="w-5 h-5" />
-                        </IconNavButton>
+                        <NavButton onClick={() => navigate('admin')} text="Admin" />
                     )}
                      {isLoggedIn && (
-                        <IconNavButton onClick={() => navigate('profile')} tooltip="Profile">
-                            <UserCircleIcon className="w-5 h-5" />
-                        </IconNavButton>
+                        <NavButton onClick={() => navigate('profile')} text="Profile" />
                     )}
                     
                     {isLoggedIn ? (

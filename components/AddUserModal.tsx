@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
-import { XMarkIcon } from '@heroicons/react/24/solid';
 
 interface AddUserModalProps {
     isOpen: boolean;
@@ -21,7 +20,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave, us
     useEffect(() => {
         if (userToEdit) {
             setUsername(userToEdit.username);
-            setEmail(userToEdit.email);
+setEmail(userToEdit.email);
             setSip(userToEdit.sipVoice || '');
             setRole(userToEdit.role);
             setFeatures(userToEdit.features);
@@ -76,7 +75,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave, us
             <div className="bg-light-card dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg text-light-text dark:text-white">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-slate-700">
                     <h2 className="text-xl font-bold">{userToEdit ? 'Edit User' : 'Add User'}</h2>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700"><XMarkIcon className="w-6 h-6" /></button>
+                    <button onClick={onClose} className="px-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 font-bold">X</button>
                 </div>
                 <div className="p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
