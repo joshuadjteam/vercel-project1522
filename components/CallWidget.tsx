@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useCall } from '../hooks/useCall';
-import { KeyIcon, PhoneIcon, MicrophoneIcon } from '@heroicons/react/24/solid';
+import { PhoneIcon } from '@heroicons/react/24/solid';
 
 const CallWidget: React.FC = () => {
     const { 
@@ -35,16 +35,6 @@ const CallWidget: React.FC = () => {
         );
     };
 
-    const ActionButton: React.FC<{ onClick: () => void, children: React.ReactNode, className?: string, title: string }> = ({ onClick, children, className, title }) => (
-        <button
-            onClick={onClick}
-            title={title}
-            className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${className}`}
-        >
-            {children}
-        </button>
-    );
-
     return (
         <div className="fixed bottom-10 right-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-300 dark:border-gray-700 rounded-lg shadow-2xl p-4 text-light-text dark:text-white w-72 z-50">
             <div className="flex items-center space-x-3 mb-3">
@@ -60,28 +50,27 @@ const CallWidget: React.FC = () => {
             {showKeypad && <Keypad />}
 
             <div className="grid grid-cols-3 gap-3 mt-4 place-items-center">
-                <ActionButton 
+                <button 
                     onClick={toggleKeypad} 
                     title="Keypad"
-                    className={`${showKeypad ? 'bg-blue-600 text-white' : 'bg-gray-500 dark:bg-gray-600 text-white'} hover:bg-blue-700`}
+                    className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors text-white font-semibold text-sm ${showKeypad ? 'bg-blue-600' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-blue-700`}
                 >
-                    <KeyIcon className="h-6 w-6"/>
-                </ActionButton>
-                 <ActionButton 
+                    Keypad
+                </button>
+                 <button 
                     onClick={endCall} 
                     title="End Call"
-                    className="bg-red-600 hover:bg-red-700 text-white"
+                    className="h-12 w-12 rounded-full flex items-center justify-center transition-colors bg-red-600 hover:bg-red-700 text-white"
                 >
                     <PhoneIcon className="h-6 w-6"/>
-                </ActionButton>
-                <ActionButton 
+                </button>
+                <button 
                     onClick={toggleMute} 
                     title={isMuted ? "Unmute" : "Mute"}
-                    className={`${isMuted ? 'bg-yellow-500' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-yellow-600 text-white relative`}
+                    className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors text-white font-semibold text-sm ${isMuted ? 'bg-yellow-500' : 'bg-gray-500 dark:bg-gray-600'} hover:bg-yellow-600`}
                 >
-                    <MicrophoneIcon className="h-6 w-6"/>
-                    {isMuted && <div className="absolute w-0.5 h-7 bg-white transform rotate-45"></div>}
-                </ActionButton>
+                    {isMuted ? 'Unmute' : 'Mute'}
+                </button>
             </div>
         </div>
     );

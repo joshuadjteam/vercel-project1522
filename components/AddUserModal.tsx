@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
-import { XMarkIcon } from '@heroicons/react/24/solid';
 
 interface AddUserModalProps {
     isOpen: boolean;
@@ -76,8 +75,8 @@ setEmail(userToEdit.email);
             <div className="bg-light-card dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg text-light-text dark:text-white">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-slate-700">
                     <h2 className="text-xl font-bold">{userToEdit ? 'Edit User' : 'Add User'}</h2>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700">
-                        <XMarkIcon className="h-6 w-6" />
+                    <button onClick={onClose} className="px-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 font-bold">
+                        X
                     </button>
                 </div>
                 <div className="p-6 space-y-4">

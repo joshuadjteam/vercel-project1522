@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useCall } from '../hooks/useCall';
-import { PhoneIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { PhoneIcon } from '@heroicons/react/24/solid';
 
 const IncomingCallWidget: React.FC = () => {
     const { incomingCall, answerCall, declineCall } = useCall();
@@ -23,7 +23,6 @@ const IncomingCallWidget: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-3">
                  <button onClick={declineCall} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors">
-                    <XMarkIcon className="h-6 w-6"/>
                     <span>Decline</span>
                 </button>
                 <button onClick={answerCall} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors">

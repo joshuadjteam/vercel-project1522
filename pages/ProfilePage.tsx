@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
-import { UserCircleIcon, CreditCardIcon, SparklesIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
+import { ArrowLeftIcon } from '@heroicons/react/24/solid';
 
 
 interface ProfilePageProps {
@@ -49,14 +49,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ navigate }) => {
         </div>
     );
 
-    const TabButton: React.FC<{ tabName: string, label: string, icon: React.ReactNode }> = ({ tabName, label, icon }) => (
+    const TabButton: React.FC<{ tabName: string, label: string }> = ({ tabName, label }) => (
          <button
             onClick={() => setActiveTab(tabName)}
-            className={`w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-colors font-semibold ${
+            className={`w-full p-3 rounded-lg text-left transition-colors font-semibold ${
                 activeTab === tabName ? 'bg-purple-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/10'
             }`}
         >
-            {icon}
             <span>{label}</span>
         </button>
     );
@@ -77,9 +76,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ navigate }) => {
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-1/4">
                     <div className="space-y-2">
-                        <TabButton tabName="info" label="Info" icon={<UserCircleIcon className="h-6 w-6"/>} />
-                        <TabButton tabName="billing" label="Billing" icon={<CreditCardIcon className="h-6 w-6"/>} />
-                        <TabButton tabName="lynxai" label="LynxAI Portal" icon={<SparklesIcon className="h-6 w-6"/>} />
+                        <TabButton tabName="info" label="Info" />
+                        <TabButton tabName="billing" label="Billing" />
+                        <TabButton tabName="lynxai" label="LynxAI Portal" />
                     </div>
                 </div>
                 <div className="w-full md:w-3/4 bg-black/5 dark:bg-black/20 rounded-lg p-6 min-h-[250px]">

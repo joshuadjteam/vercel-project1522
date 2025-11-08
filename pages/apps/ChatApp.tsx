@@ -4,7 +4,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabaseService } from '../../services/supabaseService';
 import { chatService } from '../../services/chatService';
 import { User, ChatMessage } from '../../types';
-import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 
 const ChatApp: React.FC = () => {
     const { user: currentUser } = useAuth();
@@ -111,8 +110,8 @@ const ChatApp: React.FC = () => {
                                     placeholder="Type a message..."
                                     className="flex-grow bg-gray-200 dark:bg-slate-700 rounded-full py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
-                                <button type="submit" className="ml-3 p-2 bg-blue-600 rounded-full hover:bg-blue-700 disabled:bg-slate-500 text-white">
-                                    <PaperAirplaneIcon className="h-6 w-6"/>
+                                <button type="submit" className="ml-3 px-4 py-2 bg-blue-600 rounded-full hover:bg-blue-700 disabled:bg-slate-500 text-white font-semibold">
+                                    Send
                                 </button>
                             </div>
                         </form>
