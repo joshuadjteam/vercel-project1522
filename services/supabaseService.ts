@@ -4,32 +4,36 @@ import { User, UserRole, Mail, Contact, Note } from '../types';
 
 export const supabaseService = {
     // --- Auth & User Functions ---
-    login: async (id: string, pass: string): Promise<User | null> => {
+    login: async (identifier: string, pass: string): Promise<User | null> => {
+        let emailToLogin = identifier;
+
+        // If the identifier doesn't look like an email, assume it's a username
+        if (!identifier.includes('@')) {
+            const { data: userByUsername, error: usernameError } = await supabase
+                .from('users')
+                .select('email')
+                .eq('username', identifier)
+                .single();
+
+            if (usernameError || !userByUsername) {
+                console.error(`Login Error: Could not find user with username '${identifier}'.`, usernameError);
+                return null; // User does not exist
+            }
+            emailToLogin = userByUsername.email;
+        }
+        
+        // Attempt to sign in with the determined email
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: id, // Assuming email is used as the primary login identifier
+            email: emailToLogin,
             password: pass,
         });
 
         if (authError || !authData.user) {
-            // Try with username as well
-            const { data: userByUsername, error: usernameError } = await supabase.from('users').select('*').eq('username', id).single();
-            if(usernameError || !userByUsername) {
-                console.error('Login Error: Could not find user by email or username.', { authError, usernameError });
-                return null;
-            }
-
-            const { data: secondAuthAttempt, error: secondAuthError } = await supabase.auth.signInWithPassword({
-                email: userByUsername.email,
-                password: pass
-            });
-            if(secondAuthError || !secondAuthAttempt.user) {
-                console.error('Login Error: Password incorrect for user found by username.', secondAuthError);
-                return null;
-            };
-
-            return userByUsername as User;
+            console.error('Login Error: Invalid credentials or authentication issue.', authError);
+            return null; // This is the "Invalid credentials" point
         }
 
+        // On successful login, fetch the complete user profile from our public table
         const { data: userProfile, error: profileError } = await supabase
             .from('users')
             .select('*')
@@ -38,6 +42,7 @@ export const supabaseService = {
 
         if (profileError) {
             console.error('Login Error: Could not fetch user profile after successful login.', profileError);
+            await supabase.auth.signOut(); // Log out the user if their profile is inaccessible
             return null;
         }
 
