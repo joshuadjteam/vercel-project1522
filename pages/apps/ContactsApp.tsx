@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabaseService } from '../../services/supabaseService';
 import { Contact } from '../../types';
 import AddContactModal from '../../components/AddContactModal';
-import { PhoneIcon } from '@heroicons/react/24/solid';
 
 const ContactsApp: React.FC = () => {
     const { user } = useAuth();
@@ -71,7 +69,7 @@ const ContactsApp: React.FC = () => {
                                 <div>
                                     <h3 className="text-xl font-semibold">{contact.name}</h3>
                                     {contact.email && <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 truncate">Email: {contact.email}</p>}
-                                    {contact.phone && <p className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 mt-1"><PhoneIcon className="h-4 w-4 shrink-0"/> <span>{contact.phone}</span></p>}
+                                    {contact.phone && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Tel: {contact.phone}</p>}
                                 </div>
                                 <div className="flex justify-end space-x-2 mt-4">
                                     <button onClick={() => handleEditContact(contact)} className="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white">Edit</button>

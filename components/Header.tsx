@@ -1,8 +1,6 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page, UserRole } from '../types';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
 
 
 interface HeaderProps {
@@ -38,14 +36,13 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
     }, []);
 
 
-    const NavButton: React.FC<{ onClick: () => void, text: string, icon?: React.ReactNode, isActive?: boolean, isIconStyle?: boolean }> = ({ onClick, text, icon, isActive, isIconStyle }) => (
+    const NavButton: React.FC<{ onClick: () => void, text: string, isActive?: boolean }> = ({ onClick, text, isActive }) => (
         <button
             onClick={onClick}
             title={text}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 flex items-center space-x-2 ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/20 hover:text-gray-900 dark:hover:text-white'} ${isIconStyle ? 'aspect-square p-2 !space-x-0' : ''}`}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 flex items-center space-x-2 ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/20 hover:text-gray-900 dark:hover:text-white'}`}
         >
-            {icon}
-            {!isIconStyle && <span>{text}</span>}
+            <span>{text}</span>
         </button>
     );
     
@@ -94,13 +91,13 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                    
                     <div className="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
 
-                    <NavButton onClick={() => setIsDark(!isDark)} text={isDark ? "Light" : "Dark"} icon={isDark ? <SunIcon className="h-5 w-5"/> : <MoonIcon className="h-5 w-5"/>} isIconStyle />
+                    <NavButton onClick={() => setIsDark(!isDark)} text={isDark ? "Light" : "Dark"} />
 
                     {isLoggedIn && user?.role === UserRole.Admin && (
-                        <NavButton onClick={() => navigate('admin')} text="Admin" isIconStyle />
+                        <NavButton onClick={() => navigate('admin')} text="Admin" />
                     )}
                      {isLoggedIn && (
-                        <NavButton onClick={() => navigate('profile')} text="Profile" isIconStyle />
+                        <NavButton onClick={() => navigate('profile')} text="Profile" />
                     )}
                     
                     {isLoggedIn ? (

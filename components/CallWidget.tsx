@@ -1,7 +1,5 @@
-
 import React from 'react';
 import { useCall } from '../hooks/useCall';
-import { PhoneIcon } from '@heroicons/react/24/solid';
 
 const CallWidget: React.FC = () => {
     const { 
@@ -60,9 +58,9 @@ const CallWidget: React.FC = () => {
                  <button 
                     onClick={endCall} 
                     title="End Call"
-                    className="h-12 w-12 rounded-full flex items-center justify-center transition-colors bg-red-600 hover:bg-red-700 text-white"
+                    className="h-12 w-12 rounded-full flex items-center justify-center transition-colors bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
                 >
-                    <PhoneIcon className="h-6 w-6"/>
+                    End
                 </button>
                 <button 
                     onClick={toggleMute} 
