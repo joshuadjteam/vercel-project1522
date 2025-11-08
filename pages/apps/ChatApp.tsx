@@ -17,7 +17,7 @@ const ChatApp: React.FC = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             const allUsers = await database.getUsers();
-            setUsers(allUsers.filter(u => u.username !== currentUser?.username));
+            setUsers(allUsers.filter(u => u.id !== currentUser?.id));
         };
         fetchUsers();
     }, [currentUser]);
@@ -31,20 +31,34 @@ const ChatApp: React.FC = () => {
     const handleUserSelect = async (user: User) => {
         if (!currentUser) return;
         
-        // Unsubscribe from previous chat
         if (currentChatId.current) {
             chatService.unsubscribe(currentChatId.current);
         }
         
         setSelectedUser(user);
-        const chatId = chatService.getChatId(currentUser.username, user.username);
+        const chatId = chatService.getChatId(currentUser.id, user.id);
         currentChatId.current = chatId;
 
-        const history = await chatService.getChatHistory(currentUser.username, user.username);
+        const history = await chatService.getChatHistory(currentUser.id, user.id);
         setMessages(history);
 
-        chatService.subscribe(chatId, (newMessage) => {
-            setMessages(prevMessages => [...prevMessages, newMessage]);
+        chatService.subscribe(chatId, (newMessagePayload) => {
+            // Reconstruct the message object with full user details for display
+            const sender = users.find(u => u.id === newMessagePayload.sender_id) || (currentUser.id === newMessagePayload.sender_id ? currentUser : null);
+            const receiver = users.find(u => u.id === newMessagePayload.receiver_id) || (currentUser.id === newMessagePayload.receiver_id ? currentUser : null);
+
+            if (sender && receiver) {
+                const fullMessage: ChatMessage = {
+                    id: newMessagePayload.id,
+                    text: newMessagePayload.text,
+                    timestamp: new Date(newMessagePayload.timestamp),
+                    senderId: newMessagePayload.sender_id,
+                    receiverId: newMessagePayload.receiver_id,
+                    sender,
+                    receiver
+                };
+                setMessages(prevMessages => [...prevMessages, fullMessage]);
+            }
         });
     };
     
@@ -52,9 +66,21 @@ const ChatApp: React.FC = () => {
         e.preventDefault();
         if (newMessage.trim() === '' || !currentUser || !selectedUser) return;
 
+        // Optimistically update the UI
+        const optimisticMessage: ChatMessage = {
+            id: Date.now(), // temp ID
+            text: newMessage,
+            timestamp: new Date(),
+            senderId: currentUser.id,
+            receiverId: selectedUser.id,
+            sender: currentUser,
+            receiver: selectedUser,
+        };
+        setMessages(prev => [...prev, optimisticMessage]);
+
         chatService.sendMessage({
-            sender: currentUser.username,
-            receiver: selectedUser.username,
+            senderId: currentUser.id,
+            receiverId: selectedUser.id,
             text: newMessage,
         });
 
@@ -92,8 +118,8 @@ const ChatApp: React.FC = () => {
                         </div>
                         <div className="flex-grow p-4 overflow-y-auto space-y-4">
                             {messages.map(msg => (
-                                <div key={msg.id} className={`flex ${msg.sender === currentUser?.username ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-md lg:max-w-lg px-4 py-2 rounded-2xl ${msg.sender === currentUser?.username ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-slate-600 rounded-bl-none'}`}>
+                                <div key={msg.id} className={`flex ${msg.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-md lg:max-w-lg px-4 py-2 rounded-2xl ${msg.senderId === currentUser?.id ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-slate-600 rounded-bl-none'}`}>
                                         <p className="text-sm">{msg.text}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-300 mt-1 text-right">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                     </div>

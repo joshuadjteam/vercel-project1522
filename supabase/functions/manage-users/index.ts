@@ -52,7 +52,7 @@ serve(async (req) => {
             username: username,
             role: role,
             sip_voice: sip_voice,
-            features: features, // The features object is now passed directly.
+            features: features,
           })
           .select()
           .single();
@@ -68,6 +68,8 @@ serve(async (req) => {
       case 'deleteUser': {
         const { auth_id } = payload;
         
+        // Deleting the auth user will cascade and delete the public user profile
+        // due to the foreign key constraint with ON DELETE CASCADE.
         const { data, error } = await supabaseAdmin.auth.admin.deleteUser(auth_id);
         
         if (error) throw error;

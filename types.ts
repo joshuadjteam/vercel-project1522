@@ -1,3 +1,4 @@
+
 export enum UserRole {
     Admin = 'Admin',
     Standard = 'Standard',
@@ -21,10 +22,13 @@ export interface User {
 
 export interface ChatMessage {
     id: number;
-    sender: string;
-    receiver: string;
+    senderId: number;
+    receiverId: number;
     text: string;
     timestamp: Date;
+    // Prisma will include these when we query
+    sender: User; 
+    receiver: User;
 }
 
 export interface Mail {

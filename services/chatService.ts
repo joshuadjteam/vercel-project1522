@@ -1,26 +1,45 @@
+
 import { supabase } from '../supabaseClient';
-import { ChatMessage } from '../types';
+import { ChatMessage, User } from '../types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
-// Manages active channels to prevent duplicates and allow unsubscribing
 const activeChannels = new Map<string, RealtimeChannel>();
+
+// Helper to map DB user to app User
+const mapDbUserToUser = (dbUser: any): User => {
+    if (!dbUser) return {} as User; // Or handle as an error
+    return {
+        id: dbUser.id,
+        auth_id: dbUser.auth_id,
+        username: dbUser.username,
+        email: dbUser.email,
+        role: dbUser.role,
+        sipVoice: dbUser.sip_voice,
+        features: dbUser.features,
+    };
+};
 
 export const chatService = {
     /**
-     * Creates a consistent, order-independent chat ID for two users.
+     * Creates a consistent, order-independent chat ID from two user IDs.
      */
-    getChatId(user1: string, user2: string): string {
-        return ['chat', ...[user1, user2].sort()].join('--');
+    getChatId(userId1: number, userId2: number): string {
+        return ['chat', ...[userId1, userId2].sort()].join('--');
     },
 
     /**
-     * Retrieves the message history for a given chat from the database.
+     * Retrieves the message history for a chat using Supabase, including sender and receiver user data.
      */
-    async getChatHistory(user1: string, user2: string): Promise<ChatMessage[]> {
-        const chatId = this.getChatId(user1, user2);
+    async getChatHistory(userId1: number, userId2: number): Promise<ChatMessage[]> {
+        const chatId = this.getChatId(userId1, userId2);
+        
         const { data, error } = await supabase
-            .from('messages')
-            .select('*')
+            .from('chat_messages')
+            .select(`
+                *,
+                sender:senderId(*),
+                receiver:receiverId(*)
+            `)
             .eq('chat_id', chatId)
             .order('timestamp', { ascending: true });
 
@@ -28,31 +47,42 @@ export const chatService = {
             console.error('Error fetching chat history:', error);
             return [];
         }
-        return data as ChatMessage[];
+
+        return data.map((msg: any) => ({
+            id: msg.id,
+            senderId: msg.senderId,
+            receiverId: msg.receiverId,
+            text: msg.text,
+            timestamp: new Date(msg.timestamp),
+            sender: mapDbUserToUser(msg.sender),
+            receiver: mapDbUserToUser(msg.receiver),
+        }));
     },
     
     /**
-     * Sends a new message by inserting it into the database.
+     * Sends a new message using Supabase.
      */
-    async sendMessage(messageData: Omit<ChatMessage, 'id' | 'timestamp'>): Promise<void> {
-        const chatId = this.getChatId(messageData.sender, messageData.receiver);
-        const { error } = await supabase.from('messages').insert([{
-            chat_id: chatId,
-            sender: messageData.sender,
-            receiver: messageData.receiver,
-            text: messageData.text,
-        }]);
-
+    async sendMessage(messageData: { senderId: number; receiverId: number; text: string }): Promise<void> {
+        const chatId = this.getChatId(messageData.senderId, messageData.receiverId);
+        
+        const { error } = await supabase
+            .from('chat_messages')
+            .insert({
+                chat_id: chatId,
+                senderId: messageData.senderId,
+                receiverId: messageData.receiverId,
+                text: messageData.text,
+            });
+        
         if (error) {
             console.error('Error sending message:', error);
         }
     },
     
     /**
-     * Subscribes a component to receive real-time messages for a chat.
+     * Subscribes to real-time messages for a chat from the 'chat_messages' table.
      */
-    subscribe(chatId: string, callback: (message: ChatMessage) => void): void {
-        // If already subscribed, do nothing
+    subscribe(chatId: string, callback: (message: any) => void): void {
         if (activeChannels.has(chatId)) {
             return;
         }
@@ -62,9 +92,9 @@ export const chatService = {
         channel
             .on(
                 'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
+                { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `chat_id=eq.${chatId}` },
                 (payload) => {
-                    callback(payload.new as ChatMessage);
+                    callback(payload.new);
                 }
             )
             .subscribe((status) => {
@@ -77,7 +107,7 @@ export const chatService = {
     },
     
     /**
-     * Unsubscribes from a chat to prevent memory leaks and unnecessary connections.
+     * Unsubscribes from a chat to prevent memory leaks.
      */
     unsubscribe(chatId: string): void {
         const channel = activeChannels.get(chatId);

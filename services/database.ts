@@ -2,27 +2,38 @@
 import { supabase } from '../supabaseClient';
 import { User, UserRole, Mail, Contact, Note } from '../types';
 
+// Helper to map DB user to app User
+const mapDbUserToUser = (dbUser: any): User => {
+    if (!dbUser) return null as unknown as User;
+    return {
+        id: dbUser.id,
+        auth_id: dbUser.auth_id,
+        username: dbUser.username,
+        email: dbUser.email,
+        role: dbUser.role,
+        sipVoice: dbUser.sip_voice,
+        features: dbUser.features,
+    };
+};
+
 export const database = {
-    // --- Auth & User Functions ---
+    // --- Auth & User Functions (using Supabase) ---
     login: async (identifier: string, pass: string): Promise<User | null> => {
         let emailToLogin = identifier;
-
-        // If the identifier doesn't look like an email, assume it's a username
         if (!identifier.includes('@')) {
-            const { data: userByUsername, error: usernameError } = await supabase
+            const { data: userByUsername, error } = await supabase
                 .from('users')
                 .select('email')
                 .eq('username', identifier)
                 .single();
-
-            if (usernameError || !userByUsername) {
-                console.error(`Login Error: Could not find user with username '${identifier}'.`, usernameError);
-                return null; // User does not exist
+            
+            if (error || !userByUsername) {
+                console.error(`Login Error: Could not find user with username '${identifier}'.`, error);
+                return null;
             }
             emailToLogin = userByUsername.email;
         }
-        
-        // Attempt to sign in with the determined email
+
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: emailToLogin,
             password: pass,
@@ -30,27 +41,13 @@ export const database = {
 
         if (authError || !authData.user) {
             console.error('Login Error: Invalid credentials or authentication issue.', authError);
-            return null; // This is the "Invalid credentials" point
-        }
-
-        // On successful login, fetch the complete user profile from our public table
-        const { data: userProfile, error: profileError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('auth_id', authData.user.id)
-            .single();
-
-        if (profileError) {
-            console.error('Login Error: Could not fetch user profile after successful login.', profileError);
-            await supabase.auth.signOut(); // Log out the user if their profile is inaccessible
             return null;
         }
 
-        return userProfile as User | null;
+        return await database.getUserProfile(authData.user.id);
     },
 
     getGuestUser: (): Promise<User> => {
-        // Guest user remains a client-side mock
         return Promise.resolve({
             id: 0,
             username: 'Guest User',
@@ -60,18 +57,14 @@ export const database = {
             features: { chat: false, ai: true, mail: false }
         });
     },
-
+    
     getUserProfile: async (auth_id: string): Promise<User | null> => {
-        const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('auth_id', auth_id)
-            .single();
+        const { data, error } = await supabase.from('users').select('*').eq('auth_id', auth_id).single();
         if (error) {
             console.error('Error fetching user profile:', error);
             return null;
         }
-        return data as User;
+        return mapDbUserToUser(data);
     },
 
     getUsers: async (): Promise<User[]> => {
@@ -80,22 +73,20 @@ export const database = {
             console.error('Error fetching users:', error);
             return [];
         }
-        return data as User[];
+        return data.map(mapDbUserToUser);
     },
     
     addUser: async (userData: Partial<User> & { password?: string }): Promise<{ user: User | null; error: string | null }> => {
-        const payload = {
-            action: 'createUser',
-            email: userData.email,
-            password: userData.password,
-            username: userData.username,
-            role: userData.role,
-            sip_voice: userData.sipVoice,
-            features: userData.features, // Pass the features object directly.
-        };
-        
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: payload
+            body: {
+                action: 'createUser',
+                email: userData.email,
+                password: userData.password,
+                username: userData.username,
+                role: userData.role,
+                sip_voice: userData.sipVoice,
+                features: userData.features,
+            }
         });
 
         if (error) {
@@ -103,25 +94,30 @@ export const database = {
             return { user: null, error: error.message };
         }
         if (data.error) {
-             console.error('Error from manage-users function (addUser):', data.error);
+            console.error('Error from manage-users function (addUser):', data.error);
             return { user: null, error: data.error };
         }
-        return { user: data.user, error: null };
+        return { user: mapDbUserToUser(data.user), error: null };
     },
 
     updateUser: async (userData: Partial<User>): Promise<User | null> => {
-        const updateData = {
-            username: userData.username,
-            role: userData.role,
-            sip_voice: userData.sipVoice,
-            features: userData.features,
-        }
-        const { data, error } = await supabase.from('users').update(updateData).eq('id', userData.id).select();
-        if (error || !data) {
+        const { data, error } = await supabase
+            .from('users')
+            .update({
+                username: userData.username,
+                role: userData.role,
+                sip_voice: userData.sipVoice,
+                features: userData.features,
+            })
+            .eq('id', userData.id)
+            .select()
+            .single();
+
+        if (error) {
             console.error('Error updating user:', error);
             return null;
         }
-        return data[0] as User;
+        return mapDbUserToUser(data);
     },
     
     deleteUser: async (userToDelete: User): Promise<{ error: string | null }> => {
@@ -131,10 +127,7 @@ export const database = {
             return { error: err };
         }
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: {
-                action: 'deleteUser',
-                auth_id: userToDelete.auth_id
-            }
+            body: { action: 'deleteUser', auth_id: userToDelete.auth_id }
         });
         if (error) {
             console.error('Error invoking manage-users function (deleteUser):', error);
@@ -150,33 +143,36 @@ export const database = {
     getUserByUsername: async (username: string): Promise<User | null> => {
         const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
         if (error) {
-             console.error(`Error fetching user by username '${username}':`, error);
+            console.error('Error getting user by username:', error);
             return null;
         }
-        return data as User;
+        return mapDbUserToUser(data);
     },
 
     // --- Mail Service Functions ---
     getMailsForUser: async (username: string): Promise<{ inbox: Mail[], sent: Mail[] }> => {
-        const { data, error } = await supabase.from('mails').select('*').or(`recipient.eq.${username},sender.eq.${username}`);
+        const { data, error } = await supabase
+            .from('mails')
+            .select('*')
+            .or(`recipient.eq.${username},sender.eq.${username}`)
+            .order('timestamp', { ascending: false });
+        
         if (error) {
-             console.error('Error fetching mails for user:', error);
+            console.error("Error fetching mails:", error);
             return { inbox: [], sent: [] };
         }
-        
-        const inbox = data.filter(m => m.recipient === username).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        const sent = data.filter(m => m.sender === username).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        
+        const inbox = data.filter(m => m.recipient === username);
+        const sent = data.filter(m => m.sender === username);
         return { inbox, sent };
     },
 
     sendMail: async (mailData: Omit<Mail, 'id' | 'timestamp' | 'read'>): Promise<Mail | null> => {
-        const { data, error } = await supabase.from('mails').insert([mailData]).select();
-        if (error || !data) {
+        const { data, error } = await supabase.from('mails').insert(mailData).select().single();
+        if (error) {
             console.error('Error sending mail:', error);
             return null;
         }
-        return data[0] as Mail;
+        return data;
     },
     
     markMailAsRead: async (mailId: number): Promise<boolean> => {
@@ -202,21 +198,21 @@ export const database = {
     },
 
     addContact: async (contactData: Omit<Contact, 'id'>): Promise<Contact | null> => {
-        const { data, error } = await supabase.from('contacts').insert([contactData]).select();
-        if (error || !data) {
+        const { data, error } = await supabase.from('contacts').insert(contactData).select().single();
+        if (error) {
             console.error('Error adding contact:', error);
             return null;
         }
-        return data[0];
+        return data;
     },
 
     updateContact: async (contactData: Contact): Promise<Contact | null> => {
-        const { data, error } = await supabase.from('contacts').update(contactData).eq('id', contactData.id).select();
-        if (error || !data) {
+        const { data, error } = await supabase.from('contacts').update(contactData).eq('id', contactData.id).select().single();
+        if (error) {
             console.error('Error updating contact:', error);
             return null;
         }
-        return data[0];
+        return data;
     },
 
     deleteContact: async (contactId: number): Promise<boolean> => {
@@ -239,17 +235,21 @@ export const database = {
             console.error('Error fetching notes:', error);
             return [];
         }
-        return data.map(n => ({...n, createdAt: new Date(n.created_at)}));
+        return data.map(n => ({ ...n, createdAt: new Date(n.created_at), content: n.content || '' }));
     },
 
     addNote: async (noteData: Omit<Note, 'id' | 'createdAt'>): Promise<Note | null> => {
-        const payload = { owner: noteData.owner, title: noteData.title, content: noteData.content };
-        const { data, error } = await supabase.from('notes').insert([payload]).select();
-        if (error || !data) {
+        const { data, error } = await supabase
+            .from('notes')
+            .insert({ owner: noteData.owner, title: noteData.title, content: noteData.content })
+            .select()
+            .single();
+        
+        if (error) {
             console.error('Error adding note:', error);
             return null;
         }
-        return {...data[0], createdAt: new Date(data[0].created_at)};
+        return { ...data, createdAt: new Date(data.created_at), content: data.content || '' };
     },
 
     updateNote: async (noteData: Note): Promise<Note | null> => {
@@ -257,12 +257,14 @@ export const database = {
             .from('notes')
             .update({ title: noteData.title, content: noteData.content })
             .eq('id', noteData.id)
-            .select();
-        if (error || !data) {
+            .select()
+            .single();
+
+        if (error) {
             console.error('Error updating note:', error);
             return null;
         }
-        return {...data[0], createdAt: new Date(data[0].created_at)};
+        return { ...data, createdAt: new Date(data.created_at), content: data.content || '' };
     },
 
     deleteNote: async (noteId: number): Promise<boolean> => {
