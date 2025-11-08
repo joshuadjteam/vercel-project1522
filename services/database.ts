@@ -33,8 +33,8 @@ export const database = {
                 };
                 return { user: adminUser, error: null };
             } else {
-                // Return a generic error to prevent username enumeration
-                return { user: null, error: 'Invalid credentials.' };
+                // Provide a specific error for the local admin
+                return { user: null, error: "Incorrect password for user 'daradmin'." };
             }
         }
 
@@ -47,9 +47,9 @@ export const database = {
                 .single();
             
             if (error || !userByUsername) {
-                console.error(`Login attempt for non-existent username: '${identifier}'.`, error);
-                // Return a generic error to prevent username enumeration
-                return { user: null, error: 'Invalid credentials.' };
+                console.warn(`Login attempt for non-existent username: '${identifier}'.`);
+                // Provide a specific error about the user not being found.
+                return { user: null, error: `Could not find user with username '${identifier}'.` };
             }
             emailToLogin = userByUsername.email;
         }
@@ -60,8 +60,8 @@ export const database = {
         });
 
         if (authError || !authData.user) {
-            // Supabase error messages can be helpful (e.g., rate limiting), so we pass them on.
-            console.error('Login Error: Invalid credentials or authentication issue.', authError);
+            // Supabase error messages are usually specific enough (e.g., "Invalid login credentials").
+            console.error('Login Error:', authError);
             return { user: null, error: authError?.message || 'Invalid credentials.' };
         }
 
