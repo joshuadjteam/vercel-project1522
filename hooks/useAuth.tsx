@@ -24,7 +24,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const userProfile = await database.getUserProfile(session.user.id);
+                const userProfile = await database.getUserProfile();
                 if (userProfile) {
                     setUser(userProfile);
                     setIsLoggedIn(true);
@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {
-                database.getUserProfile(session.user.id).then((profile) => {
+                database.getUserProfile().then((profile) => {
                     if (profile) {
                         setUser(profile);
                         setIsLoggedIn(true);

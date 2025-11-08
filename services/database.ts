@@ -37,22 +37,20 @@ export const database = {
             }
         }
 
-        // Directly use the provided identifier as the email for login.
-        // This avoids a pre-authentication query that is likely blocked by RLS.
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: email,
             password: pass,
         });
 
         if (authError || !authData.user) {
-            // Supabase error messages are usually specific enough (e.g., "Invalid login credentials").
             console.error('Login Error:', authError);
             return { user: null, error: authError?.message || 'Invalid login credentials.' };
         }
 
-        const userProfile = await database.getUserProfile(authData.user.id);
+        // After successful sign-in, the session is set. Now, fetch the profile
+        // using the secure edge function to bypass RLS.
+        const userProfile = await database.getUserProfile();
         if (!userProfile) {
-            // This case would be unusual if auth succeeds, but good to handle.
             return { user: null, error: 'User profile not found after successful authentication.' };
         }
 
@@ -70,13 +68,21 @@ export const database = {
         });
     },
     
-    getUserProfile: async (auth_id: string): Promise<User | null> => {
-        const { data, error } = await supabase.from('users').select('*').eq('auth_id', auth_id).single();
+    getUserProfile: async (): Promise<User | null> => {
+        // Invokes a secure edge function to fetch the user's profile.
+        // This bypasses client-side RLS policies that might prevent profile access.
+        const { data, error } = await supabase.functions.invoke('get-user-profile');
+    
         if (error) {
-            console.error('Error fetching user profile:', error);
+            console.error('Error invoking get-user-profile function:', error);
             return null;
         }
-        return mapDbUserToUser(data);
+        if (data.error) {
+            console.error('Error from get-user-profile function:', data.error);
+            return null;
+        }
+    
+        return mapDbUserToUser(data.user);
     },
 
     getUsers: async (): Promise<User[]> => {
