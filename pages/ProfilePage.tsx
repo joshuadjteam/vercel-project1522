@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
-import { UserCircleIcon, CreditCardIcon, SparklesIcon, ArrowLeftStartOnRectangleIcon } from '@heroicons/react/24/solid';
+import { UserCircleIcon, CreditCardIcon, SparklesIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/solid';
 
 
 interface ProfilePageProps {
@@ -69,7 +69,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ navigate }) => {
                     <p className="text-gray-600 dark:text-gray-300">This is your personal Lynix portal.</p>
                 </div>
                 <button onClick={handleSignOut} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center space-x-2">
-                    <ArrowLeftStartOnRectangleIcon className="h-5 w-5"/>
+                    <ArrowLeftOnRectangleIcon className="h-5 w-5"/>
                     <span>Sign Out</span>
                 </button>
             </div>

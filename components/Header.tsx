@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page, UserRole } from '../types';
-import { HomeIcon, InformationCircleIcon, SunIcon, MoonIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightEndOnRectangleIcon, ArrowLeftStartOnRectangleIcon, Squares2X2Icon, GlobeAltIcon } from '@heroicons/react/24/solid';
+import { HomeIcon, InformationCircleIcon, SunIcon, MoonIcon, UserCircleIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, ArrowLeftOnRectangleIcon, Squares2X2Icon, GlobeAltIcon } from '@heroicons/react/24/solid';
 
 
 interface HeaderProps {
@@ -105,12 +105,12 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                     
                     {isLoggedIn ? (
                         <button onClick={handleSignOut} title="Sign Out" className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-red-600 text-white hover:bg-red-700 flex items-center space-x-2">
-                           <ArrowLeftStartOnRectangleIcon className="h-5 w-5"/>
+                           <ArrowLeftOnRectangleIcon className="h-5 w-5"/>
                            <span>Sign Out</span>
                         </button>
                     ) : (
                         <button onClick={() => navigate('signin')} title="Sign On" className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700 flex items-center space-x-2">
-                            <ArrowRightEndOnRectangleIcon className="h-5 w-5"/>
+                            <ArrowRightOnRectangleIcon className="h-5 w-5"/>
                             <span>Sign On</span>
                         </button>
                     )}
