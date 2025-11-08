@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
@@ -19,14 +18,19 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
         setError('');
         setIsLoading(true);
         try {
-            const user = await login(id, password);
+            const { user, error: loginError } = await login(id, password);
             if (user) {
                 navigate('profile');
             } else {
-                setError('Invalid credentials. Please try again.');
+                let displayError = loginError || 'Invalid credentials. Please try again.';
+                if (loginError && (loginError.toLowerCase().includes('rate limit') || loginError.toLowerCase().includes('seconds'))) {
+                    displayError = 'Too many sign-in attempts. Please wait a moment before trying again.';
+                }
+                setError(displayError);
             }
-        } catch (err) {
-            setError('An error occurred during login.');
+        } catch (err: any) {
+            console.error("Unexpected sign-in error:", err);
+            setError(err.message || 'An unexpected error occurred during login.');
         } finally {
             setIsLoading(false);
         }

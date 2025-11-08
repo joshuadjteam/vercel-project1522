@@ -7,7 +7,7 @@ interface AuthContextType {
     user: User | null;
     isLoggedIn: boolean;
     isLoading: boolean;
-    login: (id: string, pass: string) => Promise<User | null>;
+    login: (id: string, pass: string) => Promise<{ user: User | null, error: string | null }>;
     loginAsGuest: () => Promise<User | null>;
     logout: () => void;
 }
@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, []);
 
-    const login = async (id: string, pass: string): Promise<User | null> => {
+    const login = async (id: string, pass: string): Promise<{ user: User | null, error: string | null }> => {
         // Special case for local admin login. This user will not have access to Supabase-dependent features.
         if (id.toLowerCase() === 'daradmin' && pass === 'admin') {
             console.warn("Logging in as local administrator. API-dependent features will be disabled.");
@@ -69,16 +69,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
             setUser(adminUser);
             setIsLoggedIn(true);
-            return adminUser;
+            return { user: adminUser, error: null };
         }
 
         // Proceed with regular database login
-        const userProfile = await database.login(id, pass);
+        const { user: userProfile, error } = await database.login(id, pass);
         if (userProfile) {
             setUser(userProfile);
             setIsLoggedIn(true);
         }
-        return userProfile;
+        return { user: userProfile, error };
     };
     
     const loginAsGuest = async (): Promise<User | null> => {
