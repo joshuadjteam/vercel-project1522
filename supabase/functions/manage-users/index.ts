@@ -1,3 +1,4 @@
+
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, linting, and type checking.
@@ -51,7 +52,7 @@ serve(async (req) => {
             username: username,
             role: role,
             sip_voice: sip_voice,
-            features: features,
+            features: JSON.parse(features), // FIX: Parse the features string back into an object.
           })
           .select()
           .single();
