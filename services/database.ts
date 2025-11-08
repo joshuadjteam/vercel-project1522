@@ -43,7 +43,7 @@ export const database = {
             const { data: userByUsername, error } = await supabase
                 .from('users')
                 .select('email')
-                .eq('username', identifier)
+                .ilike('username', identifier)
                 .single();
             
             if (error || !userByUsername) {
