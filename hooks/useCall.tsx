@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
 import { User, IncomingCall, UserRole } from '../types';
@@ -27,7 +27,6 @@ const CallContext = createContext<CallContextType | undefined>(undefined);
 
 export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { user: currentUser } = useAuth();
-    const [callChannel, setCallChannel] = useState<RealtimeChannel | null>(null);
 
     const [isCalling, setIsCalling] = useState(false);
     const [callee, setCallee] = useState<User | null>(null);
@@ -37,64 +36,92 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [showKeypad, setShowKeypad] = useState(false);
     const [keypadInput, setKeypadInput] = useState('');
 
-    const resetCallStates = () => {
+    // Refs to hold the latest state for use inside the stable subscription callbacks.
+    // This prevents the useEffect from re-subscribing on every state change, fixing the "glitch".
+    const callChannelRef = useRef<RealtimeChannel | null>(null);
+    const isCallingRef = useRef(isCalling);
+    const calleeRef = useRef(callee);
+    const incomingCallRef = useRef(incomingCall);
+
+    useEffect(() => { isCallingRef.current = isCalling; }, [isCalling]);
+    useEffect(() => { calleeRef.current = callee; }, [callee]);
+    useEffect(() => { incomingCallRef.current = incomingCall; }, [incomingCall]);
+
+
+    const resetCallStates = useCallback(() => {
         setIsMuted(false);
         setShowKeypad(false);
         setKeypadInput('');
-    };
+    }, []);
     
+    // This effect establishes the user's personal channel for receiving call events.
+    // It only re-runs when the user logs in or out.
     useEffect(() => {
         if (!currentUser?.auth_id) {
-            if (callChannel) {
-                supabase.removeChannel(callChannel);
-                setCallChannel(null);
+            if (callChannelRef.current) {
+                supabase.removeChannel(callChannelRef.current);
+                callChannelRef.current = null;
             }
             return;
         }
 
         const channelId = `calls--${currentUser.auth_id}`;
-        // Avoid re-subscribing if already on the correct channel
-        if (callChannel?.topic === channelId) return;
+        if (callChannelRef.current?.topic === channelId) return;
 
-        // Clean up previous channel if it exists
-        if (callChannel) supabase.removeChannel(callChannel);
+        if (callChannelRef.current) {
+            supabase.removeChannel(callChannelRef.current);
+        }
 
         const newChannel = supabase.channel(channelId);
 
         newChannel
             .on('broadcast', { event: 'incoming-call' }, ({ payload }) => {
-                if (payload.callerId !== currentUser.auth_id && !isCalling && !incomingCall) {
+                if (payload.callerId !== currentUser.auth_id && !isCallingRef.current && !incomingCallRef.current) {
                     setIncomingCall({ callerName: payload.callerName, callerId: payload.callerId });
                 }
             })
             .on('broadcast', { event: 'call-answered' }, ({ payload }) => {
-                if (callee?.auth_id === payload.calleeId) {
-                    setCallStatus(`Connected to ${callee.username}`);
+                if (calleeRef.current?.auth_id === payload.calleeId) {
+                    setCallStatus(`Connected to ${calleeRef.current.username}`);
                 }
             })
             .on('broadcast', { event: 'call-declined' }, ({ payload }) => {
-                 if (callee?.auth_id === payload.calleeId) {
-                    setCallStatus(`${callee.username} declined the call.`);
-                    setTimeout(() => endCall(false), 2000);
+                 if (calleeRef.current?.auth_id === payload.calleeId) {
+                    setCallStatus(`${calleeRef.current.username} declined the call.`);
+                    setTimeout(() => {
+                        setIsCalling(false);
+                        setCallee(null);
+                        setCallStatus('');
+                        setIncomingCall(null);
+                        resetCallStates();
+                    }, 2000);
                 }
             })
             .on('broadcast', { event: 'call-ended' }, () => {
-                 if (isCalling) {
+                 if (isCallingRef.current) {
                     setCallStatus('Call ended.');
-                    setTimeout(() => endCall(false), 1000);
+                    setTimeout(() => {
+                        setIsCalling(false);
+                        setCallee(null);
+                        setCallStatus('');
+                        setIncomingCall(null);
+                        resetCallStates();
+                    }, 1000);
                 }
             })
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') console.log(`Subscribed to personal call channel: ${channelId}`);
             });
         
-        setCallChannel(newChannel);
+        callChannelRef.current = newChannel;
 
         return () => {
-            supabase.removeChannel(newChannel);
-            setCallChannel(null);
+            if (callChannelRef.current) {
+                supabase.removeChannel(callChannelRef.current);
+                callChannelRef.current = null;
+            }
         };
-    }, [currentUser, isCalling, callee, incomingCall]);
+    }, [currentUser, resetCallStates]);
 
     const startCall = (userToCall: User) => {
         if (!currentUser || !userToCall.auth_id) return;
@@ -135,8 +162,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const answerCall = () => {
         if (!incomingCall || !currentUser?.auth_id) return;
 
-        // The caller becomes the callee for this user. We create a partial User object
-        // since we don't have the full profile, but have what's needed for call management.
         const callerAsCallee: User = { 
             id: 0, // placeholder
             username: incomingCall.callerName,
