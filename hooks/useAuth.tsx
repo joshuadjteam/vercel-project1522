@@ -24,27 +24,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(profile);
         setIsLoggedIn(!!profile);
     };
+    
+    useEffect(() => {
+        // onAuthStateChange is the single source of truth for the user's session state.
+        // It fires on initial load and whenever the auth state changes.
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user) {
+                // User is authenticated, now get their application profile.
+                const { profile, error } = await database.getUserProfile(session.user.id);
+
+                if (error || !profile) {
+                    // This is a critical error state: user exists in Supabase auth but not in our public.users table
+                    // or the profile fetch failed. To prevent a broken UI, sign them out.
+                    console.error('User signed in but profile fetch failed. Signing out.', error);
+                    await supabase.auth.signOut();
+                    updateUserState(null);
+                } else {
+                    updateUserState(profile);
+                }
+            } else {
+                // User is not authenticated.
+                updateUserState(null);
+            }
+            // The initial check is complete, so we can stop showing the global loader.
+            setIsLoading(false);
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, []);
+
 
     const login = async (email: string, pass: string): Promise<{ error: string | null }> => {
         setIsLoading(true);
-        try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password: pass,
-            });
+        // We only initiate the sign-in. The onAuthStateChange listener will handle the result.
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password: pass,
+        });
 
-            if (error) {
-                return { error: error.message };
-            }
-            // onAuthStateChange will handle setting the user and isLoggedIn state
-            return { error: null };
-        } finally {
-            // This might happen before onAuthStateChange completes, but that's okay.
-            // The UI will show loading during login and then react to the state change.
-            setIsLoading(false);
+        if (error) {
+            setIsLoading(false); // Crucial: stop loading on immediate failure.
+            return { error: error.message };
         }
+
+        // On success, onAuthStateChange will be triggered. It will handle fetching the
+        // user profile and setting isLoading to false once everything is done.
+        return { error: null };
     };
-    
+
     const loginAsGuest = async (): Promise<User | null> => {
         setIsLoading(true);
         const guestUser = await database.getGuestUser();
@@ -54,28 +83,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = async () => {
+        // onAuthStateChange will handle clearing the user state when sign-out is complete.
         await supabase.auth.signOut();
-        updateUserState(null);
     };
-
-    useEffect(() => {
-        // onAuthStateChange is the single source of truth.
-        // It fires once on page load with the initial session state.
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (session?.user) {
-                const { profile } = await database.getUserProfile(session.user.id);
-                updateUserState(profile);
-            } else {
-                updateUserState(null);
-            }
-            // The initial loading is finished after the first check.
-            setIsLoading(false);
-        });
-
-        return () => {
-            authListener.subscription.unsubscribe();
-        };
-    }, []);
 
 
     return (
