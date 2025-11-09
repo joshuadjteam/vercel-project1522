@@ -44,9 +44,10 @@ serve(async (req) => {
         contents: `You are a helpful voice assistant for a web portal called Lynix. Keep your response concise, friendly, and conversational. User said: "${userText}"`,
     });
     
-    // FIX: The type of `geminiResponse.text` can be inferred as 'unknown' in Deno,
-    // causing a type error. Casting it directly to a string resolves this.
-    let aiTextResponse = String(geminiResponse.text ?? '');
+    // FIX: The type of `geminiResponse.text` can be inferred as `unknown` in Deno.
+    // To fix the resulting type error, we construct the text response directly from the candidate parts.
+    const candidate = geminiResponse.candidates?.[0];
+    let aiTextResponse = (candidate?.content?.parts ?? []).map((part) => part.text).join('');
     // Add a fallback for empty responses to make the function more robust
     if (!aiTextResponse || aiTextResponse.trim() === '') {
         aiTextResponse = "I'm sorry, I don't have a response for that. Please try asking another way.";
