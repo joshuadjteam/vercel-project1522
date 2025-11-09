@@ -20,7 +20,23 @@ const ContactsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-
 const NotepadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
 const CalculatorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m-6 4h6m-6 4h6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" /></svg>;
 const PaintIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4Zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343a2 2 0 01-1.414-.586l-2.828-2.828a2 2 0 00-1.414-.586H7M9 11h2" /></svg>;
+const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16m4 6H4" /></svg>;
 
+const useIsMobile = (breakpoint = 768) => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < breakpoint);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < breakpoint);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [breakpoint]);
+
+    return isMobile;
+};
 
 interface HeaderProps {
     navigate: (page: Page) => void;
@@ -32,12 +48,20 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
     const { isLoggedIn, user, logout } = useAuth();
     const [appsMenuOpen, setAppsMenuOpen] = useState(false);
     const [webMenuOpen, setWebMenuOpen] = useState(false);
+    const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const isMobile = useIsMobile();
 
     const appsMenuRef = useRef<HTMLDivElement>(null);
     const webMenuRef = useRef<HTMLDivElement>(null);
+    const settingsMenuRef = useRef<HTMLDivElement>(null);
+    const mobileMenuRef = useRef<HTMLDivElement>(null);
+    const mobileToggleRef = useRef<HTMLButtonElement>(null);
 
     const handleSignOut = () => {
         logout();
+        setMobileMenuOpen(false);
+        setSettingsMenuOpen(false);
         navigate('home');
     };
 
@@ -48,6 +72,12 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
             }
             if (webMenuRef.current && !webMenuRef.current.contains(event.target as Node)) {
                 setWebMenuOpen(false);
+            }
+            if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target as Node)) {
+                setSettingsMenuOpen(false);
+            }
+            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node) && !mobileToggleRef.current?.contains(event.target as Node)) {
+                setMobileMenuOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -73,6 +103,132 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
         </button>
     );
 
+    const renderDesktopNav = () => (
+        <div className="flex items-center space-x-2">
+            <div className="relative" ref={webMenuRef}>
+                <NavButton onClick={() => setWebMenuOpen(!webMenuOpen)} text="Web" icon={<WebIcon />} />
+                {webMenuOpen && (
+                     <div className="absolute top-full right-0 mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2 z-20">
+                        <a href="https://darshanjoshuakesavaruban.fwscheckout.com/" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">
+                            Buy a Product
+                        </a>
+                        <a href="https://sites.google.com/gcp.lynixity.x10.bz/myportal/home" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">
+                            MyPortal
+                        </a>
+                     </div>
+                )}
+            </div>
+             {isLoggedIn && (
+                 <div className="relative" ref={appsMenuRef}>
+                    <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" icon={<AppsIcon />} />
+                    {appsMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2 z-20">
+                            <AppDropdownButton onClick={() => { navigate('app-phone'); setAppsMenuOpen(false); }} icon={<PhoneIcon />} text="Phone" />
+                            <AppDropdownButton onClick={() => { navigate('app-chat'); setAppsMenuOpen(false); }} icon={<ChatIcon />} text="Chat" />
+                            <AppDropdownButton onClick={() => { navigate('app-localmail'); setAppsMenuOpen(false); }} icon={<MailIcon />} text="LocalMail" />
+                            <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
+                            <AppDropdownButton onClick={() => { navigate('app-contacts'); setAppsMenuOpen(false); }} icon={<ContactsIcon />} text="Contacts" />
+                            <AppDropdownButton onClick={() => { navigate('app-notepad'); setAppsMenuOpen(false); }} icon={<NotepadIcon />} text="Notepad" />
+                            <AppDropdownButton onClick={() => { navigate('app-calculator'); setAppsMenuOpen(false); }} icon={<CalculatorIcon />} text="Calculator" />
+                            <AppDropdownButton onClick={() => { navigate('app-paint'); setAppsMenuOpen(false); }} icon={<PaintIcon />} text="Paint" />
+                        </div>
+                    )}
+                </div>
+             )}
+            <NavButton onClick={() => navigate('contact')} text="Contact" icon={<ContactIcon />} />
+            <NavButton onClick={() => navigate('home')} text="Home" icon={<HomeIcon />} />
+           
+            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+
+            {isLoggedIn ? (
+                <div className="relative" ref={settingsMenuRef}>
+                    <NavButton onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} text="Settings" icon={<SettingsIcon />} />
+                    {settingsMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-56 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2 z-20">
+                             <AppDropdownButton onClick={() => { navigate('profile'); setSettingsMenuOpen(false); }} icon={<ProfileIcon />} text={`Profile (${user?.username})`} />
+                             {user?.role === UserRole.Admin && (
+                                <AppDropdownButton onClick={() => { navigate('admin'); setSettingsMenuOpen(false); }} icon={<AdminIcon />} text="Admin Portal" />
+                            )}
+                            <AppDropdownButton onClick={() => setIsDark(!isDark)} icon={isDark ? <LightIcon /> : <DarkIcon />} text={`Theme: ${isDark ? "Dark" : "Light"}`} />
+                            <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
+                             <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50 flex items-center space-x-3">
+                                <SignOutIcon />
+                                <span>Sign Out</span>
+                             </button>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <button onClick={() => navigate('signin')} title="Sign On" className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700 flex items-center space-x-2">
+                    <SignInIcon />
+                    <span className="hidden sm:inline">Sign On</span>
+                </button>
+            )}
+        </div>
+    );
+
+    const renderMobileNav = () => (
+        <div className="relative">
+            <button ref={mobileToggleRef} onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-md hover:bg-black/10 dark:hover:bg-white/20">
+                <MenuIcon />
+            </button>
+            {mobileMenuOpen && (
+                <div ref={mobileMenuRef} className="absolute top-full right-0 mt-2 w-64 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2 z-50">
+                    <AppDropdownButton onClick={() => { navigate('home'); setMobileMenuOpen(false); }} icon={<HomeIcon />} text="Home" />
+                    <AppDropdownButton onClick={() => { navigate('contact'); setMobileMenuOpen(false); }} icon={<ContactIcon />} text="Contact" />
+                    <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
+
+                    {isLoggedIn && (
+                        <>
+                            <h3 className="px-4 pt-2 pb-1 text-xs font-semibold text-gray-500">Apps</h3>
+                            <AppDropdownButton onClick={() => { navigate('app-phone'); setMobileMenuOpen(false); }} icon={<PhoneIcon />} text="Phone" />
+                            <AppDropdownButton onClick={() => { navigate('app-chat'); setMobileMenuOpen(false); }} icon={<ChatIcon />} text="Chat" />
+                            <AppDropdownButton onClick={() => { navigate('app-localmail'); setMobileMenuOpen(false); }} icon={<MailIcon />} text="LocalMail" />
+                            <AppDropdownButton onClick={() => { navigate('app-contacts'); setMobileMenuOpen(false); }} icon={<ContactsIcon />} text="Contacts" />
+                            <AppDropdownButton onClick={() => { navigate('app-notepad'); setMobileMenuOpen(false); }} icon={<NotepadIcon />} text="Notepad" />
+                            <AppDropdownButton onClick={() => { navigate('app-calculator'); setMobileMenuOpen(false); }} icon={<CalculatorIcon />} text="Calculator" />
+                            <AppDropdownButton onClick={() => { navigate('app-paint'); setMobileMenuOpen(false); }} icon={<PaintIcon />} text="Paint" />
+                            <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
+                        </>
+                    )}
+                    
+                    <h3 className="px-4 pt-2 pb-1 text-xs font-semibold text-gray-500">Web</h3>
+                    <a href="https://darshanjoshuakesavaruban.fwscheckout.com/" target="_blank" rel="noopener noreferrer" className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center space-x-3">
+                        <span>Buy a Product</span>
+                    </a>
+                    <a href="https://sites.google.com/gcp.lynixity.x10.bz/myportal/home" target="_blank" rel="noopener noreferrer" className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center space-x-3">
+                        <span>MyPortal</span>
+                    </a>
+                    <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
+
+                    {isLoggedIn && (
+                        <>
+                            <h3 className="px-4 pt-2 pb-1 text-xs font-semibold text-gray-500">Settings</h3>
+                            <AppDropdownButton onClick={() => { navigate('profile'); setMobileMenuOpen(false); }} icon={<ProfileIcon />} text="Profile" />
+                            {user?.role === UserRole.Admin && <AppDropdownButton onClick={() => { navigate('admin'); setMobileMenuOpen(false); }} icon={<AdminIcon />} text="Admin" />}
+                            <AppDropdownButton onClick={() => { setIsDark(!isDark); setMobileMenuOpen(false); }} icon={isDark ? <LightIcon /> : <DarkIcon />} text={`Theme: ${isDark ? "Dark" : "Light"}`} />
+                            <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
+                        </>
+                    )}
+
+                    <div className="p-2">
+                    {isLoggedIn ? (
+                        <button onClick={handleSignOut} className="w-full px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-red-600 text-white hover:bg-red-700 flex items-center justify-center space-x-2">
+                           <SignOutIcon />
+                           <span>Sign Out</span>
+                        </button>
+                    ) : (
+                        <button onClick={() => { navigate('signin'); setMobileMenuOpen(false); }} className="w-full px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center space-x-2">
+                            <SignInIcon />
+                            <span>Sign On</span>
+                        </button>
+                    )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
     return (
         <header className="w-full bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm text-light-text dark:text-dark-text shadow-lg z-50">
             <div className="container mx-auto px-4 py-2 flex justify-between items-center">
@@ -80,66 +236,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                     <div className="w-6 h-6 bg-blue-500 rounded-full"></div>
                     <span className="text-xl font-bold">Lynix</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                    {/* Web Menu */}
-                    <div className="relative" ref={webMenuRef}>
-                        <NavButton onClick={() => setWebMenuOpen(!webMenuOpen)} text="Web" icon={<WebIcon />} />
-                        {webMenuOpen && (
-                             <div className="absolute top-full right-0 mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2">
-                                <a href="https://darshanjoshuakesavaruban.fwscheckout.com/" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">
-                                    Buy a Product
-                                </a>
-                                <a href="https://sites.google.com/gcp.lynixity.x10.bz/myportal/home" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700">
-                                    MyPortal
-                                </a>
-                             </div>
-                        )}
-                    </div>
-
-                    {/* Apps Menu */}
-                     {isLoggedIn && (
-                         <div className="relative" ref={appsMenuRef}>
-                            <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" icon={<AppsIcon />} />
-                            {appsMenuOpen && (
-                                <div className="absolute top-full right-0 mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2">
-                                    <AppDropdownButton onClick={() => { navigate('app-phone'); setAppsMenuOpen(false); }} icon={<PhoneIcon />} text="Phone" />
-                                    <AppDropdownButton onClick={() => { navigate('app-chat'); setAppsMenuOpen(false); }} icon={<ChatIcon />} text="Chat" />
-                                    <AppDropdownButton onClick={() => { navigate('app-localmail'); setAppsMenuOpen(false); }} icon={<MailIcon />} text="LocalMail" />
-                                    <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
-                                    <AppDropdownButton onClick={() => { navigate('app-contacts'); setAppsMenuOpen(false); }} icon={<ContactsIcon />} text="Contacts" />
-                                    <AppDropdownButton onClick={() => { navigate('app-notepad'); setAppsMenuOpen(false); }} icon={<NotepadIcon />} text="Notepad" />
-                                    <AppDropdownButton onClick={() => { navigate('app-calculator'); setAppsMenuOpen(false); }} icon={<CalculatorIcon />} text="Calculator" />
-                                    <AppDropdownButton onClick={() => { navigate('app-paint'); setAppsMenuOpen(false); }} icon={<PaintIcon />} text="Paint" />
-                                </div>
-                            )}
-                        </div>
-                     )}
-                    <NavButton onClick={() => navigate('contact')} text="Contact" icon={<ContactIcon />} />
-                    <NavButton onClick={() => navigate('home')} text="Home" icon={<HomeIcon />} />
-                   
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
-
-                    <NavButton onClick={() => setIsDark(!isDark)} text={isDark ? "Light" : "Dark"} icon={isDark ? <LightIcon /> : <DarkIcon />} />
-
-                    {isLoggedIn && user?.role === UserRole.Admin && (
-                        <NavButton onClick={() => navigate('admin')} text="Admin" icon={<AdminIcon />} />
-                    )}
-                     {isLoggedIn && (
-                        <NavButton onClick={() => navigate('profile')} text="Profile" icon={<ProfileIcon />} />
-                    )}
-                    
-                    {isLoggedIn ? (
-                        <button onClick={handleSignOut} title="Sign Out" className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-red-600 text-white hover:bg-red-700 flex items-center space-x-2">
-                           <SignOutIcon />
-                           <span className="hidden sm:inline">Sign Out</span>
-                        </button>
-                    ) : (
-                        <button onClick={() => navigate('signin')} title="Sign On" className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700 flex items-center space-x-2">
-                            <SignInIcon />
-                            <span className="hidden sm:inline">Sign On</span>
-                        </button>
-                    )}
-                </div>
+                {isMobile ? renderMobileNav() : renderDesktopNav()}
             </div>
         </header>
     );
