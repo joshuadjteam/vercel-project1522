@@ -319,15 +319,19 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
         
-        const restartListening = (errorMsg: string) => {
+        const restartListening = (errorMsg: string, shouldRetry = true) => {
              if (isCallingRef.current) {
                 setCallStatus(errorMsg);
-                setTimeout(() => {
-                    if (isCallingRef.current && !isMutedRef.current) {
-                        speechRecognitionRef.current?.start();
-                        setCallStatus("Listening...");
-                    }
-                }, 1500);
+                if (shouldRetry) {
+                    setTimeout(() => {
+                        if (isCallingRef.current && !isMutedRef.current) {
+                            speechRecognitionRef.current?.start();
+                            setCallStatus("Listening...");
+                        } else if (isCallingRef.current && isMutedRef.current) {
+                            setCallStatus("Muted");
+                        }
+                    }, 2000);
+                }
             }
         };
 
@@ -338,19 +342,23 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
     
-        const base64Audio = await geminiService.getAITextToSpeech(aiTextResponse);
+        const ttsResult = await geminiService.getAITextToSpeech(aiTextResponse);
     
-        if (base64Audio && aiAudioRefs.current.outputAudioContext && isCallingRef.current) {
+        if (ttsResult.audio && aiAudioRefs.current.outputAudioContext && isCallingRef.current) {
             try {
-                const audioBuffer = await decodeAudioData(decode(base64Audio), aiAudioRefs.current.outputAudioContext, 24000, 1);
+                const audioBuffer = await decodeAudioData(decode(ttsResult.audio), aiAudioRefs.current.outputAudioContext, 24000, 1);
                 playAudio(audioBuffer);
             } catch (e) {
                 console.error("Error decoding or playing TTS audio:", e);
                 restartListening("Audio Error. Retrying...");
             }
         } else {
-            console.error("Failed to get TTS audio.");
-            restartListening("AI Voice Error. Retrying...");
+            console.error("Failed to get TTS audio. Reason:", ttsResult.error);
+            if (ttsResult.error === 'api_key_missing') {
+                restartListening("AI Service Unavailable", false);
+            } else {
+                restartListening("AI Voice Error. Retrying...");
+            }
         }
     }, [playAudio]);
     
