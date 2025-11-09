@@ -1,11 +1,11 @@
 
-
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCall } from '../../hooks/useCall';
 import { database } from '../../services/database';
+import VoiceAssistantWidget from '../../components/VoiceAssistantWidget';
 
-const Dialer: React.FC = () => {
+const Dialer: React.FC<{ onLaunchAssistant: () => void }> = ({ onLaunchAssistant }) => {
     const { user: currentUser } = useAuth();
     const { startP2PCall, isCalling } = useCall();
     const [calleeInput, setCalleeInput] = useState('');
@@ -64,6 +64,15 @@ const Dialer: React.FC = () => {
             <button onClick={handleCall} className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-md hover:bg-green-700 transition-colors">
                 Call
             </button>
+            <div className="relative flex items-center justify-center my-2">
+                <div className="flex-grow border-t border-gray-300 dark:border-purple-700/50"></div>
+                <span className="flex-shrink mx-4 text-xs text-gray-500 dark:text-purple-300">OR</span>
+                <div className="flex-grow border-t border-gray-300 dark:border-purple-700/50"></div>
+            </div>
+            <button onClick={onLaunchAssistant} className="w-full bg-cyan-600 text-white font-bold py-3 px-4 rounded-md hover:bg-cyan-700 transition-colors flex items-center justify-center space-x-2">
+                <span>🎤</span>
+                <span>AI Voice Assistant</span>
+            </button>
 
             {errorStatus && <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 text-center">{errorStatus}</p>}
         </div>
@@ -71,13 +80,18 @@ const Dialer: React.FC = () => {
 }
 
 const PhoneApp: React.FC = () => {
+    const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = useState(false);
+    
     return (
-        <div className="w-full h-full flex items-center justify-center">
-            <div className="w-full max-w-sm bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-purple-600/50 rounded-2xl shadow-2xl p-6 text-light-text dark:text-white">
-                 <h1 className="text-2xl font-bold mb-4 text-center text-purple-600 dark:text-purple-400">Phone Dialer</h1>
-                <Dialer />
+        <>
+            <div className="w-full h-full flex items-center justify-center">
+                <div className="w-full max-w-sm bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-purple-600/50 rounded-2xl shadow-2xl p-6 text-light-text dark:text-white">
+                     <h1 className="text-2xl font-bold mb-4 text-center text-purple-600 dark:text-purple-400">Phone Dialer</h1>
+                    <Dialer onLaunchAssistant={() => setIsVoiceAssistantOpen(true)} />
+                </div>
             </div>
-        </div>
+            <VoiceAssistantWidget isOpen={isVoiceAssistantOpen} onClose={() => setIsVoiceAssistantOpen(false)} />
+        </>
     );
 };
 

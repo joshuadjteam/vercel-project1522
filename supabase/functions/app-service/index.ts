@@ -59,33 +59,48 @@ serve(async (req)=>{
     switch(resource){
       // --- VOICE SERVICE ---
       case 'voice-service': {
-        console.log('Voice service invoked.'); // Added for debugging
+        console.log('Voice service invoked.');
+
+        // Fetch secrets from the new database table
+        const { data: secrets, error: secretsError } = await supabaseAdmin
+          .from('function_secrets')
+          .select('name, value');
+
+        if (secretsError) {
+          console.error("Error fetching secrets from DB:", secretsError);
+          throw new Error("Could not retrieve function secrets from the database.");
+        }
+
+        const secretsMap = new Map(secrets.map(s => [s.name, s.value]));
+        const geminiApiKey = secretsMap.get('API_KEY');
+        const elevenLabsApiKey = secretsMap.get('ELEVENLABS_API_KEY');
+
+        if (!geminiApiKey) {
+            throw new Error("Gemini API key not found in the function_secrets table.");
+        }
+        if (!elevenLabsApiKey) {
+            throw new Error("ElevenLabs API key not found in the function_secrets table.");
+        }
+
         const { text: userText } = payload;
         if (!userText) {
           throw new Error("Text prompt is required.");
         }
 
         // 1. Get AI Response from Gemini
-        const geminiApiKey = Deno.env.get('API_KEY');
-        if (!geminiApiKey) {
-            throw new Error("Gemini API key not configured.");
-        }
         const ai = new GoogleGenAI({ apiKey: geminiApiKey });
         const geminiResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: `You are a helpful voice assistant for a web portal called Lynix. Keep your response concise, friendly, and conversational. User said: "${userText}"`,
         });
         
-        let aiTextResponse = geminiResponse.text;
+        // FIX: Safely convert the unknown response text to a string.
+        let aiTextResponse = String(geminiResponse.text ?? '');
         if (!aiTextResponse || aiTextResponse.trim() === '') {
             aiTextResponse = "I'm sorry, I don't have a response for that. Please try asking another way.";
         }
         
         // 2. Convert Gemini's text to speech using ElevenLabs
-        const elevenLabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
-        if (!elevenLabsApiKey) {
-            throw new Error("ElevenLabs API key not configured.");
-        }
         const voiceId = '21m00Tcm4TlvDq8ikWAM'; // Example voice ID (Rachel)
 
         const elevenLabsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {

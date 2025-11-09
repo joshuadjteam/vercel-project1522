@@ -1,10 +1,9 @@
+
 import React, { useState } from 'react';
 import HelpModal from './HelpModal';
-import VoiceAssistantWidget from './VoiceAssistantWidget';
 
 const Footer: React.FC = () => {
     const [isHelpModalOpen, setHelpModalOpen] = useState(false);
-    const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = useState(false);
 
     return (
         <>
@@ -18,14 +17,6 @@ const Footer: React.FC = () => {
                 </div>
             </footer>
             <div className="fixed bottom-5 right-5 flex flex-col items-center space-y-3 z-50">
-                <button
-                    onClick={() => setIsVoiceAssistantOpen(true)}
-                    className="w-14 h-14 bg-cyan-500 dark:bg-cyan-600 rounded-full flex items-center justify-center text-white hover:bg-cyan-600 dark:hover:bg-cyan-700 transition-colors shadow-lg group text-3xl"
-                    aria-label="Open Voice Assistant"
-                >
-                    🎤
-                    <span className="absolute right-full mr-3 hidden group-hover:block bg-light-text dark:bg-dark-card text-light-card dark:text-dark-text text-xs rounded py-1 px-2 whitespace-nowrap">Voice Assistant</span>
-                </button>
                 <button 
                     onClick={() => setHelpModalOpen(true)} 
                     className="w-14 h-14 bg-indigo-600 dark:bg-purple-600 rounded-full flex items-center justify-center text-white hover:bg-indigo-700 dark:hover:bg-purple-700 transition-colors shadow-lg group text-3xl font-bold"
@@ -36,7 +27,6 @@ const Footer: React.FC = () => {
                 </button>
             </div>
             <HelpModal isOpen={isHelpModalOpen} onClose={() => setHelpModalOpen(false)} />
-            <VoiceAssistantWidget isOpen={isVoiceAssistantOpen} onClose={() => setIsVoiceAssistantOpen(false)} />
         </>
     );
 };
