@@ -1,9 +1,11 @@
-
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SmtpClient } from 'https://deno.land/x/smtp@v0.7.0/mod.ts';
-import { ImapClient } from 'https://deno.land/x/imap@v0.3.2/mod.ts';
+// Use a stable Node.js library for IMAP via npm specifier for better compatibility
+import imaps from "npm:imap-simple";
+import { simpleParser } from "npm:mailparser";
+import { GoogleGenAI } from 'npm:@google/genai';
+
 
 declare const Deno: any;
 
@@ -20,6 +22,18 @@ const getChatId = (userId1, userId2)=>{
     ].sort()
   ].join('--');
 };
+
+// Helper to convert ArrayBuffer to Base64
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 serve(async (req)=>{
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
@@ -43,6 +57,70 @@ serve(async (req)=>{
     let data;
     let error;
     switch(resource){
+      // --- VOICE SERVICE ---
+      case 'voice-service': {
+        console.log('Voice service invoked.'); // Added for debugging
+        const { text: userText } = payload;
+        if (!userText) {
+          throw new Error("Text prompt is required.");
+        }
+
+        // 1. Get AI Response from Gemini
+        const geminiApiKey = Deno.env.get('API_KEY');
+        if (!geminiApiKey) {
+            throw new Error("Gemini API key not configured.");
+        }
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+        const geminiResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `You are a helpful voice assistant for a web portal called Lynix. Keep your response concise, friendly, and conversational. User said: "${userText}"`,
+        });
+        
+        let aiTextResponse = geminiResponse.text;
+        if (!aiTextResponse || aiTextResponse.trim() === '') {
+            aiTextResponse = "I'm sorry, I don't have a response for that. Please try asking another way.";
+        }
+        
+        // 2. Convert Gemini's text to speech using ElevenLabs
+        const elevenLabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
+        if (!elevenLabsApiKey) {
+            throw new Error("ElevenLabs API key not configured.");
+        }
+        const voiceId = '21m00Tcm4TlvDq8ikWAM'; // Example voice ID (Rachel)
+
+        const elevenLabsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'audio/mpeg',
+                'Content-Type': 'application/json',
+                'xi-api-key': elevenLabsApiKey,
+            },
+            body: JSON.stringify({
+                text: aiTextResponse,
+                model_id: 'eleven_monolingual_v1',
+                voice_settings: {
+                    stability: 0.5,
+                    similarity_boost: 0.5,
+                },
+            }),
+        });
+        
+        if (!elevenLabsResponse.ok) {
+            const errorBody = await elevenLabsResponse.text();
+            console.error("ElevenLabs Error:", errorBody);
+            throw new Error('Failed to get audio from ElevenLabs.');
+        }
+
+        // 3. Return audio data to frontend
+        const audioArrayBuffer = await elevenLabsResponse.arrayBuffer();
+        const base64Audio = arrayBufferToBase64(audioArrayBuffer);
+        const audioDataUrl = `data:audio/mpeg;base64,${base64Audio}`;
+
+        return new Response(JSON.stringify({ audioDataUrl, transcription: aiTextResponse }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+      }
       // --- NOTES ---
       case 'notes':
         switch(action){
@@ -166,7 +244,7 @@ serve(async (req)=>{
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
               status: 200,
             });
-          case 'sync':
+          case 'sync': {
             const { accountId } = payload;
             const { data: account, error: accError } = await supabaseAdmin
                 .from('mail_accounts')
@@ -176,45 +254,67 @@ serve(async (req)=>{
                 .single();
             if (accError || !account) throw new Error('Account not found or permission denied.');
             
-            const imapClient = new ImapClient({
-                hostname: account.imap_server,
-                port: account.imap_port,
-                username: account.imap_user,
-                password: account.imap_pass,
-                secure: account.imap_encryption === 'SSL/TLS',
-            });
-            await imapClient.connect();
-            await imapClient.select('INBOX');
+            const config = {
+                imap: {
+                    user: account.imap_user,
+                    password: account.imap_pass,
+                    host: account.imap_server,
+                    port: account.imap_port,
+                    tls: account.imap_encryption === 'SSL/TLS',
+                    authTimeout: 5000,
+                }
+            };
 
-            const messages = await imapClient.fetch('1:*', { envelope: true, body: ['TEXT'] });
+            const connection = await imaps.connect(config);
+            await connection.openBox('INBOX');
+
+            const searchCriteria = ['ALL'];
+            const fetchOptions = {
+                bodies: [''], // Fetch the entire raw message
+                markSeen: false
+            };
+
+            const messages = await connection.search(searchCriteria, fetchOptions);
             let newMailCount = 0;
-            for await (const msg of messages) {
-                const { count } = await supabaseAdmin
+
+            for (const item of messages) {
+                const mailSource = item.parts.find(part => part.which === '')?.body;
+                if (!mailSource) continue;
+
+                const parsed = await simpleParser(mailSource);
+                const timestamp = parsed.date ? new Date(parsed.date) : new Date();
+
+                const { count: existingCount } = await supabaseAdmin
                     .from('mails')
                     .select('*', { count: 'exact', head: true })
                     .eq('account_id', account.id)
-                    .eq('subject', msg.envelope.subject)
-                    .eq('timestamp', new Date(msg.envelope.date).toISOString());
-                if (count === 0) {
-                    const fromAddress = msg.envelope.from?.[0];
-                    const senderString = fromAddress ? `${fromAddress.name} <${fromAddress.mailbox}@${fromAddress.host}>` : 'Unknown Sender';
+                    .eq('subject', parsed.subject || '(no subject)')
+                    .eq('timestamp', timestamp.toISOString());
+                
+                if (existingCount === 0) {
+                    const from = parsed.from?.text || 'Unknown Sender';
+                    const subject = parsed.subject || '(no subject)';
+                    const body = parsed.text || (parsed.html ? "[HTML content - view in original client]" : '[No content]');
+
                     await supabaseAdmin.from('mails').insert({
                         account_id: account.id,
-                        sender: senderString,
-                        recipient: userProfile.username, // Belongs to this user's inbox
-                        subject: msg.envelope.subject,
-                        body: msg.body.text,
-                        timestamp: new Date(msg.envelope.date),
+                        sender: from,
+                        recipient: userProfile.username,
+                        subject: subject,
+                        body: body,
+                        timestamp: timestamp.toISOString(),
                         read: false,
                     });
                     newMailCount++;
                 }
             }
-            await imapClient.close();
+
+            connection.end();
             return new Response(JSON.stringify({ message: `Synced ${newMailCount} new message(s).` }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 200
             });
+          }
           case 'markAsRead':
             ({ error } = await supabaseAdmin.from('mails').update({
               read: true

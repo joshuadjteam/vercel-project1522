@@ -1,5 +1,3 @@
-
-
 import { supabase } from '../supabaseClient';
 import { User, UserRole, Mail, Contact, Note, CallRecord, MailAccount } from '../types';
 
@@ -154,6 +152,19 @@ export const database = {
             return fallbackStats;
         }
         return data.stats || fallbackStats;
+    },
+
+    // --- Voice Service ---
+    getVoiceResponse: async (text: string): Promise<{ audioDataUrl: string, transcription: string }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'voice-service', payload: { text } }
+        });
+        if (error || (data && data.error)) {
+            const errorMessage = error?.message || data?.error || 'Unknown error invoking voice service.';
+            console.error('Error invoking voice-service:', errorMessage);
+            throw new Error(errorMessage);
+        }
+        return data;
     },
 
     // --- Mail Service Functions ---
