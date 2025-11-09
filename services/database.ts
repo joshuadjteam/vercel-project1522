@@ -46,10 +46,12 @@ export const database = {
             return { user: null, error: authError?.message || 'Invalid credentials provided.' };
         }
         
-        const userProfile = await database.getUserProfile(authData.user.id);
-        if (!userProfile) {
-            const errorMessage = 'Authentication successful, but failed to retrieve user profile.';
+        const { profile: userProfile, error: profileError } = await database.getUserProfile(authData.user.id);
+        if (profileError || !userProfile) {
+            const errorMessage = `Authentication successful, but failed to retrieve user profile: ${profileError}`;
             console.error(errorMessage);
+            // Automatically sign out the user to prevent them from being stuck in a broken state.
+            await supabase.auth.signOut();
             return { user: null, error: errorMessage };
         }
 
@@ -67,13 +69,14 @@ export const database = {
         });
     },
     
-    getUserProfile: async (auth_id: string): Promise<User | null> => {
+    getUserProfile: async (auth_id: string): Promise<{ profile: User | null, error: string | null }> => {
         const { data, error } = await supabase.from('users').select('*').eq('auth_id', auth_id).single();
         if (error) {
-            console.error('Error fetching user profile:', error);
-            return null;
+            const errorMessage = `Error fetching user profile: ${error.message}`;
+            console.error(errorMessage);
+            return { profile: null, error: errorMessage };
         }
-        return mapDbUserToUser(data);
+        return { profile: mapDbUserToUser(data), error: null };
     },
 
     getUsers: async (): Promise<User[]> => {
