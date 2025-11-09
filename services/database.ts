@@ -30,15 +30,28 @@ export const database = {
     },
     
     getUserProfile: async (auth_id: string): Promise<{ profile: User | null, error: string | null }> => {
-        const { data, error } = await supabase.from('users').select('*').eq('auth_id', auth_id).single();
+        const { data, error } = await supabase.functions.invoke('get-user-profile', {
+            body: { auth_id }
+        });
+
         if (error) {
-            // Do not log "No rows found" as an error, as it's an expected case for missing profiles.
-            if (!error.message.includes('No rows found')) {
-                 console.error(`Error fetching user profile: ${error.message}`);
-            }
+            console.error(`Error invoking get-user-profile function: ${error.message}`);
             return { profile: null, error: error.message };
         }
-        return { profile: mapDbUserToUser(data), error: null };
+
+        // The function itself might return an error property in its response data
+        if (data.error) {
+            console.error(`Error from get-user-profile function: ${data.error}`);
+            return { profile: null, error: data.error };
+        }
+        
+        // Assuming the function returns the profile under a 'profile' key
+        if (!data.profile) {
+            const noProfileError = 'User profile not found.';
+            return { profile: null, error: noProfileError };
+        }
+
+        return { profile: mapDbUserToUser(data.profile), error: null };
     },
 
     getUsers: async (): Promise<User[]> => {
