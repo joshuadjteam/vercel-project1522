@@ -18,8 +18,9 @@ const mapDbUserToUser = (dbUser: any): User => {
 
 export const database = {
     // --- Auth & User Functions (using Supabase) ---
-    login: async (identifier: string, pass: string): Promise<User | null> => {
+    login: async (identifier: string, pass: string): Promise<{ user: User | null, error: string | null }> => {
         let emailToLogin = identifier;
+        // If identifier is not an email, assume it's a username and fetch the email
         if (!identifier.includes('@')) {
             const { data: userByUsername, error } = await supabase
                 .from('users')
@@ -28,8 +29,9 @@ export const database = {
                 .single();
             
             if (error || !userByUsername) {
-                console.error(`Login Error: Could not find user with username '${identifier}'.`, error);
-                return null;
+                const errorMessage = `User with login '${identifier}' not found.`;
+                console.error(errorMessage, error);
+                return { user: null, error: errorMessage };
             }
             emailToLogin = userByUsername.email;
         }
@@ -41,10 +43,17 @@ export const database = {
 
         if (authError || !authData.user) {
             console.error('Login Error: Invalid credentials or authentication issue.', authError);
-            return null;
+            return { user: null, error: authError?.message || 'Invalid credentials provided.' };
+        }
+        
+        const userProfile = await database.getUserProfile(authData.user.id);
+        if (!userProfile) {
+            const errorMessage = 'Authentication successful, but failed to retrieve user profile.';
+            console.error(errorMessage);
+            return { user: null, error: errorMessage };
         }
 
-        return await database.getUserProfile(authData.user.id);
+        return { user: userProfile, error: null };
     },
 
     getGuestUser: (): Promise<User> => {

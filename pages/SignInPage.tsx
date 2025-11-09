@@ -19,14 +19,14 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
         setError('');
         setIsLoading(true);
         try {
-            const user = await login(id, password);
+            const { user, error: loginError } = await login(id, password);
             if (user) {
                 navigate('profile');
             } else {
-                setError('Invalid credentials. Please try again.');
+                setError(loginError || 'An unknown error occurred.');
             }
-        } catch (err) {
-            setError('An error occurred during login.');
+        } catch (err: any) {
+            setError(err.message || 'An unexpected error occurred during login.');
         } finally {
             setIsLoading(false);
         }

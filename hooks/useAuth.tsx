@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { database } from '../services/database';
@@ -7,7 +8,7 @@ interface AuthContextType {
     user: User | null;
     isLoggedIn: boolean;
     isLoading: boolean;
-    login: (id: string, pass: string) => Promise<User | null>;
+    login: (id: string, pass: string) => Promise<{ user: User | null; error: string | null }>;
     loginAsGuest: () => Promise<User | null>;
     logout: () => void;
 }
@@ -54,7 +55,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, []);
 
-    const login = async (id: string, pass: string): Promise<User | null> => {
+    const login = async (id: string, pass: string): Promise<{ user: User | null; error: string | null }> => {
         // Check for local administrator account
         if (id.toLowerCase() === 'administrator' && pass === 'DJTeam2013') {
             const adminUser: User = {
@@ -71,16 +72,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
             setUser(adminUser);
             setIsLoggedIn(true);
-            return adminUser;
+            return { user: adminUser, error: null };
         }
 
         // Proceed with regular database login
-        const userProfile = await database.login(id, pass);
+        const { user: userProfile, error } = await database.login(id, pass);
         if (userProfile) {
             setUser(userProfile);
             setIsLoggedIn(true);
+            return { user: userProfile, error: null };
         }
-        return userProfile;
+        return { user: null, error };
     };
     
     const loginAsGuest = async (): Promise<User | null> => {
