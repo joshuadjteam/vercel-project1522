@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect, useRef } from 'react';
 import { useCall } from '../hooks/useCall';
 
 const CallWidget: React.FC = () => {
@@ -6,8 +7,17 @@ const CallWidget: React.FC = () => {
         isCalling, callee, callStatus, endCall,
         isMuted, toggleMute, 
         showKeypad, toggleKeypad,
-        keypadInput, handleKeypadInput
+        keypadInput, handleKeypadInput,
+        remoteStream
     } = useCall();
+    
+    const remoteAudioRef = useRef<HTMLAudioElement>(null);
+
+    useEffect(() => {
+        if (remoteStream && remoteAudioRef.current) {
+            remoteAudioRef.current.srcObject = remoteStream;
+        }
+    }, [remoteStream]);
 
     if (!isCalling) {
         return null;
@@ -70,6 +80,7 @@ const CallWidget: React.FC = () => {
                     {isMuted ? 'Unmute' : 'Mute'}
                 </button>
             </div>
+            <audio ref={remoteAudioRef} autoPlay playsInline />
         </div>
     );
 };

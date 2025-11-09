@@ -29,16 +29,16 @@ export const database = {
     },
     
     getUserProfile: async (auth_id: string): Promise<{ profile: User | null, error: string | null }> => {
-        // The user's auth_id is determined from the JWT in the Authorization header by the edge function.
         const { data, error } = await supabase.functions.invoke('get-user-profile');
 
         if (error) {
             console.error('Error invoking get-user-profile function:', error);
             return { profile: null, error: error.message };
         }
-        if (data.error) {
-            console.error('Error from get-user-profile function:', data.error);
-            return { profile: null, error: data.error };
+        if (!data || data.error) {
+            const errorMessage = data?.error || 'No data returned from get-user-profile function.';
+            console.error('Error from get-user-profile function:', errorMessage);
+            return { profile: null, error: errorMessage };
         }
         if (!data.user) {
             return { profile: null, error: 'User profile not found.' };
@@ -50,12 +50,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: { action: 'getUsers' }
         });
-        if (error) {
-            console.error('Error invoking manage-users function (getUsers):', error);
-            return [];
-        }
-        if (data.error) {
-            console.error('Error from manage-users function (getUsers):', data.error);
+        if (error || !data || data.error) {
+            console.error('Error from manage-users function (getUsers):', error || data?.error);
             return [];
         }
         return (data.users || []).map(mapDbUserToUser);
@@ -73,14 +69,11 @@ export const database = {
                 features: userData.features,
             }
         });
-
-        if (error) {
-            console.error('Error invoking manage-users function (addUser):', error);
-            return { user: null, error: error.message };
-        }
-        if (data.error) {
-            console.error('Error from manage-users function (addUser):', data.error);
-            return { user: null, error: data.error };
+        
+        if (error || !data || data.error) {
+            const errorMessage = error?.message || data?.error || 'Failed to add user.';
+            console.error('Error from manage-users function (addUser):', errorMessage);
+            return { user: null, error: errorMessage };
         }
         return { user: mapDbUserToUser(data.user), error: null };
     },
@@ -93,12 +86,8 @@ export const database = {
                 sipVoice: userData.sipVoice 
             }
         });
-        if (error) {
-            console.error('Error invoking manage-users function (updateUser):', error);
-            return null;
-        }
-        if (data.error) {
-            console.error('Error from manage-users function (updateUser):', data.error);
+        if (error || !data || data.error) {
+            console.error('Error from manage-users function (updateUser):', error || data?.error);
             return null;
         }
         return mapDbUserToUser(data.user);
@@ -113,13 +102,10 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: { action: 'deleteUser', auth_id: userToDelete.auth_id }
         });
-        if (error) {
-            console.error('Error invoking manage-users function (deleteUser):', error);
-            return { error: error.message };
-        }
-        if (data.error) {
-            console.error('Error from manage-users function (deleteUser):', data.error);
-            return { error: data.error };
+        if (error || (data && data.error)) {
+            const errorMessage = error?.message || data?.error;
+            console.error('Error from manage-users function (deleteUser):', errorMessage);
+            return { error: errorMessage };
         }
         return { error: null };
     },
@@ -133,8 +119,8 @@ export const database = {
             console.log(`User ${username} not found.`);
             return null;
         }
-        if (data.error) {
-            console.error('Error from manage-users function (getUserByUsername):', data.error);
+        if (!data || data.error) {
+            console.error('Error from manage-users function (getUserByUsername):', data?.error);
             return null;
         }
         return mapDbUserToUser(data.user);
@@ -145,8 +131,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'stats' }
         });
-        if (error || data.error) {
-            console.error('Error fetching admin stats:', error || data.error);
+        if (error || !data || data.error) {
+            console.error('Error fetching admin stats:', error || data?.error);
             return fallbackStats;
         }
         return data.stats || fallbackStats;
@@ -157,8 +143,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'mails', action: 'get' }
         });
-        if (error || data.error) {
-            console.error("Error fetching mails:", error || data.error);
+        if (error || !data || data.error) {
+            console.error("Error fetching mails:", error || data?.error);
             return { inbox: [], sent: [] };
         }
         const mails = data.mails || [];
@@ -171,27 +157,33 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'mails', action: 'send', payload: mailData }
         });
-        if (error || data.error) {
-            console.error('Error sending mail:', error || data.error);
+        if (error || !data || data.error) {
+            console.error('Error sending mail:', error || data?.error);
             return null;
         }
         return data.mail;
     },
     
     markMailAsRead: async (mailId: number): Promise<boolean> => {
-        const { error } = await supabase.functions.invoke('app-service', {
+        const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'mails', action: 'markAsRead', payload: { id: mailId } }
         });
-        if (error) console.error('Error marking mail as read:', error);
-        return !error;
+        if (error || (data && data.error)) {
+            console.error('Error marking mail as read:', error || data.error);
+            return false;
+        }
+        return true;
     },
 
     deleteMail: async (mailId: number): Promise<boolean> => {
-        const { error } = await supabase.functions.invoke('app-service', {
+        const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'mails', action: 'delete', payload: { id: mailId } }
         });
-        if (error) console.error('Error deleting mail:', error);
-        return !error;
+        if (error || (data && data.error)) {
+            console.error('Error deleting mail:', error || data.error);
+            return false;
+        }
+        return true;
     },
 
     // --- Contacts Service Functions ---
@@ -199,8 +191,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'contacts', action: 'get' }
         });
-        if (error || data.error) {
-            console.error('Error fetching contacts:', error || data.error);
+        if (error || !data || data.error) {
+            console.error('Error fetching contacts:', error || data?.error);
             return [];
         }
         return data.contacts || [];
@@ -210,8 +202,8 @@ export const database = {
          const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'contacts', action: 'add', payload: contactData }
         });
-        if (error || data.error) {
-            console.error('Error adding contact:', error || data.error);
+        if (error || !data || data.error) {
+            console.error('Error adding contact:', error || data?.error);
             return null;
         }
         return data.contact;
@@ -221,19 +213,22 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'contacts', action: 'update', payload: contactData }
         });
-        if (error || data.error) {
-            console.error('Error updating contact:', error || data.error);
+        if (error || !data || data.error) {
+            console.error('Error updating contact:', error || data?.error);
             return null;
         }
         return data.contact;
     },
 
     deleteContact: async (contactId: number): Promise<boolean> => {
-        const { error } = await supabase.functions.invoke('app-service', {
+        const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'contacts', action: 'delete', payload: { id: contactId } }
         });
-        if (error) console.error('Error deleting contact:', error);
-        return !error;
+        if (error || (data && data.error)) {
+            console.error('Error deleting contact:', error || data.error);
+            return false;
+        }
+        return true;
     },
 
     // --- Notepad Service Functions ---
@@ -242,8 +237,8 @@ export const database = {
             body: { resource: 'notes', action: 'get' }
         });
 
-        if (error || data.error) {
-            console.error('Error fetching notes:', error || data.error);
+        if (error || !data || data.error) {
+            console.error('Error fetching notes:', error || data?.error);
             return [];
         }
         return (data.notes || []).map((n: any) => ({ ...n, createdAt: new Date(n.created_at), content: n.content || '' }));
@@ -254,8 +249,8 @@ export const database = {
             body: { resource: 'notes', action: 'add', payload: noteData }
         });
         
-        if (error || data.error) {
-            console.error('Error adding note:', error || data.error);
+        if (error || !data || data.error) {
+            console.error('Error adding note:', error || data?.error);
             return null;
         }
         const note = data.note;
@@ -267,8 +262,8 @@ export const database = {
             body: { resource: 'notes', action: 'update', payload: noteData }
         });
 
-        if (error || data.error) {
-            console.error('Error updating note:', error || data.error);
+        if (error || !data || data.error) {
+            console.error('Error updating note:', error || data?.error);
             return null;
         }
         const note = data.note;
@@ -276,10 +271,13 @@ export const database = {
     },
 
     deleteNote: async (noteId: number): Promise<boolean> => {
-        const { error } = await supabase.functions.invoke('app-service', {
+        const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'notes', action: 'delete', payload: { id: noteId } }
         });
-        if (error) console.error('Error deleting note:', error);
-        return !error;
+        if (error || (data && data.error)) {
+            console.error('Error deleting note:', error || data.error);
+            return false;
+        }
+        return true;
     },
 };

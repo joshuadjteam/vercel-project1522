@@ -1,5 +1,7 @@
 {
   "name": "Lynix",
   "description": "A comprehensive web portal for Lynix Technology and Coding, featuring user and admin dashboards, communication tools, and other integrated applications.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }
