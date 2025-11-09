@@ -44,7 +44,8 @@ serve(async (req) => {
         contents: `You are a helpful voice assistant for a web portal called Lynix. Keep your response concise, friendly, and conversational. User said: "${userText}"`,
     });
     
-    let aiTextResponse = geminiResponse.text;
+    // FIX: Safely cast the response text to a string to handle potential 'unknown' type from the API in this environment.
+    let aiTextResponse = String(geminiResponse.text ?? '');
     // Add a fallback for empty responses to make the function more robust
     if (!aiTextResponse || aiTextResponse.trim() === '') {
         aiTextResponse = "I'm sorry, I don't have a response for that. Please try asking another way.";
