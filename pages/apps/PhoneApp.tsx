@@ -7,7 +7,7 @@ import { CallRecord } from '../../types';
 
 const DialerTab: React.FC = () => {
     const { user: currentUser } = useAuth();
-    const { startP2PCall, startAICall, isCalling } = useCall();
+    const { startP2PCall, isCalling } = useCall();
     const [calleeInput, setCalleeInput] = useState('');
     const [errorStatus, setErrorStatus] = useState('');
 
@@ -33,11 +33,6 @@ const DialerTab: React.FC = () => {
         }
     };
     
-    const handleTalkWithAI = () => {
-        setErrorStatus('');
-        startAICall('Lynix AI'); // Predefined AI persona name
-    };
-    
     return isCalling ? (
         <div className="text-center text-gray-500 dark:text-gray-400 p-4">
             <h2 className="text-xl font-semibold">Call in Progress</h2>
@@ -53,17 +48,7 @@ const DialerTab: React.FC = () => {
                 className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button onClick={handleCall} className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-md hover:bg-green-700 transition-colors">
-                Call User
-            </button>
-            
-            <div className="flex items-center space-x-2">
-                <hr className="flex-grow border-gray-300 dark:border-slate-600"/>
-                <span className="text-xs text-gray-500 dark:text-gray-400">OR</span>
-                <hr className="flex-grow border-gray-300 dark:border-slate-600"/>
-            </div>
-            
-            <button onClick={handleTalkWithAI} className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-md hover:bg-indigo-700 transition-colors">
-                Talk With AI
+                Call
             </button>
 
             {errorStatus && <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">{errorStatus}</p>}
