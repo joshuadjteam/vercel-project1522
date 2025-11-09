@@ -155,8 +155,9 @@ const ComposeMail: React.FC<ComposeMailProps> = ({ onMailSent }) => {
             return;
         }
         setStatus('Sending...');
+        // FIX: Removed the `sender` property to match the expected type for `database.sendMail`.
+        // The sender is inferred from the user's session on the backend.
         await database.sendMail({
-            sender: currentUser.username,
             recipient,
             subject,
             body,

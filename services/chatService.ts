@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 import { ChatMessage, User } from '../types';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -28,29 +27,26 @@ export const chatService = {
     },
 
     /**
-     * Retrieves the message history for a chat using Supabase, including sender and receiver user data.
-     * Uses snake_case for foreign key columns.
+     * Retrieves the message history for a chat using the 'app-service' Supabase Edge Function.
      */
     async getChatHistory(userId1: number, userId2: number): Promise<ChatMessage[]> {
-        const chatId = this.getChatId(userId1, userId2);
-        
-        const { data, error } = await supabase
-            .from('chat_messages')
-            .select(`
-                *,
-                sender:sender_id(*),
-                receiver:receiver_id(*)
-            `)
-            .eq('chat_id', chatId)
-            .order('timestamp', { ascending: true });
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: {
+                resource: 'chatHistory',
+                payload: {
+                    currentUserId: userId1,
+                    otherUserId: userId2,
+                }
+            }
+        });
 
-        if (error) {
-            console.error('Error fetching chat history:', error);
+        if (error || data.error) {
+            console.error('Error fetching chat history:', error || data.error);
             return [];
         }
 
         // Map snake_case from DB to camelCase for the app
-        return data.map((msg: any) => ({
+        return (data.history || []).map((msg: any) => ({
             id: msg.id,
             senderId: msg.sender_id,
             receiverId: msg.receiver_id,
