@@ -9,6 +9,7 @@ const DialerTab: React.FC = () => {
     const { user: currentUser } = useAuth();
     const { startP2PCall, isCalling } = useCall();
     const [calleeInput, setCalleeInput] = useState('');
+    const [withVideo, setWithVideo] = useState(true);
     const [errorStatus, setErrorStatus] = useState('');
 
     const handleCall = async () => {
@@ -27,7 +28,7 @@ const DialerTab: React.FC = () => {
 
         if (userToCall) {
             setErrorStatus('');
-            startP2PCall(userToCall.username);
+            startP2PCall(userToCall.username, withVideo);
         } else {
             setErrorStatus(`User "${calleeInput.trim()}" not found.`);
         }
@@ -47,11 +48,24 @@ const DialerTab: React.FC = () => {
                 onChange={(e) => setCalleeInput(e.target.value)}
                 className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+             <div className="flex items-center justify-center space-x-2 py-2">
+                <span className="text-sm text-gray-600 dark:text-gray-300">Audio</span>
+                <button
+                    type="button"
+                    onClick={() => setWithVideo(!withVideo)}
+                    className={`${withVideo ? 'bg-green-600' : 'bg-gray-400 dark:bg-gray-500'} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-light-card dark:focus:ring-offset-teal-800`}
+                    aria-pressed={withVideo}
+                >
+                    <span className="sr-only">Use Video</span>
+                    <span className={`${withVideo ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}/>
+                </button>
+                <span className="text-sm text-gray-600 dark:text-gray-300">Video</span>
+            </div>
             <button onClick={handleCall} className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-md hover:bg-green-700 transition-colors">
                 Call
             </button>
 
-            {errorStatus && <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">{errorStatus}</p>}
+            {errorStatus && <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 text-center">{errorStatus}</p>}
         </div>
     );
 }

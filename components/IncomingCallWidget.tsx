@@ -9,10 +9,12 @@ const IncomingCallWidget: React.FC = () => {
         return null;
     }
 
+    const callType = incomingCall.isVideoCall ? 'Video Call' : 'Call';
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100]">
             <div className="bg-light-card dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-sm p-8 text-center text-light-text dark:text-white">
-                <h2 className="text-2xl font-bold mb-2">Incoming Call</h2>
+                <h2 className="text-2xl font-bold mb-2">Incoming {callType}</h2>
                 <p className="text-lg mb-6">
                     <span className="font-semibold">{incomingCall.from}</span> is calling...
                 </p>

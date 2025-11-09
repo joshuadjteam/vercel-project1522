@@ -18,15 +18,18 @@ interface CallContextType {
     callee: string;
     callStatus: string;
     isMuted: boolean;
+    isVideoEnabled: boolean;
     showKeypad: boolean;
     keypadInput: string;
-    incomingCall: { from: string } | null;
+    incomingCall: { from: string; isVideoCall: boolean; } | null;
+    localStream: MediaStream | null;
     remoteStream: MediaStream | null;
-    startP2PCall: (callee: string) => void;
+    startP2PCall: (callee: string, withVideo: boolean) => void;
     acceptCall: () => void;
     declineCall: () => void;
     endCall: () => void;
     toggleMute: () => void;
+    toggleVideo: () => void;
     toggleKeypad: () => void;
     handleKeypadInput: (key: string) => void;
 }
@@ -39,9 +42,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [callee, setCallee] = useState('');
     const [callStatus, setCallStatus] = useState('');
     const [isMuted, setIsMuted] = useState(false);
+    const [isVideoEnabled, setIsVideoEnabled] = useState(true);
     const [showKeypad, setShowKeypad] = useState(false);
     const [keypadInput, setKeypadInput] = useState('');
-    const [incomingCall, setIncomingCall] = useState<{ from: string; offer: RTCSessionDescriptionInit; } | null>(null);
+    const [incomingCall, setIncomingCall] = useState<{ from: string; offer: RTCSessionDescriptionInit; isVideoCall: boolean; } | null>(null);
+    const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
     // Call Logging refs
@@ -66,7 +71,9 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setShowKeypad(false);
         setKeypadInput('');
         setIncomingCall(null);
+        setLocalStream(null);
         setRemoteStream(null);
+        setIsVideoEnabled(true);
         callStartTimeRef.current = null;
         callDirectionRef.current = null;
     }, []);
@@ -76,6 +83,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStreamRef.current = null;
         peerConnectionRef.current?.close();
         peerConnectionRef.current = null;
+        setLocalStream(null);
+        setRemoteStream(null);
     }, []);
     
     const endCall = useCallback(() => {
@@ -84,8 +93,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (remoteUser) {
                 supabase.channel(`call-channel-${remoteUser}`).send({ type: 'broadcast', event: 'call-event', payload: { type: 'end-call' }});
             }
-            cleanupP2P();
         }
+        cleanupP2P();
 
         // Log the call
         if (callStartTimeRef.current && user && callDirectionRef.current) {
@@ -122,15 +131,15 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             case 'offer':
                 // Do not show incoming call if already in a call
                 if(isCallingRef.current) return;
-                setIncomingCall({ from: payload.from, offer: payload.offer });
+                setIncomingCall({ from: payload.from, offer: payload.offer, isVideoCall: payload.isVideoCall });
                 break;
             case 'answer':
-                if (peerConnectionRef.current) {
+                if (peerConnectionRef.current && peerConnectionRef.current.signalingState !== 'closed') {
                     await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer));
                 }
                 break;
             case 'ice-candidate':
-                if (peerConnectionRef.current && payload.candidate) {
+                if (peerConnectionRef.current && payload.candidate && peerConnectionRef.current.signalingState !== 'closed') {
                     await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
                 }
                 break;
@@ -160,16 +169,18 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, [user, handleSignalingData]);
     
-    const startP2PCall = async (calleeUsername: string) => {
+    const startP2PCall = async (calleeUsername: string, withVideo: boolean) => {
         if (isCalling || !user) return;
         setIsCalling(true);
         setCallee(calleeUsername);
         setCallStatus(`Ringing ${calleeUsername}...`);
         callStartTimeRef.current = Date.now();
         callDirectionRef.current = 'outgoing';
+        setIsVideoEnabled(withVideo);
         
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
+            setLocalStream(stream);
             localStreamRef.current = stream;
             
             const pc = new RTCPeerConnection(iceServers);
@@ -184,16 +195,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
             
             pc.ontrack = (event) => {
-                const stream = new MediaStream();
-                stream.addTrack(event.track);
-                setRemoteStream(stream);
+                setRemoteStream(event.streams[0]);
                 setCallStatus('Connected');
             };
 
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            await supabase.channel(`call-channel-${calleeUsername}`).send({ type: 'broadcast', event: 'call-event', payload: { type: 'offer', from: user.username, offer }});
+            await supabase.channel(`call-channel-${calleeUsername}`).send({ type: 'broadcast', event: 'call-event', payload: { type: 'offer', from: user.username, offer, isVideoCall: withVideo }});
 
         } catch (error) {
             console.error("Error starting P2P call:", error);
@@ -210,9 +219,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCallStatus('Connecting...');
         callStartTimeRef.current = Date.now();
         callDirectionRef.current = 'incoming';
+        setIsVideoEnabled(!!incomingCall.isVideoCall);
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: !!incomingCall.isVideoCall });
+            setLocalStream(stream);
             localStreamRef.current = stream;
             
             const pc = new RTCPeerConnection(iceServers);
@@ -227,9 +238,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
 
             pc.ontrack = (event) => {
-                const newStream = new MediaStream();
-                newStream.addTrack(event.track);
-                setRemoteStream(newStream);
+                setRemoteStream(event.streams[0]);
                 setCallStatus('Connected');
             };
 
@@ -273,14 +282,26 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const toggleVideo = () => {
+        const newVideoState = !isVideoEnabled;
+        setIsVideoEnabled(newVideoState);
+        if (localStreamRef.current) {
+            localStreamRef.current.getVideoTracks().forEach(track => {
+                track.enabled = newVideoState;
+            });
+        }
+    };
+
     const toggleKeypad = () => setShowKeypad(prev => !prev);
     const handleKeypadInput = (key: string) => setKeypadInput(prev => prev + key);
 
     return (
         <CallContext.Provider value={{ 
-            isCalling, callee, callStatus, isMuted, showKeypad, keypadInput, incomingCall: incomingCall ? { from: incomingCall.from } : null, remoteStream,
+            isCalling, callee, callStatus, isMuted, isVideoEnabled, showKeypad, keypadInput, 
+            incomingCall: incomingCall ? { from: incomingCall.from, isVideoCall: incomingCall.isVideoCall } : null, 
+            localStream, remoteStream,
             startP2PCall, acceptCall, declineCall, endCall, 
-            toggleMute, toggleKeypad, handleKeypadInput 
+            toggleMute, toggleVideo, toggleKeypad, handleKeypadInput 
         }}>
             {children}
         </CallContext.Provider>
