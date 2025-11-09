@@ -167,7 +167,7 @@ export const database = {
         }
         const mails = data.mails || [];
         const inbox = mails.filter((m: Mail) => m.recipient === username);
-        const sent = mails.filter((m: Mail) => m.sender === username);
+        const sent = mails.filter((m: Mail) => m.sender.includes(username)); // Approximate for sent items
         return { inbox, sent };
     },
 
@@ -224,6 +224,17 @@ export const database = {
             return null;
         }
         return data.account;
+    },
+
+    syncMailAccount: async (accountId: number): Promise<{ success: boolean, message: string }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'mails', action: 'sync', payload: { accountId } }
+        });
+        if (error || !data || data.error) {
+            console.error('Error syncing mail account:', error || data?.error);
+            return { success: false, message: error?.message || data?.error || 'Sync failed.' };
+        }
+        return { success: true, message: data.message || 'Sync complete.' };
     },
 
     // --- Contacts Service Functions ---

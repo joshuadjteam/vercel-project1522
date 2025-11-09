@@ -8,6 +8,7 @@ type MailView = 'inbox' | 'sent' | 'spam' | 'compose';
 
 // A local type to represent both local and external accounts for the UI
 type UI_Account = {
+    id?: number; // For external accounts
     name: string; // display name
     email: string; // sending address
     folders: string[];
@@ -53,7 +54,7 @@ const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
     const [smtpUsername, setSmtpUsername] = useState('');
     const [smtpPassword, setSmtpPassword] = useState('');
     const [smtpPort, setSmtpPort] = useState('587');
-    const [smtpTls, setSmtpTls] = useState(true);
+    const [smtpEncryption, setSmtpEncryption] = useState('STARTTLS');
     const [imapServer, setImapServer] = useState('');
     const [imapPort, setImapPort] = useState('993');
     const [imapEncryption, setImapEncryption] = useState('SSL/TLS');
@@ -70,7 +71,7 @@ const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
                 smtp_port: parseInt(smtpPort) || 587,
                 smtp_user: smtpUsername,
                 smtp_pass: smtpPassword,
-                smtp_tls: smtpTls,
+                smtp_encryption: smtpEncryption,
                 imap_server: imapServer,
                 imap_port: parseInt(imapPort) || 993,
                 imap_user: imapUsername,
@@ -124,7 +125,14 @@ const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
                                             <input type="number" placeholder="Port (SMTP)" value={smtpPort} onChange={e => setSmtpPort(e.target.value)} className="bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
                                         </div>
                                         <input type="password" placeholder="Password (Auth)" value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
-                                        <div className="flex items-center space-x-2"><input type="checkbox" id="smtp-tls" checked={smtpTls} onChange={e => setSmtpTls(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" /><label htmlFor="smtp-tls" className="text-sm">Use TLS/SSL</label></div>
+                                        <div>
+                                            <label className="text-sm font-medium mr-2">Encryption:</label>
+                                            <select value={smtpEncryption} onChange={e => setSmtpEncryption(e.target.value)} className="bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-1.5 text-sm">
+                                                <option>STARTTLS</option>
+                                                <option>SSL/TLS</option>
+                                                <option>None</option>
+                                            </select>
+                                        </div>
                                     </fieldset>
                                     <fieldset className="border border-gray-300 dark:border-slate-600 rounded-md p-3 space-y-3">
                                         <legend className="px-2 font-semibold text-sm">IMAP (Incoming Mail)</legend>
@@ -137,7 +145,9 @@ const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
                                         <div>
                                             <label className="text-sm font-medium mr-2">Encryption:</label>
                                             <select value={imapEncryption} onChange={e => setImapEncryption(e.target.value)} className="bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-1.5 text-sm">
-                                                <option>SSL/TLS</option><option>STARTTLS</option><option>None</option>
+                                                <option>SSL/TLS</option>
+                                                <option>STARTTLS</option>
+                                                <option>None</option>
                                             </select>
                                         </div>
                                     </fieldset>
@@ -246,7 +256,7 @@ const ComposeView: React.FC<{ onMailSent: () => void, availableSenders: UI_Accou
                         ))}
                     </select>
                 </div>
-                <input type="text" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="To (username)" className="w-full p-2 bg-black/10 border-b-2 border-current border-opacity-20 focus:outline-none focus:border-opacity-50" />
+                <input type="text" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="To (username or email)" className="w-full p-2 bg-black/10 border-b-2 border-current border-opacity-20 focus:outline-none focus:border-opacity-50" />
                 <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" className="w-full p-2 bg-black/10 border-b-2 border-current border-opacity-20 focus:outline-none focus:border-opacity-50" />
             </div>
             <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Your message..." className="flex-grow w-full p-2 bg-black/10 mt-4 focus:outline-none resize-none" />
@@ -273,6 +283,7 @@ const LocalMailApp: React.FC = () => {
     const [userDisplayName, setUserDisplayName] = useState(currentUser?.username || 'user');
 
     const [accounts, setAccounts] = useState<UI_Account[]>([]);
+    const [selectedAccount, setSelectedAccount] = useState<UI_Account | null>(null);
     const [expandedAccounts, setExpandedAccounts] = useState<string[]>([]);
 
     const fetchMails = useCallback(async () => {
@@ -288,21 +299,29 @@ const LocalMailApp: React.FC = () => {
     const fetchAccounts = useCallback(async () => {
         if (!currentUser) return;
         const externalAccounts = await database.getMailAccounts();
-        const formattedExternal = externalAccounts.map(acc => ({
+        const formattedExternal: UI_Account[] = externalAccounts.map(acc => ({
+            id: acc.id,
             name: acc.display_name,
             email: acc.email_address,
             folders: ['Inbox', 'Spam', 'Sent'],
         }));
         const localAccount: UI_Account = {
+            id: undefined,
             name: userDisplayName,
             email: `${currentUser.username}@lynix.local`,
             folders: ['Inbox', 'Spam', 'Sent'],
         };
-        setAccounts([localAccount, ...formattedExternal]);
+        const allAccounts = [localAccount, ...formattedExternal];
+        setAccounts(allAccounts);
+
+        if (!selectedAccount) {
+            setSelectedAccount(localAccount);
+        }
+
         if (!expandedAccounts.includes(localAccount.email)) {
             setExpandedAccounts(prev => [localAccount.email, ...prev]);
         }
-    }, [currentUser, userDisplayName]);
+    }, [currentUser, userDisplayName, selectedAccount]);
 
 
     useEffect(() => {
@@ -325,6 +344,12 @@ const LocalMailApp: React.FC = () => {
             fetchMails();
         }
     };
+    
+    const handleSyncAccount = async (accountId: number) => {
+        const { message } = await database.syncMailAccount(accountId);
+        alert(message);
+        fetchMails();
+    };
 
     const handleMailSent = () => {
         setView('sent');
@@ -332,7 +357,11 @@ const LocalMailApp: React.FC = () => {
         fetchMails();
     }
 
-    const currentMailList = view === 'inbox' ? inbox : view === 'sent' ? sent : spam;
+    const currentMailList = (() => {
+        const list = view === 'inbox' ? inbox : view === 'sent' ? sent : spam;
+        if (!selectedAccount) return list.filter(m => !m.account_id);
+        return list.filter(m => (m.account_id ?? undefined) === selectedAccount.id);
+    })();
 
     return (
         <div className={`w-full max-w-7xl h-[80vh] backdrop-blur-sm border rounded-2xl shadow-2xl flex overflow-hidden transition-colors duration-300 ${themes[theme].classes}`} style={wallpapers[wallpaper].style}>
@@ -349,20 +378,26 @@ const LocalMailApp: React.FC = () => {
                 <nav className="flex-grow overflow-y-auto">
                     {accounts.map(account => (
                         <div key={account.email}>
-                            <button onClick={() => setExpandedAccounts(prev => prev.includes(account.email) ? prev.filter(name => name !== account.email) : [...prev, account.email])} className="w-full text-left p-3 font-semibold flex justify-between items-center">
-                                <span>{account.name} &gt;</span>
-                                <span className={`transform transition-transform duration-200 ${expandedAccounts.includes(account.email) ? 'rotate-90' : ''}`}>›</span>
-                            </button>
+                            <div className="w-full text-left p-3 font-semibold flex justify-between items-center">
+                                <button onClick={() => setExpandedAccounts(prev => prev.includes(account.email) ? prev.filter(name => name !== account.email) : [...prev, account.email])} className="flex-grow flex justify-between items-center">
+                                    <span>{account.name} &gt;</span>
+                                    <span className={`transform transition-transform duration-200 ${expandedAccounts.includes(account.email) ? 'rotate-90' : ''}`}>›</span>
+                                </button>
+                                {account.id && (
+                                    <button onClick={() => handleSyncAccount(account.id!)} title="Sync Mail" className="ml-2 px-2 py-1 rounded-full text-sm hover:bg-white/20">🔄</button>
+                                )}
+                            </div>
                             {expandedAccounts.includes(account.email) && (
                                 <div className="pl-6">
                                     {account.folders.map(folder => (
                                         <button key={folder} onClick={() => {
+                                            setSelectedAccount(account);
                                             const folderView = folder.toLowerCase() as MailView;
                                             if (['inbox', 'sent', 'spam'].includes(folderView)) {
                                                 setView(folderView);
                                                 setSelectedMail(null);
                                             }
-                                        }} className={`w-full text-left p-2 rounded-md transition-colors text-lg ${view === folder.toLowerCase() ? 'font-bold' : 'hover:bg-white/10'}`}>
+                                        }} className={`w-full text-left p-2 rounded-md transition-colors text-lg ${view === folder.toLowerCase() && selectedAccount?.email === account.email ? 'font-bold' : 'hover:bg-white/10'}`}>
                                             {folder}
                                         </button>
                                     ))}
@@ -375,7 +410,7 @@ const LocalMailApp: React.FC = () => {
 
             <div className="w-1/3 border-r border-current border-opacity-20 flex flex-col">
                 <div className="p-4 border-b border-current border-opacity-20">
-                    <h3 className="text-lg font-bold capitalize">{view === 'compose' ? 'New Message' : view}</h3>
+                    <h3 className="text-lg font-bold capitalize">{view === 'compose' ? 'New Message' : `${selectedAccount?.name} ${view}`}</h3>
                     <p className="text-sm opacity-60">{isLoading ? 'Loading...' : `${currentMailList.length} message(s)`}</p>
                 </div>
                 <div className="flex-grow overflow-y-auto">

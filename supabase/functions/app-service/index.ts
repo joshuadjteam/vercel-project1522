@@ -2,6 +2,8 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SmtpClient } from 'https://deno.land/x/smtp@v0.7.0/mod.ts';
+import { ImapClient } from 'https://deno.land/x/imap@v0.3.2/mod.ts';
 
 declare const Deno: any;
 
@@ -122,23 +124,96 @@ serve(async (req)=>{
               status: 200
             });
           case 'send':
-             const senderAddress = payload.sender || userProfile.username;
+            const { sender, recipient, subject, body } = payload;
+            const { data: senderAccount } = await supabaseAdmin
+                .from('mail_accounts')
+                .select('*')
+                .eq('user_id', authUser.id)
+                .eq('email_address', sender)
+                .single();
+
+            if (senderAccount) {
+                // Send via external SMTP
+                const client = new SmtpClient();
+                await client.connect({
+                    hostname: senderAccount.smtp_server,
+                    port: senderAccount.smtp_port,
+                    username: senderAccount.smtp_user,
+                    password: senderAccount.smtp_pass,
+                    // Note: Deno SMTP client handles STARTTLS automatically on non-465 ports
+                });
+                await client.send({
+                    from: senderAccount.email_address,
+                    to: recipient,
+                    subject: subject,
+                    content: body,
+                });
+                await client.close();
+            }
+
+            // Save a copy to our DB regardless
             ({ data, error } = await supabaseAdmin.from('mails').insert({
-              sender: senderAddress,
-              recipient: payload.recipient,
-              subject: payload.subject,
-              body: payload.body,
+              sender: sender,
+              recipient: recipient,
+              subject: subject,
+              body: body,
               read: false,
+              account_id: senderAccount ? senderAccount.id : null
             }).select().single());
+
             if (error) throw error;
-            return new Response(JSON.stringify({
-              mail: data
-            }), {
-              headers: {
-                ...corsHeaders,
-                'Content-Type': 'application/json'
-              },
-              status: 200
+            return new Response(JSON.stringify({ mail: data }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200,
+            });
+          case 'sync':
+            const { accountId } = payload;
+            const { data: account, error: accError } = await supabaseAdmin
+                .from('mail_accounts')
+                .select('*')
+                .eq('id', accountId)
+                .eq('user_id', authUser.id)
+                .single();
+            if (accError || !account) throw new Error('Account not found or permission denied.');
+            
+            const imapClient = new ImapClient({
+                hostname: account.imap_server,
+                port: account.imap_port,
+                username: account.imap_user,
+                password: account.imap_pass,
+                secure: account.imap_encryption === 'SSL/TLS',
+            });
+            await imapClient.connect();
+            await imapClient.select('INBOX');
+
+            const messages = await imapClient.fetch('1:*', { envelope: true, body: ['TEXT'] });
+            let newMailCount = 0;
+            for await (const msg of messages) {
+                const { count } = await supabaseAdmin
+                    .from('mails')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('account_id', account.id)
+                    .eq('subject', msg.envelope.subject)
+                    .eq('timestamp', new Date(msg.envelope.date).toISOString());
+                if (count === 0) {
+                    const fromAddress = msg.envelope.from?.[0];
+                    const senderString = fromAddress ? `${fromAddress.name} <${fromAddress.mailbox}@${fromAddress.host}>` : 'Unknown Sender';
+                    await supabaseAdmin.from('mails').insert({
+                        account_id: account.id,
+                        sender: senderString,
+                        recipient: userProfile.username, // Belongs to this user's inbox
+                        subject: msg.envelope.subject,
+                        body: msg.body.text,
+                        timestamp: new Date(msg.envelope.date),
+                        read: false,
+                    });
+                    newMailCount++;
+                }
+            }
+            await imapClient.close();
+            return new Response(JSON.stringify({ message: `Synced ${newMailCount} new message(s).` }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
             });
           case 'markAsRead':
             ({ error } = await supabaseAdmin.from('mails').update({

@@ -33,6 +33,7 @@ export interface ChatMessage {
 
 export interface Mail {
     id: number;
+    account_id?: number;
     sender: string;
     recipient: string;
     subject: string;
@@ -50,7 +51,7 @@ export interface MailAccount {
     smtp_port: number;
     smtp_user: string;
     smtp_pass: string;
-    smtp_tls: boolean;
+    smtp_encryption: string;
     imap_server: string;
     imap_port: number;
     imap_user: string;
