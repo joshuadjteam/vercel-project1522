@@ -52,7 +52,7 @@ serve(async (req) => {
     switch (action) {
       case 'createUser': {
         await ensureAdmin();
-        const { email, password, username, role, sipVoice, features } = payload;
+        const { email, password, username, role, sipVoice, features, plan_name } = payload;
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: email,
           password: password,
@@ -67,6 +67,7 @@ serve(async (req) => {
             email: email,
             username: username,
             role: role,
+            plan_name: plan_name,
             sip_voice: sipVoice,
             features: features,
           })
@@ -81,13 +82,14 @@ serve(async (req) => {
       }
       case 'updateUser': {
         await ensureAdmin();
-        const { id, auth_id, email, password, username, role, sipVoice, features } = payload;
+        const { id, auth_id, email, password, username, role, sipVoice, features, plan_name } = payload;
         const { data: profileData, error: profileError } = await supabaseAdmin
           .from('users')
           .update({
             username: username,
             email: email,
             role: role,
+            plan_name: plan_name,
             sip_voice: sipVoice,
             features: features,
           })

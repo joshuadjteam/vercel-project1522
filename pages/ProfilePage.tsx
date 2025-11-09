@@ -44,7 +44,7 @@ const BillingTabContent = () => {
             <div className="space-y-4 text-gray-600 dark:text-gray-300 bg-black/5 dark:bg-black/20 p-4 rounded-lg">
                 <div className="flex justify-between items-center">
                     <span className="font-semibold text-gray-800 dark:text-gray-100">Current Plan:</span>
-                    <span className="font-bold text-lg text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/50">{user?.role}</span>
+                    <span className="font-bold text-lg text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/50">{user?.plan_name || user?.role}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-300 dark:border-slate-600">
                     Your plan is managed by your organization's administrator. Please contact them to make any changes.

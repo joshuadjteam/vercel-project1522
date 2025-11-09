@@ -12,6 +12,7 @@ export interface User {
     username: string;
     email: string;
     role: UserRole;
+    plan_name: string | null;
     sipVoice: string | null;
     features: {
         chat: boolean;

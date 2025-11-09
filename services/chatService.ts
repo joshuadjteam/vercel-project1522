@@ -13,6 +13,8 @@ const mapDbUserToUser = (dbUser: any): User => {
         username: dbUser.username,
         email: dbUser.email,
         role: dbUser.role,
+        // FIX: Added missing 'plan_name' property to match the User type.
+        plan_name: dbUser.plan_name,
         sipVoice: dbUser.sip_voice,
         features: dbUser.features,
     };

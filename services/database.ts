@@ -10,6 +10,7 @@ const mapDbUserToUser = (dbUser: any): User => {
         username: dbUser.username,
         email: dbUser.email,
         role: dbUser.role,
+        plan_name: dbUser.plan_name,
         sipVoice: dbUser.sip_voice,
         features: dbUser.features,
     };
@@ -23,6 +24,7 @@ export const database = {
             username: 'Guest User',
             email: 'guest@lynixity.x10.bz',
             role: UserRole.Trial,
+            plan_name: 'Trial',
             sipVoice: 'N/A',
             features: { chat: false, ai: true, mail: false }
         });
@@ -65,6 +67,7 @@ export const database = {
                 password: userData.password,
                 username: userData.username,
                 role: userData.role,
+                plan_name: userData.plan_name,
                 sipVoice: userData.sipVoice,
                 features: userData.features,
             }
@@ -152,6 +155,40 @@ export const database = {
             return fallbackStats;
         }
         return data.stats || fallbackStats;
+    },
+
+    // --- Broadcast Service ---
+    getBroadcastMessage: async (): Promise<{ message: string; is_active: boolean } | null> => {
+        const { data, error } = await supabase.functions.invoke('manage-broadcast', {
+            body: { action: 'get' }
+        });
+        if (error || !data || data.error) {
+            console.error("Error fetching broadcast message:", error || data?.error);
+            return null;
+        }
+        return data.message;
+    },
+
+    setBroadcastMessage: async (message: string): Promise<boolean> => {
+        const { data, error } = await supabase.functions.invoke('manage-broadcast', {
+            body: { action: 'set', payload: { message } }
+        });
+        if (error || (data && data.error)) {
+            console.error('Error setting broadcast message:', error || data.error);
+            return false;
+        }
+        return true;
+    },
+
+    deactivateBroadcastMessage: async (): Promise<boolean> => {
+        const { data, error } = await supabase.functions.invoke('manage-broadcast', {
+            body: { action: 'deactivate' }
+        });
+        if (error || (data && data.error)) {
+            console.error('Error deactivating broadcast message:', error || data.error);
+            return false;
+        }
+        return true;
     },
 
     // --- Voice Service ---
