@@ -8,7 +8,7 @@ interface AuthContextType {
     user: User | null;
     isLoggedIn: boolean;
     isLoading: boolean;
-    login: (id: string, pass: string) => Promise<{ user: User | null; error: string | null }>;
+    login: (id: string, pass: string) => Promise<{ error: string | null }>;
     loginAsGuest: () => Promise<User | null>;
     logout: () => void;
 }
@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, []);
 
-    const login = async (id: string, pass: string): Promise<{ user: User | null; error: string | null }> => {
+    const login = async (id: string, pass: string): Promise<{ error: string | null }> => {
         // Check for local administrator account
         if (id.toLowerCase() === 'administrator' && pass === 'DJTeam2013') {
             const adminUser: User = {
@@ -81,13 +81,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
             setUser(adminUser);
             setIsLoggedIn(true);
-            return { user: adminUser, error: null };
+            return { error: null };
         }
 
         // The onAuthStateChange listener will handle setting the user profile and loggedIn state.
-        // This function's job is just to perform the login and return the result.
-        const { user: userProfile, error } = await database.login(id, pass);
-        return { user: userProfile, error };
+        // This function's job is just to perform the login and return any auth error.
+        const { error } = await database.login(id, pass);
+        return { error };
     };
     
     const loginAsGuest = async (): Promise<User | null> => {

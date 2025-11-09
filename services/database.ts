@@ -18,7 +18,7 @@ const mapDbUserToUser = (dbUser: any): User => {
 
 export const database = {
     // --- Auth & User Functions (using Supabase) ---
-    login: async (identifier: string, pass: string): Promise<{ user: User | null, error: string | null }> => {
+    login: async (identifier: string, pass: string): Promise<{ error: string | null }> => {
         let emailToLogin = identifier;
         // If identifier is not an email, assume it's a username and fetch the email
         if (!identifier.includes('@')) {
@@ -31,34 +31,23 @@ export const database = {
             if (error || !userByUsername) {
                 const errorMessage = `User with login '${identifier}' not found.`;
                 console.error(errorMessage, error);
-                return { user: null, error: errorMessage };
+                return { error: errorMessage };
             }
             emailToLogin = userByUsername.email;
         }
 
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        const { error: authError } = await supabase.auth.signInWithPassword({
             email: emailToLogin,
             password: pass,
         });
 
-        if (authError || !authData.user) {
+        if (authError) {
             console.error('Login Error: Invalid credentials or authentication issue.', authError);
-            return { user: null, error: authError?.message || 'Invalid credentials provided.' };
-        }
-        
-        // Fetch the user profile directly instead of calling this.getUserProfile
-        const { data: profileData, error: profileError } = await supabase.from('users').select('*').eq('auth_id', authData.user.id).single();
-
-        if (profileError || !profileData) {
-            const errorMessage = `Authentication successful, but failed to retrieve user profile: ${profileError?.message}`;
-            console.error(errorMessage);
-            // Automatically sign out the user to prevent them from being stuck in a broken state.
-            await supabase.auth.signOut();
-            return { user: null, error: errorMessage };
+            return { error: authError.message };
         }
 
-        const userProfile = mapDbUserToUser(profileData);
-        return { user: userProfile, error: null };
+        // Success. The onAuthStateChange listener in useAuth will handle fetching the profile.
+        return { error: null };
     },
 
     getGuestUser: (): Promise<User> => {

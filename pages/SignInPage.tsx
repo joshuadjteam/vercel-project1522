@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
 
@@ -12,19 +12,26 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { login, loginAsGuest } = useAuth();
+    const { login, loginAsGuest, isLoggedIn } = useAuth();
+
+    useEffect(() => {
+        // Navigate to profile page if user is logged in
+        if (isLoggedIn) {
+            navigate('profile');
+        }
+    }, [isLoggedIn, navigate]);
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
         try {
-            const { user, error: loginError } = await login(id, password);
-            if (user) {
-                navigate('profile');
-            } else {
-                setError(loginError || 'An unknown error occurred.');
+            const { error: loginError } = await login(id, password);
+            if (loginError) {
+                setError(loginError);
             }
+            // If login is successful, `isLoggedIn` will become true,
+            // and the `useEffect` will handle navigation.
         } catch (err: any) {
             setError(err.message || 'An unexpected error occurred during login.');
         } finally {
@@ -36,10 +43,8 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
         setError('');
         setIsLoading(true);
         try {
-            const user = await loginAsGuest();
-            if (user) {
-                navigate('profile');
-            }
+            await loginAsGuest();
+            // The useEffect will handle navigation once `isLoggedIn` is updated.
         } catch (err) {
             setError('Could not log in as guest.');
         } finally {
