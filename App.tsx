@@ -80,8 +80,10 @@ const AppContent: React.FC = () => {
     return (
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500 font-sans transition-colors duration-300">
             <Header navigate={navigate} isDark={isDark} setIsDark={setIsDark} />
-            <main className="flex-grow flex items-center justify-center p-4">
-                {renderPage()}
+            <main className="flex-grow flex items-center justify-center p-4 overflow-hidden">
+                <div key={currentPage} className="w-full h-full flex items-center justify-center animate-fade-in">
+                    {renderPage()}
+                </div>
             </main>
             <Footer />
             <CallWidget />

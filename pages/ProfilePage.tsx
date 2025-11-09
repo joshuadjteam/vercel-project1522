@@ -1,12 +1,14 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
 import { geminiService } from '../services/geminiService';
+import { database } from '../services/database';
 
 const InfoTabContent = () => {
     const { user } = useAuth();
     return (
-        <div>
+        <div className="animate-fade-in">
             <h3 className="text-2xl font-semibold mb-6">Account Information</h3>
             <div className="space-y-4 text-gray-600 dark:text-gray-300">
                 <div className="grid grid-cols-3">
@@ -30,54 +32,82 @@ const InfoTabContent = () => {
     )
 };
 
-const BillingTabContent = () => {
-    const { user } = useAuth();
+const SecurityTabContent: React.FC = () => {
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [message, setMessage] = useState('');
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMessage('');
+        setIsSuccess(false);
+
+        if (newPassword !== confirmPassword) {
+            setMessage("New passwords don't match.");
+            return;
+        }
+        if (newPassword.length < 6) {
+            setMessage("New password must be at least 6 characters.");
+            return;
+        }
+
+        setIsLoading(true);
+        const { error } = await database.updateUserPassword(currentPassword, newPassword);
+        setIsLoading(false);
+
+        if (error) {
+            setMessage(error);
+        } else {
+            setIsSuccess(true);
+            setMessage("Password updated successfully!");
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        }
+    };
+
     return (
-        <div>
-            <h3 className="text-2xl font-semibold mb-6">Billing Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-black/5 dark:bg-black/20 p-4 rounded-lg">
-                    <h4 className="font-semibold mb-2">Current Plan</h4>
-                    <p className="text-xl">{user?.role} Plan</p>
-                    <p className="text-gray-500 dark:text-gray-400">{user?.role === 'Admin' ? '$99.99/month' : user?.role === 'Standard' ? '$19.99/month' : 'Free Trial'}</p>
-                    <button className="mt-4 text-sm text-blue-500 hover:underline">Change Plan</button>
-                </div>
-                <div className="bg-black/5 dark:bg-black/20 p-4 rounded-lg">
-                    <h4 className="font-semibold mb-2">Payment Method</h4>
-                    <p>Visa ending in **** 1234</p>
-                    <p className="text-gray-500 dark:text-gray-400">Expires 12/2028</p>
-                    <button className="mt-4 text-sm text-blue-500 hover:underline">Update Payment</button>
-                </div>
-            </div>
-            <div className="mt-8">
-                <h4 className="text-xl font-semibold mb-4">Billing History</h4>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="border-b border-gray-300 dark:border-slate-600">
-                            <tr>
-                                <th className="p-2">Date</th>
-                                <th className="p-2">Description</th>
-                                <th className="p-2 text-right">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr className="border-b border-gray-200 dark:border-slate-700">
-                                <td className="p-2">11/01/2025</td>
-                                <td className="p-2">Monthly Subscription</td>
-                                <td className="p-2 text-right">$19.99</td>
-                            </tr>
-                            <tr className="border-b border-gray-200 dark:border-slate-700">
-                                <td className="p-2">10/01/2025</td>
-                                <td className="p-2">Monthly Subscription</td>
-                                <td className="p-2 text-right">$19.99</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div className="animate-fade-in">
+            <h3 className="text-2xl font-semibold mb-6">Change Password</h3>
+            <form onSubmit={handleSubmit} className="space-y-4 max-w-sm">
+                <input
+                    type="password"
+                    placeholder="Current Password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                />
+                <input
+                    type="password"
+                    placeholder="New Password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                />
+                <input
+                    type="password"
+                    placeholder="Confirm New Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                />
+                {message && (
+                    <p className={`text-sm ${isSuccess ? 'text-green-500' : 'text-red-500'}`}>{message}</p>
+                )}
+                <button type="submit" disabled={isLoading} className="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-md hover:bg-purple-700 transition-colors disabled:bg-purple-800">
+                    {isLoading ? 'Updating...' : 'Update Password'}
+                </button>
+            </form>
         </div>
     );
 };
+
 
 type Message = {
     sender: 'user' | 'ai';
@@ -99,7 +129,6 @@ const LynxAITabContent = () => {
 
     const handleSend = async () => {
         if (input.trim() === '' || isLoading) return;
-        // FIX: Explicitly type message objects to conform to the Message interface. This resolves a TypeScript error where the 'sender' property was being inferred as a general 'string' instead of the required '"user" | "ai"' literal type.
         const userMessage: Message = { sender: 'user', text: input };
         setMessages(prev => [...prev, userMessage]);
         setInput('');
@@ -119,7 +148,7 @@ const LynxAITabContent = () => {
 
     if (!user?.features.ai) {
         return (
-            <div>
+            <div className="animate-fade-in">
                 <h3 className="text-2xl font-semibold mb-6">LynxAI Portal</h3>
                 <p className="text-gray-500 dark:text-gray-400">The LynxAI feature is not enabled for your account. Please contact an administrator to upgrade your plan.</p>
             </div>
@@ -127,7 +156,7 @@ const LynxAITabContent = () => {
     }
     
     return (
-        <div className="h-[45vh] flex flex-col">
+        <div className="h-[45vh] flex flex-col animate-fade-in">
             <h3 className="text-2xl font-semibold mb-4">LynxAI Portal</h3>
             <div className="flex-grow overflow-y-auto pr-2 space-y-4">
                 {messages.map((msg, index) => (
@@ -208,13 +237,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ navigate }) => {
                 <div className="w-full md:w-1/4">
                     <div className="space-y-2">
                         <TabButton tabName="info" label="Info" />
-                        <TabButton tabName="billing" label="Billing" />
+                        <TabButton tabName="security" label="Security" />
                         <TabButton tabName="lynxai" label="LynxAI Portal" />
                     </div>
                 </div>
                 <div className="w-full md:w-3/4 bg-black/5 dark:bg-black/20 rounded-lg p-6 min-h-[250px]">
                     {activeTab === 'info' && <InfoTabContent />}
-                    {activeTab === 'billing' && <BillingTabContent />}
+                    {activeTab === 'security' && <SecurityTabContent />}
                     {activeTab === 'lynxai' && <LynxAITabContent />}
                 </div>
             </div>

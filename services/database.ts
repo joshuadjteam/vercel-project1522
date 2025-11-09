@@ -1,4 +1,5 @@
 
+
 import { supabase } from '../supabaseClient';
 import { User, UserRole, Mail, Contact, Note, CallRecord } from '../types';
 
@@ -94,6 +95,23 @@ export const database = {
         return mapDbUserToUser(data.user);
     },
     
+    updateUserPassword: async (currentPassword: string, newPassword: string): Promise<{ error: string | null }> => {
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+            body: {
+                action: 'updatePassword',
+                currentPassword,
+                newPassword,
+            },
+        });
+
+        if (error || (data && data.error)) {
+            const errorMessage = error?.message || data?.error || 'Failed to update password.';
+            console.error('Error from manage-users function (updatePassword):', errorMessage);
+            return { error: errorMessage };
+        }
+        return { error: null };
+    },
+    
     deleteUser: async (userToDelete: User): Promise<{ error: string | null }> => {
         if (!userToDelete.auth_id) {
             const err = 'Cannot delete user without an authentication ID.';
@@ -116,7 +134,6 @@ export const database = {
             body: { action: 'getUserByUsername', username: username }
         });
         if (error) {
-            // The function returns a 404 which causes an invoke error, this is expected for "not found"
             console.log(`User ${username} not found.`);
             return null;
         }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
 import { database } from '../services/database';
@@ -79,56 +80,45 @@ const AdminPortal: React.FC = () => {
                 <StatCard title="Saved Contacts" value={stats.contacts} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 bg-black/5 dark:bg-black/20 p-6 rounded-lg">
-                    <h2 className="text-2xl font-semibold mb-4">System Broadcast</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">Send a direct message to all users.</p>
-                    <textarea 
-                        placeholder="Type your message here..."
-                        className="w-full h-32 bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    ></textarea>
-                    <button className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        Broadcast
+            <div className="bg-black/5 dark:bg-black/20 p-6 rounded-lg">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-semibold">User Management</h2>
+                    <button onClick={handleAddUser} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        Add User
                     </button>
                 </div>
-                <div className="lg:col-span-2 bg-black/5 dark:bg-black/20 p-6 rounded-lg">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-semibold">User Management</h2>
-                        <button onClick={handleAddUser} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                            Add User
-                        </button>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="border-b border-gray-300 dark:border-slate-600">
-                                <tr>
-                                    <th className="p-2">Username</th>
-                                    <th className="p-2">Role</th>
-                                    <th className="p-2 text-center">Chat</th>
-                                    <th className="p-2 text-center">AI</th>
-                                    <th className="p-2 text-center">Mail</th>
-                                    <th className="p-2">Actions</th>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="border-b border-gray-300 dark:border-slate-600">
+                            <tr>
+                                <th className="p-2">Username</th>
+                                <th className="p-2">Email</th>
+                                <th className="p-2">Plan</th>
+                                <th className="p-2 text-center">Chat</th>
+                                <th className="p-2 text-center">AI</th>
+                                <th className="p-2 text-center">Mail</th>
+                                <th className="p-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.map(user => (
+                                <tr key={user.id} className="border-b border-gray-200 dark:border-slate-700 hover:bg-gray-100/50 dark:hover:bg-slate-800/50">
+                                    <td className="p-2 font-medium">{user.username}</td>
+                                    <td className="p-2">{user.email}</td>
+                                    <td className="p-2">{user.role}</td>
+                                    <td className="p-2 text-center"><FeatureIndicator enabled={user.features.chat} /></td>
+                                    <td className="p-2 text-center"><FeatureIndicator enabled={user.features.ai} /></td>
+                                    <td className="p-2 text-center"><FeatureIndicator enabled={user.features.mail} /></td>
+                                    <td className="p-2">
+                                        <div className="flex space-x-2">
+                                            <button onClick={() => handleEditUser(user)} className="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white">Edit</button>
+                                            <button onClick={() => handleDeleteUser(user)} className="px-3 py-1 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white">Delete</button>
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {users.map(user => (
-                                    <tr key={user.id} className="border-b border-gray-200 dark:border-slate-700 hover:bg-gray-100/50 dark:hover:bg-slate-800/50">
-                                        <td className="p-2 font-medium">{user.username}</td>
-                                        <td className="p-2">{user.role}</td>
-                                        <td className="p-2 text-center"><FeatureIndicator enabled={user.features.chat} /></td>
-                                        <td className="p-2 text-center"><FeatureIndicator enabled={user.features.ai} /></td>
-                                        <td className="p-2 text-center"><FeatureIndicator enabled={user.features.mail} /></td>
-                                        <td className="p-2">
-                                            <div className="flex space-x-2">
-                                                <button onClick={() => handleEditUser(user)} className="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white">Edit</button>
-                                                <button onClick={() => handleDeleteUser(user)} className="px-3 py-1 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white">Delete</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
             {isModalOpen && (

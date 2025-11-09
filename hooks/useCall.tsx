@@ -20,19 +20,16 @@ interface CallContextType {
     callStatus: string;
     isMuted: boolean;
     isVideoEnabled: boolean;
-    showKeypad: boolean;
-    keypadInput: string;
     incomingCall: { from: string; isVideoCall: boolean; } | null;
     localStream: MediaStream | null;
     remoteStream: MediaStream | null;
+    callDuration: number;
     startP2PCall: (callee: string, withVideo: boolean) => void;
     acceptCall: () => void;
     declineCall: () => void;
     endCall: () => void;
     toggleMute: () => void;
     toggleVideo: () => void;
-    toggleKeypad: () => void;
-    handleKeypadInput: (key: string) => void;
 }
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
@@ -44,15 +41,15 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [callStatus, setCallStatus] = useState('');
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-    const [showKeypad, setShowKeypad] = useState(false);
-    const [keypadInput, setKeypadInput] = useState('');
     const [incomingCall, setIncomingCall] = useState<{ from: string; offer: RTCSessionDescriptionInit; isVideoCall: boolean; } | null>(null);
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+    const [callDuration, setCallDuration] = useState(0);
 
     // Call Logging refs
     const callStartTimeRef = useRef<number | null>(null);
     const callDirectionRef = useRef<'incoming' | 'outgoing' | null>(null);
+    const callTimerRef = useRef<number | null>(null);
 
     // P2P refs
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -70,12 +67,13 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCallee('');
         setCallStatus('');
         setIsMuted(false);
-        setShowKeypad(false);
-        setKeypadInput('');
         setIncomingCall(null);
         setLocalStream(null);
         setRemoteStream(null);
         setIsVideoEnabled(true);
+        setCallDuration(0);
+        if (callTimerRef.current) clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
         callStartTimeRef.current = null;
         callDirectionRef.current = null;
         pendingCandidatesRef.current = [];
@@ -105,19 +103,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             
             let status: CallRecord['status'] = 'ended';
             
-            // FIX: The `callee` state variable is the single source of truth for the remote party's username
-            // for both incoming and outgoing calls once they are initiated or connected.
-            // The previous logic failed for incoming calls because `incomingCall` is cleared after acceptance.
             const remoteUser = callee;
 
-            if (callStatus === 'Connected') {
+            if (callStatus.startsWith('Connected')) {
                 status = 'answered';
             } else if (callStatus === 'Call Declined') {
                 status = 'declined';
             }
     
-            // The remoteUser might be an empty string if the call ends before the callee is set.
-            // This check prevents sending an invalid record.
             if (remoteUser) {
                 const record: Omit<CallRecord, 'id' | 'owner' | 'timestamp'> = {
                     caller_username: callDirectionRef.current === 'outgoing' ? user.username : remoteUser,
@@ -131,21 +124,19 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         resetState();
-    }, [callee, user, cleanupP2P, resetState, callStatus]);
+    }, [callee, user, cleanupP2P, resetState, callStatus, incomingCall?.from]);
 
 
     const handleSignalingData = useCallback(async (payload: any) => {
         if (!user) return;
         switch (payload.type) {
             case 'offer':
-                // Do not show incoming call if already in a call
                 if(isCallingRef.current) return;
                 setIncomingCall({ from: payload.from, offer: payload.offer, isVideoCall: payload.isVideoCall });
                 break;
             case 'answer':
                 if (peerConnectionRef.current && peerConnectionRef.current.signalingState === 'have-local-offer') {
                     await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer));
-                    // Process any queued candidates after setting remote description
                     pendingCandidatesRef.current.forEach(candidate => {
                         peerConnectionRef.current?.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => {
                             console.error("Error adding queued ICE candidate", e);
@@ -159,8 +150,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             case 'ice-candidate':
                 try {
                     if (peerConnectionRef.current && payload.candidate && peerConnectionRef.current.signalingState !== 'closed') {
-                        // FIX: Queue ICE candidates if the remote description isn't set yet.
-                        // This prevents the "Failed to execute 'addIceCandidate'" race condition.
                         if (peerConnectionRef.current.remoteDescription) {
                             await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
                         } else {
@@ -225,6 +214,9 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             pc.ontrack = (event) => {
                 setRemoteStream(event.streams[0]);
                 setCallStatus('Connected');
+                callTimerRef.current = window.setInterval(() => {
+                    setCallDuration(prev => prev + 1);
+                }, 1000);
             };
 
             const offer = await pc.createOffer();
@@ -268,11 +260,13 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             pc.ontrack = (event) => {
                 setRemoteStream(event.streams[0]);
                 setCallStatus('Connected');
+                callTimerRef.current = window.setInterval(() => {
+                    setCallDuration(prev => prev + 1);
+                }, 1000);
             };
 
             await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
 
-            // Process any queued candidates after setting remote description
             pendingCandidatesRef.current.forEach(candidate => {
                 pc.addIceCandidate(new RTCIceCandidate(candidate));
             });
@@ -327,16 +321,13 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const toggleKeypad = () => setShowKeypad(prev => !prev);
-    const handleKeypadInput = (key: string) => setKeypadInput(prev => prev + key);
-
     return (
         <CallContext.Provider value={{ 
-            isCalling, callee, callStatus, isMuted, isVideoEnabled, showKeypad, keypadInput, 
+            isCalling, callee, callStatus, isMuted, isVideoEnabled, 
             incomingCall: incomingCall ? { from: incomingCall.from, isVideoCall: incomingCall.isVideoCall } : null, 
-            localStream, remoteStream,
+            localStream, remoteStream, callDuration,
             startP2PCall, acceptCall, declineCall, endCall, 
-            toggleMute, toggleVideo, toggleKeypad, handleKeypadInput 
+            toggleMute, toggleVideo 
         }}>
             {children}
         </CallContext.Provider>

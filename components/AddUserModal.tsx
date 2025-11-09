@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { database } from '../services/database';
@@ -60,6 +61,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
             
             if (userToEdit) {
                 userData.id = userToEdit.id;
+                userData.auth_id = userToEdit.auth_id;
+                if (password) userData.password = password; // Only include password if it's being changed
                 const updatedUser = await database.updateUser(userData);
                 if (updatedUser) {
                     onSaveSuccess();
@@ -109,10 +112,10 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
                 <div className="p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                         <select value={role} onChange={e => setRole(e.target.value as UserRole)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                             <option value={UserRole.Standard}>Standard</option>
-                             <option value={UserRole.Trial}>Trial</option>
-                             <option value={UserRole.Admin}>Admin</option>
+                          <select value={role} onChange={e => setRole(e.target.value as UserRole)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value={UserRole.Standard}>Standard</option>
+                            <option value={UserRole.Trial}>Trial</option>
+                            <option value={UserRole.Admin}>Admin</option>
                          </select>
                     </div>
                      <input type="email" placeholder="Email (used for login)" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />

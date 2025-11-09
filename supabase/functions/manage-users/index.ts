@@ -1,3 +1,4 @@
+
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, linting, and type checking.
@@ -17,7 +18,6 @@ serve(async (req) => {
   }
 
   try {
-    // Create a client to authenticate the request and get the auth user
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -28,14 +28,11 @@ serve(async (req) => {
       throw { message: 'Not authenticated', status: 401 };
     }
 
-    // Create an admin client for elevated privileges
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Helper function to ensure the requesting user is an admin.
-    // It fetches the user's profile and checks their role.
     const ensureAdmin = async () => {
       const { data: requestingUserProfile, error: profileError } = await supabaseAdmin
         .from('users')
@@ -43,9 +40,7 @@ serve(async (req) => {
         .eq('auth_id', authUser.id)
         .single();
       
-      if (profileError) {
-        throw { message: 'Could not verify user role.', status: 500 };
-      }
+      if (profileError) throw { message: 'Could not verify user role.', status: 500 };
       if (!requestingUserProfile || requestingUserProfile.role !== 'Admin') {
         throw { message: 'Permission denied: Admin role required.', status: 403 };
       }
@@ -58,7 +53,6 @@ serve(async (req) => {
       case 'createUser': {
         await ensureAdmin();
         const { email, password, username, role, sipVoice, features } = payload;
-        // 1. Create the user in the auth system
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: email,
           password: password,
@@ -66,7 +60,6 @@ serve(async (req) => {
         });
         if (authError) throw authError;
 
-        // 2. Create the user profile in the public.users table
         const { data: profileData, error: profileError } = await supabaseAdmin
           .from('users')
           .insert({
@@ -89,7 +82,6 @@ serve(async (req) => {
       case 'updateUser': {
         await ensureAdmin();
         const { id, auth_id, email, password, username, role, sipVoice, features } = payload;
-        // 1. Update user profile in public.users table
         const { data: profileData, error: profileError } = await supabaseAdmin
           .from('users')
           .update({
@@ -104,13 +96,11 @@ serve(async (req) => {
           .single();
         if (profileError) throw profileError;
 
-        // 2. If auth_id and email are provided, update email in the auth system
         if (auth_id && email) {
           const { error: authEmailError } = await supabaseAdmin.auth.admin.updateUserById(auth_id, { email });
           if (authEmailError) throw authEmailError;
         }
 
-        // 3. If password and auth_id are provided, update it in the auth system
         if (auth_id && password) {
           const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(auth_id, { password });
           if (authError) throw authError;
@@ -143,7 +133,6 @@ serve(async (req) => {
         });
       }
       case 'getUserByUsername': {
-        // This action does not require admin privileges.
         const { username } = payload;
         if (!username) throw { message: 'Username is required.', status: 400 };
 
@@ -158,6 +147,28 @@ serve(async (req) => {
           throw error;
         }
         return new Response(JSON.stringify({ user: data }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+      case 'updatePassword': {
+        const { currentPassword, newPassword } = payload;
+        // 1. Verify the user's current password by trying to sign in with it.
+        const { error: signInError } = await userClient.auth.signInWithPassword({
+          email: authUser.email,
+          password: currentPassword,
+        });
+        if (signInError) {
+          throw { message: 'Incorrect current password.', status: 401 };
+        }
+        
+        // 2. If verification is successful, update the user's password.
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
+          password: newPassword,
+        });
+        if (updateError) throw updateError;
+        
+        return new Response(JSON.stringify({ message: 'Password updated successfully.' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         });
