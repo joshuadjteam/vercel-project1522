@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useRef } from 'react';
 import { useCall } from '../hooks/useCall';
 
@@ -14,6 +15,7 @@ const CallWidget: React.FC = () => {
     
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
+    const remoteAudioRef = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
         if (localStream && localVideoRef.current) {
@@ -22,8 +24,13 @@ const CallWidget: React.FC = () => {
     }, [localStream]);
     
     useEffect(() => {
-        if (remoteStream && remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = remoteStream;
+        if (remoteStream) {
+            if (remoteVideoRef.current) {
+                remoteVideoRef.current.srcObject = remoteStream;
+            }
+            if (remoteAudioRef.current) {
+                remoteAudioRef.current.srcObject = remoteStream;
+            }
         }
     }, [remoteStream]);
 
@@ -71,6 +78,8 @@ const CallWidget: React.FC = () => {
                 </div>
             )}
 
+            {/* Hidden audio element to ensure audio plays even if video element is not visible */}
+            <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
 
             {showKeypad && <Keypad />}
 

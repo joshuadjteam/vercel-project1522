@@ -143,13 +143,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setIncomingCall({ from: payload.from, offer: payload.offer, isVideoCall: payload.isVideoCall });
                 break;
             case 'answer':
-                if (peerConnectionRef.current && peerConnectionRef.current.signalingState !== 'closed') {
+                if (peerConnectionRef.current && peerConnectionRef.current.signalingState === 'have-local-offer') {
                     await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer));
                     // Process any queued candidates after setting remote description
                     pendingCandidatesRef.current.forEach(candidate => {
-                        peerConnectionRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
+                        peerConnectionRef.current?.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => {
+                            console.error("Error adding queued ICE candidate", e);
+                        });
                     });
                     pendingCandidatesRef.current = [];
+                } else {
+                    console.warn(`[P2P] Received answer in unexpected state: ${peerConnectionRef.current?.signalingState}. Ignoring.`);
                 }
                 break;
             case 'ice-candidate':
