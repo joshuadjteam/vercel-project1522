@@ -84,14 +84,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return { user: adminUser, error: null };
         }
 
-        // Proceed with regular database login
+        // The onAuthStateChange listener will handle setting the user profile and loggedIn state.
+        // This function's job is just to perform the login and return the result.
         const { user: userProfile, error } = await database.login(id, pass);
-        if (userProfile) {
-            setUser(userProfile);
-            setIsLoggedIn(true);
-            return { user: userProfile, error: null };
-        }
-        return { user: null, error };
+        return { user: userProfile, error };
     };
     
     const loginAsGuest = async (): Promise<User | null> => {
