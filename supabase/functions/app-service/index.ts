@@ -68,7 +68,7 @@ serve(async (req)=>{
 
         if (secretsError) {
           console.error("Error fetching secrets from DB:", secretsError);
-          throw new Error("Could not retrieve function secrets from the database.");
+          throw new Error(`Could not retrieve function secrets from the database. Make sure the 'function_secrets' table exists and is accessible. DB Error: ${secretsError.message}`);
         }
 
         const secretsMap = new Map(secrets.map(s => [s.name, s.value]));
@@ -76,10 +76,10 @@ serve(async (req)=>{
         const elevenLabsApiKey = secretsMap.get('ELEVENLABS_API_KEY');
 
         if (!geminiApiKey) {
-            throw new Error("Gemini API key not found in the function_secrets table.");
+            throw new Error("SETUP INCOMPLETE: Gemini API key (API_KEY) not found in the 'function_secrets' table.");
         }
         if (!elevenLabsApiKey) {
-            throw new Error("ElevenLabs API key not found in the function_secrets table.");
+            throw new Error("SETUP INCOMPLETE: ElevenLabs API key (ELEVENLABS_API_KEY) not found in the 'function_secrets' table.");
         }
 
         const { text: userText } = payload;
@@ -94,7 +94,7 @@ serve(async (req)=>{
             contents: `You are a helpful voice assistant for a web portal called Lynix. Keep your response concise, friendly, and conversational. User said: "${userText}"`,
         });
         
-        // FIX: Safely convert the unknown response text to a string.
+        // FIX: Safely convert the response from Gemini to a string, as its type might be 'unknown'.
         let aiTextResponse = String(geminiResponse.text ?? '');
         if (!aiTextResponse || aiTextResponse.trim() === '') {
             aiTextResponse = "I'm sorry, I don't have a response for that. Please try asking another way.";
@@ -535,6 +535,11 @@ serve(async (req)=>{
         throw new Error(`Invalid resource: ${resource}`);
     }
   } catch (error) {
+    // Enhanced logging for better debugging
+    console.error('--- EDGE FUNCTION CRASHED ---');
+    console.error(`Error Message: ${error.message}`);
+    console.error('Full Error Object:', error);
+    
     return new Response(JSON.stringify({
       error: error.message
     }), {
