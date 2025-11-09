@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -220,6 +221,38 @@ serve(async (req)=>{
           default:
             throw new Error('Invalid action for contacts');
         }
+      // --- CALL HISTORY ---
+      case 'call-history': {
+        switch(action) {
+          case 'get': {
+            ({ data, error } = await supabaseAdmin
+              .from('call_history')
+              .select('*')
+              .eq('owner_username', userProfile.username)
+              .order('timestamp', { ascending: false }));
+            if (error) throw error;
+            return new Response(JSON.stringify({ history: data }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200,
+            });
+          }
+          case 'add': {
+            const record = { ...payload, owner_username: userProfile.username };
+            ({ data, error } = await supabaseAdmin
+              .from('call_history')
+              .insert(record)
+              .select()
+              .single());
+            if (error) throw error;
+            return new Response(JSON.stringify({ record: data }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200,
+            });
+          }
+          default:
+            throw new Error('Invalid action for call-history');
+        }
+      }
       // --- CHAT HISTORY ---
       case 'chatHistory':
         const { currentUserId, otherUserId } = payload;

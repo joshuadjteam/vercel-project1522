@@ -57,6 +57,17 @@ export interface Note {
     createdAt: Date;
 }
 
+export interface CallRecord {
+    id: number;
+    owner_username: string;
+    caller_username: string;
+    callee_username: string;
+    direction: 'incoming' | 'outgoing';
+    status: 'answered' | 'declined' | 'missed' | 'ended' | 'ai_call';
+    duration: number; // in seconds
+    timestamp: string; // ISO string
+}
+
 
 export type Page = 
     | 'home' 

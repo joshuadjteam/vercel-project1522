@@ -1,5 +1,6 @@
+
 import { supabase } from '../supabaseClient';
-import { User, UserRole, Mail, Contact, Note } from '../types';
+import { User, UserRole, Mail, Contact, Note, CallRecord } from '../types';
 
 // Helper to map DB user to app User
 const mapDbUserToUser = (dbUser: any): User => {
@@ -279,5 +280,28 @@ export const database = {
             return false;
         }
         return true;
+    },
+
+    // --- Call History Service Functions ---
+    getCallHistoryForUser: async (): Promise<CallRecord[]> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'call-history', action: 'get' }
+        });
+        if (error || !data || data.error) {
+            console.error('Error fetching call history:', error || data?.error);
+            return [];
+        }
+        return data.history || [];
+    },
+
+    addCallHistoryRecord: async (recordData: Omit<CallRecord, 'id' | 'owner_username' | 'timestamp'>): Promise<CallRecord | null> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'call-history', action: 'add', payload: recordData }
+        });
+        if (error || !data || data.error) {
+            console.error('Error adding call record:', error || data?.error);
+            return null;
+        }
+        return data.record;
     },
 };

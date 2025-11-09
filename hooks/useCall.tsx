@@ -1,8 +1,11 @@
+
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { geminiService } from '../services/geminiService';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { database } from '../services/database';
+import { CallRecord } from '../types';
 
 // FIX: Add TypeScript definitions for the non-standard Web Speech API to resolve errors.
 // This provides the `SpeechRecognition` type and adds `SpeechRecognition` and
@@ -116,6 +119,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [incomingCall, setIncomingCall] = useState<{ from: string; offer: RTCSessionDescriptionInit; } | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
+    // Call Logging refs
+    const callStartTimeRef = useRef<number | null>(null);
+    const callDirectionRef = useRef<'incoming' | 'outgoing' | null>(null);
+
     // P2P refs
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
     const localStreamRef = useRef<MediaStream | null>(null);
@@ -125,6 +132,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
     const isPlayingAudioRef = useRef(false);
     const isCallingRef = useRef(isCalling);
+    const isMutedRef = useRef(isMuted);
     const aiAudioRefs = useRef<{
         outputAudioContext: AudioContext | null,
         playbackSources: Set<AudioBufferSourceNode>,
@@ -133,6 +141,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         isCallingRef.current = isCalling;
     }, [isCalling]);
+    
+    useEffect(() => {
+        isMutedRef.current = isMuted;
+    }, [isMuted]);
 
     const resetState = useCallback(() => {
         setIsCalling(false);
@@ -144,6 +156,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setKeypadInput('');
         setIncomingCall(null);
         setRemoteStream(null);
+        callStartTimeRef.current = null;
+        callDirectionRef.current = null;
     }, []);
 
     const cleanupP2P = useCallback(() => {
@@ -177,14 +191,47 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else if (callType === 'ai') {
             cleanupAI();
         }
+
+        // Log the call
+        if (callStartTimeRef.current && user && callDirectionRef.current) {
+            const duration = Math.round((Date.now() - callStartTimeRef.current) / 1000);
+            
+            let status: CallRecord['status'] = 'ended';
+            let remoteUser = callee;
+
+            if (callType === 'p2p') {
+                remoteUser = callDirectionRef.current === 'outgoing' ? callee : (incomingCall?.from || '');
+                if (callStatus === 'Connected') {
+                    status = 'answered';
+                } else if (callStatus === 'Call Declined') {
+                    status = 'declined';
+                }
+            } else if (callType === 'ai') {
+                status = 'ai_call';
+            }
+    
+            if (remoteUser) {
+                const record: Omit<CallRecord, 'id' | 'owner_username' | 'timestamp'> = {
+                    caller_username: callDirectionRef.current === 'outgoing' ? user.username : remoteUser,
+                    callee_username: callDirectionRef.current === 'outgoing' ? remoteUser : user.username,
+                    direction: callDirectionRef.current,
+                    status,
+                    duration
+                };
+                database.addCallHistoryRecord(record);
+            }
+        }
+
         resetState();
-    }, [callType, callee, incomingCall, user, cleanupP2P, cleanupAI, resetState]);
+    }, [callType, callee, incomingCall, user, cleanupP2P, cleanupAI, resetState, callStatus]);
 
 
     const handleSignalingData = useCallback(async (payload: any) => {
         if (!user) return;
         switch (payload.type) {
             case 'offer':
+                // Do not show incoming call if already in a call
+                if(isCallingRef.current) return;
                 setIncomingCall({ from: payload.from, offer: payload.offer });
                 break;
             case 'answer':
@@ -204,10 +251,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
                 break;
             case 'end-call':
+                // if the other user ends the call, we also log it as a missed call if it was ringing.
+                if (callStatus.startsWith('Ringing') && callDirectionRef.current === 'outgoing') {
+                     // This case is when the caller hangs up, the callee should see a missed call.
+                     // The caller's endCall will be logged as 'ended'. The callee isn't in a call yet so won't log.
+                     // This is tricky to handle perfectly without a dedicated signaling server.
+                     // The current approach logs from the active client. Missed calls for offline users are not logged.
+                }
                 endCall();
                 break;
         }
-    }, [user, callee, endCall]);
+    }, [user, callee, endCall, callStatus]);
     
     useEffect(() => {
         if (!user || user.role === 'Trial') return;
@@ -226,6 +280,12 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const playAudio = useCallback((audioBuffer: AudioBuffer) => {
         const ctx = aiAudioRefs.current.outputAudioContext;
         if (!ctx) return;
+
+        // Prevent playing if muted
+        if (isMutedRef.current) {
+            setCallStatus("Muted");
+            return;
+        }
         
         isPlayingAudioRef.current = true;
         setCallStatus("Speaking...");
@@ -239,20 +299,20 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         source.onended = () => {
             aiAudioRefs.current.playbackSources.delete(source);
             isPlayingAudioRef.current = false;
-            if (isCallingRef.current && !isMuted) {
+            if (isCallingRef.current && !isMutedRef.current) {
                 speechRecognitionRef.current?.start();
                 setCallStatus("Listening...");
-            } else if (isCallingRef.current && isMuted) {
+            } else if (isCallingRef.current && isMutedRef.current) {
                 setCallStatus("Muted");
             }
         };
         
         source.start();
-    }, [isMuted]);
+    }, []);
 
     const handleUserTranscript = useCallback(async (transcript: string, persona: string) => {
         if (!transcript) {
-            if (isCallingRef.current && !isMuted) {
+            if (isCallingRef.current && !isMutedRef.current) {
                  speechRecognitionRef.current?.start();
                  setCallStatus("Listening...");
             }
@@ -263,7 +323,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         if (!aiTextResponse || !isCallingRef.current) {
             setCallStatus("Error from AI. Try again.");
-            if (isCallingRef.current && !isMuted) speechRecognitionRef.current?.start();
+            if (isCallingRef.current && !isMutedRef.current) speechRecognitionRef.current?.start();
             return;
         }
     
@@ -275,19 +335,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 playAudio(audioBuffer);
             } catch (e) {
                 console.error("Error decoding or playing TTS audio:", e);
-                if (isCallingRef.current && !isMuted) speechRecognitionRef.current?.start();
+                if (isCallingRef.current && !isMutedRef.current) speechRecognitionRef.current?.start();
             }
         } else {
             console.error("Failed to get TTS audio.");
-            if (isCallingRef.current && !isMuted) speechRecognitionRef.current?.start();
+            if (isCallingRef.current && !isMutedRef.current) speechRecognitionRef.current?.start();
         }
-    }, [isMuted, playAudio]);
+    }, [playAudio]);
     
     const startAICall = async (persona: string) => {
         if (isCalling) return;
     
-        // FIX: With the added typings, we can now safely access `window.SpeechRecognition`
-        // and `window.webkitSpeechRecognition` without type errors.
         const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognitionAPI) {
             setIsCalling(true);
@@ -302,6 +360,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCallee(persona);
         setCallStatus("Muted");
         setIsMuted(true);
+        callStartTimeRef.current = Date.now();
+        callDirectionRef.current = 'outgoing';
     
         const recognition = new SpeechRecognitionAPI();
         recognition.continuous = false;
@@ -318,16 +378,15 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
         
         recognition.onend = () => {
-            if (isCallingRef.current && !isMuted && !isPlayingAudioRef.current) {
-                setCallStatus("Listening...");
-                recognition.start();
-            }
+            // This is intentionally left blank. The logic to restart recognition is handled
+            // after audio playback finishes or in the onerror handler, preventing a race
+            // condition where recognition would restart before the AI could process the transcript.
         };
         
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
             if (event.error === 'no-speech' || event.error === 'audio-capture') {
-                if (isCallingRef.current && !isMuted && !isPlayingAudioRef.current) {
+                if (isCallingRef.current && !isMutedRef.current && !isPlayingAudioRef.current) {
                      setCallStatus("Listening...");
                      recognition.start();
                 }
@@ -343,6 +402,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCallType('p2p');
         setCallee(calleeUsername);
         setCallStatus(`Ringing ${calleeUsername}...`);
+        callStartTimeRef.current = Date.now();
+        callDirectionRef.current = 'outgoing';
         
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -385,6 +446,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCallType('p2p');
         setCallee(incomingCall.from);
         setCallStatus('Connecting...');
+        callStartTimeRef.current = Date.now();
+        callDirectionRef.current = 'incoming';
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -424,6 +487,16 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const declineCall = () => {
         if (!incomingCall || !user) return;
         supabase.channel(`call-channel-${incomingCall.from}`).send({ type: 'broadcast', event: 'call-event', payload: { type: 'decline', from: user.username }});
+        
+        const record: Omit<CallRecord, 'id' | 'owner_username' | 'timestamp'> = {
+            caller_username: incomingCall.from,
+            callee_username: user.username,
+            direction: 'incoming',
+            status: 'declined',
+            duration: 0
+        };
+        database.addCallHistoryRecord(record);
+        
         setIncomingCall(null);
     };
 
