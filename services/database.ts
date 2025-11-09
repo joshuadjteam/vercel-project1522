@@ -46,15 +46,18 @@ export const database = {
             return { user: null, error: authError?.message || 'Invalid credentials provided.' };
         }
         
-        const { profile: userProfile, error: profileError } = await database.getUserProfile(authData.user.id);
-        if (profileError || !userProfile) {
-            const errorMessage = `Authentication successful, but failed to retrieve user profile: ${profileError}`;
+        // Fetch the user profile directly instead of calling this.getUserProfile
+        const { data: profileData, error: profileError } = await supabase.from('users').select('*').eq('auth_id', authData.user.id).single();
+
+        if (profileError || !profileData) {
+            const errorMessage = `Authentication successful, but failed to retrieve user profile: ${profileError?.message}`;
             console.error(errorMessage);
             // Automatically sign out the user to prevent them from being stuck in a broken state.
             await supabase.auth.signOut();
             return { user: null, error: errorMessage };
         }
 
+        const userProfile = mapDbUserToUser(profileData);
         return { user: userProfile, error: null };
     },
 
