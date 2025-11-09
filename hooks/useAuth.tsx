@@ -8,7 +8,7 @@ interface AuthContextType {
     user: User | null;
     isLoggedIn: boolean;
     isLoading: boolean;
-    login: (id: string, pass: string) => Promise<{ error: string | null }>;
+    login: (email: string, pass: string) => Promise<{ error: string | null }>;
     loginAsGuest: () => Promise<User | null>;
     logout: () => void;
 }
@@ -64,29 +64,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, []);
 
-    const login = async (id: string, pass: string): Promise<{ error: string | null }> => {
-        // Check for local administrator account
-        if (id.toLowerCase() === 'administrator' && pass === 'DJTeam2013') {
-            const adminUser: User = {
-                id: -1, // Special ID for local admin
-                username: 'administrator',
-                email: 'admin@local',
-                role: UserRole.Admin,
-                sipVoice: 'N/A',
-                features: {
-                    chat: true,
-                    ai: true,
-                    mail: true,
-                },
-            };
-            setUser(adminUser);
-            setIsLoggedIn(true);
-            return { error: null };
-        }
-
+    const login = async (email: string, pass: string): Promise<{ error: string | null }> => {
         // The onAuthStateChange listener will handle setting the user profile and loggedIn state.
         // This function's job is just to perform the login and return any auth error.
-        const { error } = await database.login(id, pass);
+        const { error } = await database.login(email, pass);
         return { error };
     };
     
@@ -98,18 +79,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = async () => {
-        if (user?.id === -1) { // Local admin logout
-            setUser(null);
-            setIsLoggedIn(false);
-        } else { // Regular user logout
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                console.error('Error logging out:', error);
-            }
-            // State is also cleared by the onAuthStateChange listener
-            setUser(null);
-            setIsLoggedIn(false);
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error('Error logging out:', error);
         }
+        // State is also cleared by the onAuthStateChange listener
+        setUser(null);
+        setIsLoggedIn(false);
     };
 
     return (

@@ -18,26 +18,9 @@ const mapDbUserToUser = (dbUser: any): User => {
 
 export const database = {
     // --- Auth & User Functions (using Supabase) ---
-    login: async (identifier: string, pass: string): Promise<{ error: string | null }> => {
-        let emailToLogin = identifier;
-        // If identifier is not an email, assume it's a username and fetch the email
-        if (!identifier.includes('@')) {
-            const { data: userByUsername, error } = await supabase
-                .from('users')
-                .select('email')
-                .eq('username', identifier)
-                .single();
-            
-            if (error || !userByUsername) {
-                const errorMessage = `User with login '${identifier}' not found.`;
-                console.error(errorMessage, error);
-                return { error: errorMessage };
-            }
-            emailToLogin = userByUsername.email;
-        }
-
+    login: async (email: string, pass: string): Promise<{ error: string | null }> => {
         const { error: authError } = await supabase.auth.signInWithPassword({
-            email: emailToLogin,
+            email: email,
             password: pass,
         });
 
