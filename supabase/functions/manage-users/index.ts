@@ -34,15 +34,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch the profile of the user making the request to check their role if needed.
-    const { data: requestingUserProfile, error: profileError } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('auth_id', authUser.id)
-      .single();
-    
-    // Helper function to ensure the requesting user is an admin
-    const ensureAdmin = () => {
+    // Helper function to ensure the requesting user is an admin.
+    // It fetches the user's profile and checks their role.
+    const ensureAdmin = async () => {
+      const { data: requestingUserProfile, error: profileError } = await supabaseAdmin
+        .from('users')
+        .select('role')
+        .eq('auth_id', authUser.id)
+        .single();
+      
       if (profileError) {
         throw { message: 'Could not verify user role.', status: 500 };
       }
@@ -56,7 +56,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'createUser': {
-        ensureAdmin();
+        await ensureAdmin();
         const { email, password, username, role, sipVoice, features } = payload;
         // 1. Create the user in the auth system
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -87,7 +87,7 @@ serve(async (req) => {
         });
       }
       case 'updateUser': {
-        ensureAdmin();
+        await ensureAdmin();
         const { id, auth_id, email, password, username, role, sipVoice, features } = payload;
         // 1. Update user profile in public.users table
         const { data: profileData, error: profileError } = await supabaseAdmin
@@ -122,7 +122,7 @@ serve(async (req) => {
         });
       }
       case 'deleteUser': {
-        ensureAdmin();
+        await ensureAdmin();
         const { auth_id } = payload;
         const { error } = await supabaseAdmin.auth.admin.deleteUser(auth_id);
         if (error) throw error;
@@ -133,7 +133,7 @@ serve(async (req) => {
         });
       }
       case 'getUsers': {
-        ensureAdmin();
+        await ensureAdmin();
         const { data, error } = await supabaseAdmin.from('users').select('*').order('id', { ascending: true });
         if (error) throw error;
         
