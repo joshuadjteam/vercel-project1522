@@ -41,6 +41,24 @@ export interface Mail {
     read: boolean;
 }
 
+export interface MailAccount {
+    id: number;
+    user_id: string; // auth_id of the owner
+    display_name: string;
+    email_address: string;
+    smtp_server: string;
+    smtp_port: number;
+    smtp_user: string;
+    smtp_pass: string;
+    smtp_tls: boolean;
+    imap_server: string;
+    imap_port: number;
+    imap_user: string;
+    imap_pass: string;
+    imap_encryption: string;
+}
+
+
 export interface Contact {
     id: number;
     owner: string; // username of the user who owns the contact

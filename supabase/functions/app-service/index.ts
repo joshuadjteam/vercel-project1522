@@ -122,9 +122,13 @@ serve(async (req)=>{
               status: 200
             });
           case 'send':
+             const senderAddress = payload.sender || userProfile.username;
             ({ data, error } = await supabaseAdmin.from('mails').insert({
-              ...payload,
-              sender: userProfile.username
+              sender: senderAddress,
+              recipient: payload.recipient,
+              subject: payload.subject,
+              body: payload.body,
+              read: false,
             }).select().single());
             if (error) throw error;
             return new Response(JSON.stringify({
@@ -164,6 +168,27 @@ serve(async (req)=>{
             });
           default:
             throw new Error('Invalid action for mails');
+        }
+      // --- MAIL ACCOUNTS ---
+      case 'mail_accounts':
+        switch(action) {
+            case 'get':
+                ({ data, error } = await supabaseAdmin
+                    .from('mail_accounts')
+                    .select('*')
+                    .eq('user_id', authUser.id));
+                if (error) throw error;
+                return new Response(JSON.stringify({ accounts: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            case 'add':
+                ({ data, error } = await supabaseAdmin
+                    .from('mail_accounts')
+                    .insert({ ...payload, user_id: authUser.id })
+                    .select()
+                    .single());
+                if (error) throw error;
+                return new Response(JSON.stringify({ account: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            default:
+                throw new Error('Invalid action for mail_accounts');
         }
       // --- CONTACTS ---
       case 'contacts':

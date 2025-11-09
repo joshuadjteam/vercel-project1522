@@ -1,7 +1,7 @@
 
 
 import { supabase } from '../supabaseClient';
-import { User, UserRole, Mail, Contact, Note, CallRecord } from '../types';
+import { User, UserRole, Mail, Contact, Note, CallRecord, MailAccount } from '../types';
 
 // Helper to map DB user to app User
 const mapDbUserToUser = (dbUser: any): User => {
@@ -171,7 +171,7 @@ export const database = {
         return { inbox, sent };
     },
 
-    sendMail: async (mailData: Omit<Mail, 'id' | 'timestamp' | 'read' | 'sender'>): Promise<Mail | null> => {
+    sendMail: async (mailData: { recipient: string; subject: string; body: string; sender: string; }): Promise<Mail | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'mails', action: 'send', payload: mailData }
         });
@@ -202,6 +202,28 @@ export const database = {
             return false;
         }
         return true;
+    },
+
+    getMailAccounts: async (): Promise<MailAccount[]> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'mail_accounts', action: 'get' }
+        });
+        if (error || !data || data.error) {
+            console.error("Error fetching mail accounts:", error || data?.error);
+            return [];
+        }
+        return data.accounts || [];
+    },
+
+    addMailAccount: async (accountData: Omit<MailAccount, 'id' | 'user_id'>): Promise<MailAccount | null> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'mail_accounts', action: 'add', payload: accountData }
+        });
+        if (error || !data || data.error) {
+            console.error('Error adding mail account:', error || data?.error);
+            return null;
+        }
+        return data.account;
     },
 
     // --- Contacts Service Functions ---
