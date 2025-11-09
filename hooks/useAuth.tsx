@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User } from '../types';
 import { database } from '../services/database';
@@ -29,25 +28,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // onAuthStateChange is the single source of truth for the user's session state.
         // It fires on initial load and whenever the auth state changes.
         const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (session?.user) {
-                // User is authenticated, now get their application profile.
-                const { profile, error } = await database.getUserProfile(session.user.id);
+            try {
+                if (session?.user) {
+                    // User is authenticated, now get their application profile.
+                    const { profile, error } = await database.getUserProfile(session.user.id);
 
-                if (error || !profile) {
-                    // This is a critical error state: user exists in Supabase auth but not in our public.users table
-                    // or the profile fetch failed. To prevent a broken UI, sign them out.
-                    console.error('User signed in but profile fetch failed. Signing out.', error);
-                    await supabase.auth.signOut();
-                    updateUserState(null);
+                    if (error || !profile) {
+                        // This is a critical error state: user exists in Supabase auth but not in our public.users table
+                        // or the profile fetch failed. To prevent a broken UI, sign them out.
+                        console.error('User signed in but profile fetch failed. Signing out.', error);
+                        await supabase.auth.signOut();
+                        updateUserState(null);
+                    } else {
+                        updateUserState(profile);
+                    }
                 } else {
-                    updateUserState(profile);
+                    // User is not authenticated.
+                    updateUserState(null);
                 }
-            } else {
-                // User is not authenticated.
+            } catch (e) {
+                console.error("Error in onAuthStateChange callback:", e);
+                // In case of any unexpected error, sign out and reset state.
+                await supabase.auth.signOut();
                 updateUserState(null);
+            } finally {
+                // This will ALWAYS run, regardless of success or error, preventing a stuck loading screen.
+                setIsLoading(false);
             }
-            // The initial check is complete, so we can stop showing the global loader.
-            setIsLoading(false);
         });
 
         return () => {
