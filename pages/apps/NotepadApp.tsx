@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
@@ -15,7 +16,7 @@ const NotepadApp: React.FC = () => {
     const fetchNotes = useCallback(async () => {
         if (!user) return;
         setIsLoading(true);
-        const userNotes = await database.getNotesForUser();
+        const userNotes = await database.getNotesForUser(user.username);
         setNotes(userNotes);
         setIsLoading(false);
     }, [user]);
@@ -41,13 +42,12 @@ const NotepadApp: React.FC = () => {
     const handleNewNote = async () => {
         if (!user) return;
         const newNote = await database.addNote({
+            owner: user.username,
             title: 'New Note',
             content: '',
         });
-        if (newNote) {
-            await fetchNotes();
-            setSelectedNote(newNote);
-        }
+        await fetchNotes();
+        setSelectedNote(newNote);
     };
 
     const handleDeleteNote = async () => {
@@ -62,18 +62,14 @@ const NotepadApp: React.FC = () => {
     const handleSaveNote = async () => {
         if (!selectedNote || !user) return;
         setSaveStatus('Saving...');
-        const updatedNoteData = {
+        const updatedNote = {
             ...selectedNote,
             title: currentTitle,
             content: currentContent,
         };
-        const updatedNote = await database.updateNote(updatedNoteData);
+        await database.updateNote(updatedNote);
         setSaveStatus('Note saved!');
-        if(updatedNote) {
-            // Update the selected note with the response from the server
-            setSelectedNote(updatedNote);
-        }
-        await fetchNotes(); // to re-sort list if title changed
+        fetchNotes(); // to re-sort list if title changed
         setTimeout(() => setSaveStatus(''), 2000);
     };
 
@@ -89,7 +85,7 @@ const NotepadApp: React.FC = () => {
                     </button>
                 </div>
                  <div className="p-2 text-center text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/50">
-                    Notes are temporary and may be cleared periodically.
+                    Notes are deleted after 72 hours of inactivity.
                 </div>
                 <div className="flex-grow overflow-y-auto">
                     {isLoading ? <p className="p-4">Loading...</p> : notes.map(note => (

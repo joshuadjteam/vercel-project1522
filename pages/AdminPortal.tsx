@@ -2,14 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
 import { database } from '../services/database';
 import AddUserModal from '../components/AddUserModal';
-import { useAuth } from '../hooks/useAuth';
 
 const AdminPortal: React.FC = () => {
-    const { user } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
-    const [stats, setStats] = useState({ messages: 0, mails: 0, contacts: 0 });
 
     const fetchUsers = useCallback(async () => {
         const userList = await database.getUsers();
@@ -17,18 +14,8 @@ const AdminPortal: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const fetchStats = async () => {
-            const adminStats = await database.getAdminStats();
-            if (adminStats) {
-                setStats(adminStats);
-            }
-        };
-
-        if (user?.auth_id) {
-            fetchStats();
-            fetchUsers();
-        }
-    }, [fetchUsers, user]);
+        fetchUsers();
+    }, [fetchUsers]);
 
     const handleAddUser = () => {
         setUserToEdit(null);
@@ -71,21 +58,6 @@ const AdminPortal: React.FC = () => {
         </span>
     );
 
-    // Disable portal for local admin as they don't have a Supabase session
-    if (user && !user.auth_id) {
-        return (
-             <div className="w-full max-w-4xl bg-light-card/80 dark:bg-red-900/50 backdrop-blur-sm border border-gray-300 dark:border-red-700/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white">
-                <h1 className="text-3xl font-bold text-center mb-4">User Management Disabled</h1>
-                <p className="text-center text-red-200">
-                    You are logged in as a local administrator. This account does not have the necessary permissions to manage users because it is not authenticated with the backend service.
-                </p>
-                <p className="text-center mt-2 text-gray-300">
-                    Please sign out and use an account created via the 'Add User' feature to access the admin portal.
-                </p>
-            </div>
-        );
-    }
-
     return (
         <div className="w-full max-w-7xl bg-light-card/80 dark:bg-teal-900/50 backdrop-blur-sm border border-gray-300 dark:border-teal-700/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white">
             <h1 className="text-4xl font-bold">Admin Portal</h1>
@@ -93,9 +65,9 @@ const AdminPortal: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <StatCard title="Total Users" value={users.length} />
-                <StatCard title="Chat Messages" value={stats.messages} />
-                <StatCard title="Local Mails" value={stats.mails} />
-                <StatCard title="Saved Contacts" value={stats.contacts} />
+                <StatCard title="Chat Messages" value={0} />
+                <StatCard title="Local Mails" value={0} />
+                <StatCard title="Saved Contacts" value={0} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

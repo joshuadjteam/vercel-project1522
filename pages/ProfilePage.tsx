@@ -99,7 +99,7 @@ const LynxAITabContent = () => {
 
     const handleSend = async () => {
         if (input.trim() === '' || isLoading) return;
-        // FIX: Explicitly type message objects to ensure their 'sender' property conforms to the '"user" | "ai"' literal type, resolving TypeScript type inference issues.
+        // FIX: Explicitly type message objects to conform to the Message interface. This resolves a TypeScript error where the 'sender' property was being inferred as a general 'string' instead of the required '"user" | "ai"' literal type.
         const userMessage: Message = { sender: 'user', text: input };
         setMessages(prev => [...prev, userMessage]);
         setInput('');

@@ -1,11 +1,13 @@
+
 import { supabase } from '../supabaseClient';
 import { ChatMessage, User } from '../types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 const activeChannels = new Map<string, RealtimeChannel>();
 
-const mapDbUserToUser = (dbUser: any): User | null => {
-    if (!dbUser) return null;
+// Helper to map DB user to app User, assuming snake_case from DB
+const mapDbUserToUser = (dbUser: any): User => {
+    if (!dbUser) return {} as User;
     return {
         id: dbUser.id,
         auth_id: dbUser.auth_id,
@@ -18,47 +20,51 @@ const mapDbUserToUser = (dbUser: any): User | null => {
 };
 
 export const chatService = {
+    /**
+     * Creates a consistent, order-independent chat ID from two user IDs.
+     */
     getChatId(userId1: number, userId2: number): string {
         return ['chat', ...[userId1, userId2].sort()].join('--');
     },
 
-    async getChatHistory(currentUserId: number, otherUserId: number): Promise<ChatMessage[]> {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: {
-                resource: 'chatHistory',
-                action: 'get',
-                payload: { currentUserId, otherUserId }
-            }
-        });
+    /**
+     * Retrieves the message history for a chat using Supabase, including sender and receiver user data.
+     * Uses snake_case for foreign key columns.
+     */
+    async getChatHistory(userId1: number, userId2: number): Promise<ChatMessage[]> {
+        const chatId = this.getChatId(userId1, userId2);
+        
+        const { data, error } = await supabase
+            .from('chat_messages')
+            .select(`
+                *,
+                sender:sender_id(*),
+                receiver:receiver_id(*)
+            `)
+            .eq('chat_id', chatId)
+            .order('timestamp', { ascending: true });
 
-        if (error || data.error) {
-            console.error('Error fetching chat history via function:', error || data.error);
+        if (error) {
+            console.error('Error fetching chat history:', error);
             return [];
         }
 
-        const messages = data.history.map((msg: any) => {
-            const sender = mapDbUserToUser(msg.sender);
-            const receiver = mapDbUserToUser(msg.receiver);
-
-            if (!sender || !receiver) {
-                console.warn(`Skipping message ${msg.id} due to missing user profile.`);
-                return null;
-            }
-
-            return {
-                id: msg.id,
-                senderId: msg.sender_id,
-                receiverId: msg.receiver_id,
-                text: msg.text,
-                timestamp: new Date(msg.timestamp),
-                sender,
-                receiver,
-            };
-        }).filter((msg): msg is ChatMessage => msg !== null);
-
-        return messages;
+        // Map snake_case from DB to camelCase for the app
+        return data.map((msg: any) => ({
+            id: msg.id,
+            senderId: msg.sender_id,
+            receiverId: msg.receiver_id,
+            text: msg.text,
+            timestamp: new Date(msg.timestamp),
+            sender: mapDbUserToUser(msg.sender),
+            receiver: mapDbUserToUser(msg.receiver),
+        }));
     },
     
+    /**
+     * Sends a new message using Supabase.
+     * Uses snake_case for column names in the insert payload.
+     */
     async sendMessage(messageData: { senderId: number; receiverId: number; text: string }): Promise<void> {
         const chatId = this.getChatId(messageData.senderId, messageData.receiverId);
         
@@ -76,6 +82,10 @@ export const chatService = {
         }
     },
     
+    /**
+     * Subscribes to real-time messages for a chat from the 'chat_messages' table.
+     * The payload received from Supabase will have snake_case keys.
+     */
     subscribe(chatId: string, callback: (message: any) => void): void {
         if (activeChannels.has(chatId)) {
             return;
@@ -100,6 +110,9 @@ export const chatService = {
         activeChannels.set(chatId, channel);
     },
     
+    /**
+     * Unsubscribes from a chat to prevent memory leaks.
+     */
     unsubscribe(chatId: string): void {
         const channel = activeChannels.get(chatId);
         if (channel) {

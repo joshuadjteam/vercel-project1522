@@ -57,11 +57,6 @@ export interface Note {
     createdAt: Date;
 }
 
-export interface IncomingCall {
-    callerName: string; // The username of the person calling
-    callerId: string;   // The auth_id of the person calling
-}
-
 
 export type Page = 
     | 'home' 

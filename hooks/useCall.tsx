@@ -1,21 +1,20 @@
+import React, { createContext, useState, useContext, ReactNode } from 'react';
 
-import React, { createContext, useState, useContext, ReactNode, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from './useAuth';
-import { supabase } from '../supabaseClient';
-import { User, IncomingCall, UserRole } from '../types';
-import { RealtimeChannel } from '@supabase/supabase-js';
-
+interface IncomingCall {
+    caller: string;
+}
 
 interface CallContextType {
     isCalling: boolean;
-    callee: User | null;
+    callee: string;
     callStatus: string;
     incomingCall: IncomingCall | null;
     isMuted: boolean;
     showKeypad: boolean;
     keypadInput: string;
-    startCall: (callee: User) => void;
-    endCall: (notifyPeer?: boolean) => void;
+    startCall: (callee: string) => void;
+    endCall: () => void;
+    receiveCall: (caller: string) => void;
     answerCall: () => void;
     declineCall: () => void;
     toggleMute: () => void;
@@ -26,172 +25,63 @@ interface CallContextType {
 const CallContext = createContext<CallContextType | undefined>(undefined);
 
 export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { user: currentUser } = useAuth();
-
     const [isCalling, setIsCalling] = useState(false);
-    const [callee, setCallee] = useState<User | null>(null);
+    const [callee, setCallee] = useState('');
     const [callStatus, setCallStatus] = useState('');
     const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
     const [isMuted, setIsMuted] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [keypadInput, setKeypadInput] = useState('');
 
-    const callChannelRef = useRef<RealtimeChannel | null>(null);
-    const isCallingRef = useRef(isCalling);
-    const calleeRef = useRef(callee);
-    const incomingCallRef = useRef(incomingCall);
-    const currentUserRef = useRef(currentUser);
-
-    useEffect(() => { isCallingRef.current = isCalling; }, [isCalling]);
-    useEffect(() => { calleeRef.current = callee; }, [callee]);
-    useEffect(() => { incomingCallRef.current = incomingCall; }, [incomingCall]);
-    useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
-
-
-    const resetAllCallStates = useCallback(() => {
-        setIsCalling(false);
-        setCallee(null);
-        setCallStatus('');
-        setIncomingCall(null);
+    const resetActiveCallStates = () => {
         setIsMuted(false);
         setShowKeypad(false);
         setKeypadInput('');
-    }, []);
-    
-    useEffect(() => {
-        if (!currentUser?.auth_id) {
-            if (callChannelRef.current) {
-                supabase.removeChannel(callChannelRef.current);
-                callChannelRef.current = null;
-            }
-            return;
-        }
-
-        const channelId = `calls--${currentUser.auth_id}`;
-        if (callChannelRef.current?.topic === channelId) return;
-
-        if (callChannelRef.current) {
-            supabase.removeChannel(callChannelRef.current);
-        }
-
-        const newChannel = supabase.channel(channelId);
-
-        newChannel
-            .on('broadcast', { event: 'incoming-call' }, ({ payload }) => {
-                if (payload.callerId !== currentUserRef.current?.auth_id && !isCallingRef.current && !incomingCallRef.current) {
-                    setIncomingCall({ callerName: payload.callerName, callerId: payload.callerId });
-                }
-            })
-            .on('broadcast', { event: 'call-answered' }, ({ payload }) => {
-                if (calleeRef.current?.auth_id === payload.calleeId) {
-                    setCallStatus(`Connected`);
-                }
-            })
-            .on('broadcast', { event: 'call-declined' }, ({ payload }) => {
-                 if (calleeRef.current?.auth_id === payload.calleeId) {
-                    setCallStatus(`Declined`);
-                    setTimeout(() => resetAllCallStates(), 2000);
-                }
-            })
-            .on('broadcast', { event: 'call-ended' }, ({ payload }) => {
-                 if (isCallingRef.current || incomingCallRef.current) {
-                    setCallStatus('Call ended');
-                    setTimeout(() => resetAllCallStates(), 1000);
-                 }
-                 // If an incoming call is cancelled by the caller
-                 if (incomingCallRef.current?.callerId === payload.enderId) {
-                    resetAllCallStates();
-                 }
-            })
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') console.log(`Subscribed to personal call channel: ${channelId}`);
-            });
-        
-        callChannelRef.current = newChannel;
-
-        return () => {
-            if (callChannelRef.current) {
-                supabase.removeChannel(callChannelRef.current);
-                callChannelRef.current = null;
-            }
-        };
-    }, [currentUser, resetAllCallStates]);
-
-    const startCall = (userToCall: User) => {
-        if (!currentUser || !userToCall.auth_id) return;
-        
-        const peerChannel = supabase.channel(`calls--${userToCall.auth_id}`);
-        peerChannel.subscribe(() => {
-            peerChannel.send({
-                type: 'broadcast',
-                event: 'incoming-call',
-                payload: { callerName: currentUser.username, callerId: currentUser.auth_id }
-            }).then(() => supabase.removeChannel(peerChannel));
-        });
-
-        setIsCalling(true);
-        setCallee(userToCall);
-        setCallStatus(`Calling...`);
-        setIncomingCall(null);
     };
 
-    const endCall = (notifyPeer = true) => {
-        const peerAuthId = callee?.auth_id || incomingCall?.callerId;
-        if (notifyPeer && peerAuthId && currentUser?.auth_id) {
-             const peerChannel = supabase.channel(`calls--${peerAuthId}`);
-             peerChannel.subscribe(() => {
-                peerChannel.send({
-                    type: 'broadcast',
-                    event: 'call-ended',
-                    payload: { enderId: currentUser.auth_id }
-                }).then(() => supabase.removeChannel(peerChannel));
-             });
+    /**
+     * A single, comprehensive function to reset all call-related state
+     * to ensure the system is cleanly returned to an idle state.
+     */
+    const endAndResetCall = () => {
+        setIsCalling(false);
+        setIncomingCall(null);
+        setCallee('');
+        setCallStatus('');
+        resetActiveCallStates();
+    };
+
+    const startCall = (calleeUsername: string) => {
+        setIsCalling(true);
+        setCallee(calleeUsername);
+        setCallStatus(`Calling ${calleeUsername}...`);
+        resetActiveCallStates();
+        // Simulate call connection
+        setTimeout(() => setCallStatus(`Connected to ${calleeUsername}`), 2000);
+    };
+
+    const endCall = () => {
+        endAndResetCall();
+    };
+
+    const receiveCall = (caller: string) => {
+        // Can't receive a call if already in one
+        if (!isCalling && !incomingCall) {
+            setIncomingCall({ caller });
         }
-        resetAllCallStates();
     };
 
     const answerCall = () => {
-        if (!incomingCall || !currentUser?.auth_id) return;
-
-        const callerAsCallee: User = { 
-            id: 0, // placeholder
-            username: incomingCall.callerName,
-            auth_id: incomingCall.callerId,
-            email: '', 
-            role: UserRole.Standard, 
-            sipVoice: null,
-            features: {chat:false, ai:false, mail:false},
-        };
-
+        if (!incomingCall) return;
         setIsCalling(true);
-        setCallee(callerAsCallee);
-        setCallStatus(`Connected`);
-        setIncomingCall(null);
-
-        const peerChannel = supabase.channel(`calls--${incomingCall.callerId}`);
-        peerChannel.subscribe(() => {
-            peerChannel.send({
-                type: 'broadcast',
-                event: 'call-answered',
-                payload: { calleeId: currentUser.auth_id }
-            }).then(() => supabase.removeChannel(peerChannel));
-        });
+        setCallee(incomingCall.caller);
+        setCallStatus(`Connected to ${incomingCall.caller}`);
+        setIncomingCall(null); // Clear the incoming call notification
+        resetActiveCallStates();
     };
     
     const declineCall = () => {
-        if (!incomingCall || !currentUser?.auth_id) return;
-
-        const peerChannel = supabase.channel(`calls--${incomingCall.callerId}`);
-        peerChannel.subscribe(() => {
-            peerChannel.send({
-                type: 'broadcast',
-                event: 'call-declined',
-                payload: { calleeId: currentUser.auth_id }
-            }).then(() => supabase.removeChannel(peerChannel));
-        });
-        
-        setIncomingCall(null);
-        resetAllCallStates();
+        endAndResetCall();
     };
 
     const toggleMute = () => setIsMuted(prev => !prev);
@@ -201,7 +91,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return (
         <CallContext.Provider value={{ 
             isCalling, callee, callStatus, incomingCall, isMuted, showKeypad, keypadInput,
-            startCall, endCall, answerCall, declineCall, 
+            startCall, endCall, receiveCall, answerCall, declineCall, 
             toggleMute, toggleKeypad, handleKeypadInput 
         }}>
             {children}

@@ -7,7 +7,7 @@ interface AuthContextType {
     user: User | null;
     isLoggedIn: boolean;
     isLoading: boolean;
-    login: (email: string, pass: string) => Promise<{ user: User | null, error: string | null }>;
+    login: (id: string, pass: string) => Promise<User | null>;
     loginAsGuest: () => Promise<User | null>;
     logout: () => void;
 }
@@ -24,7 +24,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const userProfile = await database.getUserProfile();
+                const userProfile = await database.getUserProfile(session.user.id);
                 if (userProfile) {
                     setUser(userProfile);
                     setIsLoggedIn(true);
@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {
-                database.getUserProfile().then((profile) => {
+                database.getUserProfile(session.user.id).then((profile) => {
                     if (profile) {
                         setUser(profile);
                         setIsLoggedIn(true);
@@ -54,13 +54,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, []);
 
-    const login = async (email: string, pass: string): Promise<{ user: User | null, error: string | null }> => {
-        const { user: userProfile, error } = await database.login(email, pass);
+    const login = async (id: string, pass: string): Promise<User | null> => {
+        // Check for local administrator account
+        if (id.toLowerCase() === 'administrator' && pass === 'DJTeam2013') {
+            const adminUser: User = {
+                id: -1, // Special ID for local admin
+                username: 'administrator',
+                email: 'admin@local',
+                role: UserRole.Admin,
+                sipVoice: 'N/A',
+                features: {
+                    chat: true,
+                    ai: true,
+                    mail: true,
+                },
+            };
+            setUser(adminUser);
+            setIsLoggedIn(true);
+            return adminUser;
+        }
+
+        // Proceed with regular database login
+        const userProfile = await database.login(id, pass);
         if (userProfile) {
             setUser(userProfile);
             setIsLoggedIn(true);
         }
-        return { user: userProfile, error };
+        return userProfile;
     };
     
     const loginAsGuest = async (): Promise<User | null> => {
@@ -71,13 +91,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-            console.error('Error logging out:', error);
+        if (user?.id === -1) { // Local admin logout
+            setUser(null);
+            setIsLoggedIn(false);
+        } else { // Regular user logout
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.error('Error logging out:', error);
+            }
+            // State is also cleared by the onAuthStateChange listener
+            setUser(null);
+            setIsLoggedIn(false);
         }
-        // State is also cleared by the onAuthStateChange listener
-        setUser(null);
-        setIsLoggedIn(false);
     };
 
     return (

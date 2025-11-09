@@ -57,22 +57,17 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
                 role,
                 features,
             };
-
-            if (password) {
-                userData.password = password;
-            }
             
             if (userToEdit) {
                 userData.id = userToEdit.id;
-                userData.auth_id = userToEdit.auth_id; 
-
-                const { error: updateError } = await database.updateUser(userData);
-                if (updateError) {
-                    setError(updateError);
-                } else {
+                const updatedUser = await database.updateUser(userData);
+                if (updatedUser) {
                     onSaveSuccess();
+                } else {
+                    setError('Failed to update user.');
                 }
             } else {
+                userData.password = password;
                 const { error: addUserError } = await database.addUser(userData);
                 if (addUserError) {
                     setError(addUserError);
