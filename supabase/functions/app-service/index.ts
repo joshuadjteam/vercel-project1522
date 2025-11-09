@@ -4,7 +4,8 @@ import { SmtpClient } from 'https://deno.land/x/smtp@v0.7.0/mod.ts';
 // Use a stable Node.js library for IMAP via npm specifier for better compatibility
 import imaps from "npm:imap-simple";
 import { simpleParser } from "npm:mailparser";
-import { GoogleGenAI } from 'npm:@google/genai';
+// FIX: Import GenerateContentResponse to explicitly type the API response, fixing type inference issues.
+import { GoogleGenAI, type GenerateContentResponse } from 'npm:@google/genai';
 
 
 declare const Deno: any;
@@ -89,13 +90,14 @@ serve(async (req)=>{
 
         // 1. Get AI Response from Gemini
         const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-        const geminiResponse = await ai.models.generateContent({
+        // FIX: Explicitly typing the response from the Gemini API addresses an issue where
+        // the type was being inferred as 'unknown' in the Deno environment, causing a type error.
+        const geminiResponse: GenerateContentResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: `You are a helpful voice assistant for a web portal called Lynix. Keep your response concise, friendly, and conversational. User said: "${userText}"`,
         });
         
-        // FIX: Safely convert the response from Gemini to a string, as its type might be 'unknown'.
-        let aiTextResponse = String(geminiResponse.text ?? '');
+        let aiTextResponse = geminiResponse.text;
         if (!aiTextResponse || aiTextResponse.trim() === '') {
             aiTextResponse = "I'm sorry, I don't have a response for that. Please try asking another way.";
         }
@@ -112,7 +114,7 @@ serve(async (req)=>{
             },
             body: JSON.stringify({
                 text: aiTextResponse,
-                model_id: 'eleven_monolingual_v1',
+                model_id: 'eleven_turbo_v2',
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.5,

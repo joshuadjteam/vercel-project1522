@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { GoogleGenAI } from 'npm:@google/genai';
+// FIX: Import GenerateContentResponse to explicitly type the API response, fixing type inference issues.
+import { GoogleGenAI, type GenerateContentResponse } from 'npm:@google/genai';
 
 declare const Deno: any;
 
@@ -36,13 +37,14 @@ serve(async (req) => {
         throw new Error("Gemini API key not configured.");
     }
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-    const geminiResponse = await ai.models.generateContent({
+    // FIX: Explicitly typing the response from the Gemini API addresses an issue where
+    // the type was being inferred as 'unknown' in the Deno environment, causing a type error.
+    const geminiResponse: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: `You are a helpful voice assistant for a web portal called Lynix. Keep your response concise, friendly, and conversational. User said: "${userText}"`,
     });
     
-    // FIX: Safely convert the unknown response text to a string.
-    let aiTextResponse = String(geminiResponse.text ?? '');
+    let aiTextResponse = geminiResponse.text;
     // Add a fallback for empty responses to make the function more robust
     if (!aiTextResponse || aiTextResponse.trim() === '') {
         aiTextResponse = "I'm sorry, I don't have a response for that. Please try asking another way.";
@@ -64,7 +66,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
             text: aiTextResponse,
-            model_id: 'eleven_monolingual_v1',
+            model_id: 'eleven_turbo_v2',
             voice_settings: {
                 stability: 0.5,
                 similarity_boost: 0.5,
