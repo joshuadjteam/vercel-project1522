@@ -17,6 +17,7 @@ import LocalMailApp from './pages/apps/LocalMailApp';
 import ContactsApp from './pages/apps/ContactsApp';
 import NotepadApp from './pages/apps/NotepadApp';
 import CalculatorApp from './pages/apps/CalculatorApp';
+import PaintApp from './pages/apps/PaintApp';
 import { Page, UserRole } from './types';
 
 const AppContent: React.FC = () => {
@@ -72,6 +73,8 @@ const AppContent: React.FC = () => {
                 return <NotepadApp />;
             case 'app-calculator':
                 return <CalculatorApp />;
+            case 'app-paint':
+                return <PaintApp />;
             default:
                 return <ProfilePage navigate={navigate}/>;
         }

@@ -1,7 +1,13 @@
 
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useCall } from '../hooks/useCall';
+
+const MuteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>;
+const UnmuteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15.586a3 3 0 014.242 0L12 17.757l2.172-2.171a3 3 0 014.242 0M9 12a3 3 0 116 0v6a3 3 0 01-6 0v-6z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.586 15.586a3 3 0 010 4.243L12 23.07l-3.586-3.24a3 3 0 010-4.243m5.172-2.171a3 3 0 010-4.243L12 2.93 8.414 6.171a3 3 0 010 4.243" /></svg>; // A bit creative for unmute
+const VideoOnIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>;
+const VideoOffIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c1.61 0 3.093.59 4.232 1.572l-1.096 1.096A4.934 4.934 0 0012 7c-2.761 0-5 2.239-5 5 0 .342.042.675.118.996l-1.578 1.578A9.953 9.953 0 002.458 12zM12 19c4.477 0 8.268-2.943 9.542-7-.744-2.31-2.25-4.143-4.116-5.328l-1.88 1.88A4.953 4.953 0 0017 12c0 2.761-2.239 5-5 5a4.934 4.934 0 01-1.69-.328l-1.88 1.88C9.907 18.41 10.89 19 12 19z" /></svg>;
+const EndCallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="currentColor" viewBox="0 0 24 24"><path d="M3.628 3.519c-.33-.113-.71-.01-1.02.2-.31.21-.44.57-.33.91l3.52 9.84c.11.33.4.54.75.54h3.83c.35 0 .64-.21.75-.54l1.5-4.19a.75.75 0 00-.7-.99l-4.13.75-2.17-6.07zM19.7 3.719c-.31-.21-.69-.31-1.02-.2l-2.17 6.07-4.13-.75a.75.75 0 00-.7.99l1.5 4.19c.11.33.4.54.75.54h3.83c.35 0 .64-.21.75-.54l3.52-9.84c.11-.34-.02-.7-.33-.91z" transform="rotate(-150 12 12)" /></svg>;
+
 
 const CallWidget: React.FC = () => {
     const { 
@@ -145,21 +151,21 @@ const CallWidget: React.FC = () => {
                             title={isMuted ? "Unmute" : "Mute"}
                             className={`h-14 w-14 rounded-full flex items-center justify-center transition-all duration-300 text-2xl ${isMuted ? 'bg-yellow-500 text-white' : 'bg-white/20 hover:bg-white/30'}`}
                         >
-                           🎤
+                           {isMuted ? <UnmuteIcon /> : <MuteIcon />}
                         </button>
                         <button 
                             onClick={toggleVideo} 
                             title={isVideoEnabled ? "Video Off" : "Video On"}
                              className={`h-14 w-14 rounded-full flex items-center justify-center transition-all duration-300 text-2xl ${!isVideoEnabled ? 'bg-yellow-500 text-white' : 'bg-white/20 hover:bg-white/30'}`}
                         >
-                            📹
+                            {isVideoEnabled ? <VideoOnIcon /> : <VideoOffIcon />}
                         </button>
                         <button 
                             onClick={endCall} 
                             title="End Call"
                             className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white text-2xl font-semibold hover:scale-110"
                         >
-                            📞
+                            <EndCallIcon />
                         </button>
                     </div>
                 </div>

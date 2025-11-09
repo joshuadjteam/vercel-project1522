@@ -4,6 +4,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { Mail, MailAccount } from '../../types';
 
+// Icons
+const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const ComposeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
+const SyncIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l1.5 1.5A9 9 0 0120 12M20 20l-1.5-1.5A9 9 0 004 12" /></svg>;
+const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
+
 type MailView = 'inbox' | 'sent' | 'spam' | 'compose';
 
 // A local type to represent both local and external accounts for the UI
@@ -99,7 +107,7 @@ const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
             <div className="bg-light-card dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-3xl h-[90vh] max-h-[700px] flex flex-col text-light-text dark:text-white">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
                     <h2 className="text-xl font-bold">Mail Settings</h2>
-                    <button onClick={onClose} className="px-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 font-bold">X</button>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700"><CloseIcon /></button>
                 </div>
                 <div className="flex flex-grow overflow-hidden">
                     <div className="w-1/4 p-4 border-r border-gray-200 dark:border-slate-700">
@@ -153,8 +161,8 @@ const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
                                     </fieldset>
                                 </div>
                                 <div className="flex justify-end pt-4 mt-4 border-t border-gray-200 dark:border-slate-700 flex-shrink-0 space-x-2">
-                                    <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white">Cancel</button>
-                                    <button onClick={handleAddAccount} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Add Account</button>
+                                    <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white flex items-center space-x-2"><span>Cancel</span></button>
+                                    <button onClick={handleAddAccount} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"><ComposeIcon /> <span>Add Account</span></button>
                                 </div>
                             </div>
                         )}
@@ -262,7 +270,10 @@ const ComposeView: React.FC<{ onMailSent: () => void, availableSenders: UI_Accou
             <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Your message..." className="flex-grow w-full p-2 bg-black/10 mt-4 focus:outline-none resize-none" />
             <div className="flex items-center justify-between mt-4">
                 <p className="text-sm">{status}</p>
-                <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Send</button>
+                <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2">
+                    <SendIcon />
+                    <span>Send</span>
+                </button>
             </div>
         </form>
     );
@@ -368,10 +379,11 @@ const LocalMailApp: React.FC = () => {
             <div className="w-1/4 border-r border-current border-opacity-20 bg-black/5 flex flex-col">
                 <div className="p-4 border-b border-current border-opacity-20 flex justify-between items-center">
                     <h2 className="text-xl font-bold">LocalMail</h2>
-                    <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full hover:bg-white/20">⚙️</button>
+                    <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full hover:bg-white/20"><SettingsIcon /></button>
                 </div>
                 <div className="p-2">
                     <button onClick={() => { setView('compose'); setSelectedMail(null); }} className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        <ComposeIcon />
                         <span>Compose</span>
                     </button>
                 </div>
@@ -384,7 +396,7 @@ const LocalMailApp: React.FC = () => {
                                     <span className={`transform transition-transform duration-200 ${expandedAccounts.includes(account.email) ? 'rotate-90' : ''}`}>›</span>
                                 </button>
                                 {account.id && (
-                                    <button onClick={() => handleSyncAccount(account.id!)} title="Sync Mail" className="ml-2 px-2 py-1 rounded-full text-sm hover:bg-white/20">🔄</button>
+                                    <button onClick={() => handleSyncAccount(account.id!)} title="Sync Mail" className="ml-2 p-1 rounded-full text-sm hover:bg-white/20"><SyncIcon /></button>
                                 )}
                             </div>
                             {expandedAccounts.includes(account.email) && (
@@ -440,7 +452,10 @@ const LocalMailApp: React.FC = () => {
                     <div className="flex-grow flex flex-col p-6 overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-2xl font-bold">{selectedMail.subject}</h2>
-                            <button onClick={() => handleDeleteMail(selectedMail.id)} className="px-3 py-1 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white">Delete</button>
+                            <button onClick={() => handleDeleteMail(selectedMail.id)} className="px-3 py-1 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2">
+                                <TrashIcon />
+                                <span>Delete</span>
+                            </button>
                         </div>
                         <div className="text-sm opacity-80 border-b border-current border-opacity-20 pb-4 mb-4">
                             <p><strong>From:</strong> {selectedMail.sender}</p>

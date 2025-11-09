@@ -4,6 +4,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { Note } from '../../types';
 
+const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
+const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>;
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+
+
 const NotepadApp: React.FC = () => {
     const { user } = useAuth();
     const [notes, setNotes] = useState<Note[]>([]);
@@ -81,8 +86,9 @@ const NotepadApp: React.FC = () => {
             <div className="w-1/3 border-r border-gray-200 dark:border-teal-700/50 bg-black/5 dark:bg-black/10 flex flex-col">
                 <div className="p-4 border-b border-gray-200 dark:border-teal-700/50 flex justify-between items-center">
                     <h2 className="text-xl font-bold">My Notes</h2>
-                    <button onClick={handleNewNote} className="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white">
-                        New
+                    <button onClick={handleNewNote} className="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2">
+                        <PlusIcon />
+                        <span>New</span>
                     </button>
                 </div>
                  <div className="p-2 text-center text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/50">
@@ -104,11 +110,13 @@ const NotepadApp: React.FC = () => {
                     <>
                         <div className="p-3 border-b border-gray-200 dark:border-teal-700/50 flex justify-end items-center space-x-2 bg-black/5 dark:bg-black/10">
                             {saveStatus && <span className="text-sm text-green-600 dark:text-green-400">{saveStatus}</span>}
-                             <button onClick={handleSaveNote} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">
-                                Save
+                             <button onClick={handleSaveNote} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm flex items-center space-x-2">
+                                <SaveIcon />
+                                <span>Save</span>
                              </button>
-                            <button onClick={handleDeleteNote} className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm">
-                                Delete
+                            <button onClick={handleDeleteNote} className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm flex items-center space-x-2">
+                                <TrashIcon />
+                                <span>Delete</span>
                             </button>
                         </div>
                         <div className="flex-grow flex flex-col p-4">

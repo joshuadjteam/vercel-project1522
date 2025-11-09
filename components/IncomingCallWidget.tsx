@@ -1,7 +1,9 @@
 
-
 import React, { useEffect, useRef } from 'react';
 import { useCall } from '../hooks/useCall';
+
+const DeclineIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="currentColor" viewBox="0 0 24 24"><path d="M3.628 3.519c-.33-.113-.71-.01-1.02.2-.31.21-.44.57-.33.91l3.52 9.84c.11.33.4.54.75.54h3.83c.35 0 .64-.21.75-.54l1.5-4.19a.75.75 0 00-.7-.99l-4.13.75-2.17-6.07zM19.7 3.719c-.31-.21-.69-.31-1.02-.2l-2.17 6.07-4.13-.75a.75.75 0 00-.7.99l1.5 4.19c.11.33.4.54.75.54h3.83c.35 0 .64-.21.75-.54l3.52-9.84c.11-.34-.02-.7-.33-.91z" transform="rotate(-150 12 12)" /></svg>;
+const AcceptIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="currentColor" viewBox="0 0 24 24"><path d="M3.628 3.519c-.33-.113-.71-.01-1.02.2-.31.21-.44.57-.33.91l3.52 9.84c.11.33.4.54.75.54h3.83c.35 0 .64-.21.75-.54l1.5-4.19a.75.75 0 00-.7-.99l-4.13.75-2.17-6.07zM19.7 3.719c-.31-.21-.69-.31-1.02-.2l-2.17 6.07-4.13-.75a.75.75 0 00-.7.99l1.5 4.19c.11.33.4.54.75.54h3.83c.35 0 .64-.21.75-.54l3.52-9.84c.11-.34-.02-.7-.33-.91z" /></svg>;
 
 const IncomingCallWidget: React.FC = () => {
     const { incomingCall, acceptCall, declineCall } = useCall();
@@ -45,20 +47,20 @@ const IncomingCallWidget: React.FC = () => {
                     <div className="flex flex-col items-center">
                         <button 
                             onClick={declineCall} 
-                            className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white font-semibold text-2xl hover:scale-110"
+                            className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white font-semibold hover:scale-110"
                             aria-label="Decline call"
                         >
-                            📞
+                            <DeclineIcon />
                         </button>
                         <span className="mt-2 text-sm">Decline</span>
                     </div>
                     <div className="flex flex-col items-center">
                         <button 
                             onClick={acceptCall}
-                            className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-green-600 hover:bg-green-700 text-white font-semibold text-2xl hover:scale-110"
+                            className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-green-600 hover:bg-green-700 text-white font-semibold hover:scale-110"
                             aria-label="Accept call"
                         >
-                            📞
+                           <AcceptIcon />
                         </button>
                         <span className="mt-2 text-sm">Accept</span>
                     </div>

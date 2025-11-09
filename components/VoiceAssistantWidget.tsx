@@ -1,5 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { database } from '../services/database';
+
+const UnmuteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>;
+const MuteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>;
+const MicrophoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>;
+const EndCallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="currentColor" viewBox="0 0 24 24"><path d="M3.628 3.519c-.33-.113-.71-.01-1.02.2-.31.21-.44.57-.33.91l3.52 9.84c.11.33.4.54.75.54h3.83c.35 0 .64-.21.75-.54l1.5-4.19a.75.75 0 00-.7-.99l-4.13.75-2.17-6.07zM19.7 3.719c-.31-.21-.69-.31-1.02-.2l-2.17 6.07-4.13-.75a.75.75 0 00-.7.99l1.5 4.19c.11.33.4.54.75.54h3.83c.35 0 .64-.21.75-.54l3.52-9.84c.11-.34-.02-.7-.33-.91z" transform="rotate(-150 12 12)" /></svg>;
 
 interface VoiceAssistantWidgetProps {
     isOpen: boolean;
@@ -172,25 +178,25 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
                 <button 
                     onClick={toggleMute}
                     title={isMuted ? "Unmute" : "Mute"}
-                    className={`h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300 text-3xl ${isMuted ? 'bg-yellow-500 text-white' : 'bg-white/20 hover:bg-white/30'}`}
+                    className={`h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300 ${isMuted ? 'bg-yellow-500 text-white' : 'bg-white/20 hover:bg-white/30 text-white'}`}
                 >
-                   {isMuted ? '🔇' : '🔊'}
+                   {isMuted ? <MuteIcon /> : <UnmuteIcon />}
                 </button>
 
                 <button 
                     onClick={status === 'idle' || status === 'error' ? startListening : undefined}
                     title="Speak"
-                    className={`h-20 w-20 rounded-full flex items-center justify-center transition-all duration-300 text-4xl text-white ${status === 'listening' ? 'bg-red-600 animate-pulse' : 'bg-green-600 hover:bg-green-700'}`}
+                    className={`h-20 w-20 rounded-full flex items-center justify-center transition-all duration-300 text-white ${status === 'listening' ? 'bg-red-600 animate-pulse' : 'bg-green-600 hover:bg-green-700'}`}
                 >
-                    🎤
+                    <MicrophoneIcon />
                 </button>
                 
                 <button 
                     onClick={onClose}
                     title="End"
-                    className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white text-3xl hover:scale-110"
+                    className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white hover:scale-110"
                 >
-                    📞
+                    <EndCallIcon />
                 </button>
             </div>
         </div>

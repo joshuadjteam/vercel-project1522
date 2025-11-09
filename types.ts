@@ -99,4 +99,5 @@ export type Page =
     | 'app-localmail'
     | 'app-contacts'
     | 'app-notepad'
-    | 'app-calculator';
+    | 'app-calculator'
+    | 'app-paint';
