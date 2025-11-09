@@ -1,20 +1,52 @@
-
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
-import { GoogleGenAI, LiveServerMessage, Modality, Blob } from '@google/genai';
+import { geminiService } from '../services/geminiService';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
-// --- Audio Encoding/Decoding Helpers for AI Call ---
-function encode(bytes: Uint8Array) {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
+// FIX: Add TypeScript definitions for the non-standard Web Speech API to resolve errors.
+// This provides the `SpeechRecognition` type and adds `SpeechRecognition` and
+// `webkitSpeechRecognition` to the global `Window` object.
+interface SpeechRecognitionEvent extends Event {
+    readonly resultIndex: number;
+    readonly results: SpeechRecognitionResultList;
+}
+interface SpeechRecognitionResultList {
+    readonly length: number;
+    item(index: number): SpeechRecognitionResult;
+    [index: number]: SpeechRecognitionResult;
+}
+interface SpeechRecognitionResult {
+    readonly isFinal: boolean;
+    readonly length: number;
+    item(index: number): SpeechRecognitionAlternative;
+    [index: number]: SpeechRecognitionAlternative;
+}
+interface SpeechRecognitionAlternative {
+    readonly transcript: string;
+    readonly confidence: number;
+}
+interface SpeechRecognitionErrorEvent extends Event {
+    readonly error: string;
+}
+interface SpeechRecognition extends EventTarget {
+    continuous: boolean;
+    interimResults: boolean;
+    onend: (() => void) | null;
+    onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+    onresult: ((event: SpeechRecognitionEvent) => void) | null;
+    start: () => void;
+    stop: () => void;
+}
+declare global {
+    interface Window {
+        SpeechRecognition: new () => SpeechRecognition;
+        webkitSpeechRecognition: new () => SpeechRecognition;
+    }
 }
 
+
+// --- Audio Encoding/Decoding Helpers ---
 function decode(base64: string) {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -42,18 +74,6 @@ async function decodeAudioData(
     }
   }
   return buffer;
-}
-
-function createBlob(data: Float32Array): Blob {
-  const l = data.length;
-  const int16 = new Int16Array(l);
-  for (let i = 0; i < l; i++) {
-    int16[i] = data[i] * 32768;
-  }
-  return {
-    data: encode(new Uint8Array(int16.buffer)),
-    mimeType: 'audio/pcm;rate=16000',
-  };
 }
 
 const iceServers = {
@@ -102,16 +122,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const callChannelRef = useRef<RealtimeChannel | null>(null);
 
     // AI call refs
-    const sessionPromiseRef = useRef<Promise<any> | null>(null);
+    const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
+    const isPlayingAudioRef = useRef(false);
+    const isCallingRef = useRef(isCalling);
     const aiAudioRefs = useRef<{
-        inputAudioContext: AudioContext | null,
         outputAudioContext: AudioContext | null,
-        micSource: MediaStreamAudioSourceNode | null,
-        gainNode: GainNode | null,
-        scriptProcessor: ScriptProcessorNode | null,
         playbackSources: Set<AudioBufferSourceNode>,
-        nextStartTime: number
-    }>({ inputAudioContext: null, outputAudioContext: null, micSource: null, gainNode: null, scriptProcessor: null, playbackSources: new Set(), nextStartTime: 0 });
+    }>({ outputAudioContext: null, playbackSources: new Set() });
+
+    useEffect(() => {
+        isCallingRef.current = isCalling;
+    }, [isCalling]);
 
     const resetState = useCallback(() => {
         setIsCalling(false);
@@ -133,12 +154,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const cleanupAI = useCallback(() => {
+        if (speechRecognitionRef.current) {
+            speechRecognitionRef.current.onresult = null;
+            speechRecognitionRef.current.onend = null;
+            speechRecognitionRef.current.onerror = null;
+            speechRecognitionRef.current.stop();
+            speechRecognitionRef.current = null;
+        }
         aiAudioRefs.current.playbackSources.forEach(source => source.stop());
-        sessionPromiseRef.current?.then(session => session.close());
-        sessionPromiseRef.current = null;
-        localStreamRef.current?.getTracks().forEach(track => track.stop());
-        localStreamRef.current = null;
-        Object.assign(aiAudioRefs.current, { inputAudioContext: null, outputAudioContext: null, micSource: null, gainNode: null, scriptProcessor: null, playbackSources: new Set(), nextStartTime: 0 });
+        aiAudioRefs.current.outputAudioContext?.close();
+        isPlayingAudioRef.current = false;
+        Object.assign(aiAudioRefs.current, { outputAudioContext: null, playbackSources: new Set() });
     }, []);
     
     const endCall = useCallback(() => {
@@ -197,64 +223,118 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, [user, handleSignalingData]);
 
+    const playAudio = useCallback((audioBuffer: AudioBuffer) => {
+        const ctx = aiAudioRefs.current.outputAudioContext;
+        if (!ctx) return;
+        
+        isPlayingAudioRef.current = true;
+        setCallStatus("Speaking...");
+    
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        
+        aiAudioRefs.current.playbackSources.add(source);
+    
+        source.onended = () => {
+            aiAudioRefs.current.playbackSources.delete(source);
+            isPlayingAudioRef.current = false;
+            if (isCallingRef.current && !isMuted) {
+                speechRecognitionRef.current?.start();
+                setCallStatus("Listening...");
+            } else if (isCallingRef.current && isMuted) {
+                setCallStatus("Muted");
+            }
+        };
+        
+        source.start();
+    }, [isMuted]);
+
+    const handleUserTranscript = useCallback(async (transcript: string, persona: string) => {
+        if (!transcript) {
+            if (isCallingRef.current && !isMuted) {
+                 speechRecognitionRef.current?.start();
+                 setCallStatus("Listening...");
+            }
+            return;
+        }
+        
+        const aiTextResponse = await geminiService.getAIPersonaResponse(transcript, persona);
+        
+        if (!aiTextResponse || !isCallingRef.current) {
+            setCallStatus("Error from AI. Try again.");
+            if (isCallingRef.current && !isMuted) speechRecognitionRef.current?.start();
+            return;
+        }
+    
+        const base64Audio = await geminiService.getAITextToSpeech(aiTextResponse);
+    
+        if (base64Audio && aiAudioRefs.current.outputAudioContext && isCallingRef.current) {
+            try {
+                const audioBuffer = await decodeAudioData(decode(base64Audio), aiAudioRefs.current.outputAudioContext, 24000, 1);
+                playAudio(audioBuffer);
+            } catch (e) {
+                console.error("Error decoding or playing TTS audio:", e);
+                if (isCallingRef.current && !isMuted) speechRecognitionRef.current?.start();
+            }
+        } else {
+            console.error("Failed to get TTS audio.");
+            if (isCallingRef.current && !isMuted) speechRecognitionRef.current?.start();
+        }
+    }, [isMuted, playAudio]);
+    
     const startAICall = async (persona: string) => {
         if (isCalling) return;
+    
+        // FIX: With the added typings, we can now safely access `window.SpeechRecognition`
+        // and `window.webkitSpeechRecognition` without type errors.
+        const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognitionAPI) {
+            setIsCalling(true);
+            setCallType('ai');
+            setCallee(persona);
+            setCallStatus('Browser not supported.');
+            return;
+        }
+    
         setIsCalling(true);
         setCallType('ai');
         setCallee(persona);
-        setCallStatus(`Connecting to ${persona}...`);
+        setCallStatus("Muted");
+        setIsMuted(true);
+    
+        const recognition = new SpeechRecognitionAPI();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        speechRecognitionRef.current = recognition;
+    
+        aiAudioRefs.current.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    
+        recognition.onresult = (event) => {
+            const transcript = event.results[event.results.length - 1][0].transcript.trim();
+            setCallStatus("Thinking...");
+            recognition.stop();
+            handleUserTranscript(transcript, persona);
+        };
         
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            localStreamRef.current = stream;
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            aiAudioRefs.current.inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-            aiAudioRefs.current.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-            aiAudioRefs.current.nextStartTime = 0;
-            
-            sessionPromiseRef.current = ai.live.connect({
-                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-                callbacks: {
-                    onopen: () => {
-                        if (!aiAudioRefs.current.inputAudioContext || !localStreamRef.current) return;
-                        setCallStatus(`Connected to ${persona}`);
-                        const ctx = aiAudioRefs.current.inputAudioContext;
-                        aiAudioRefs.current.micSource = ctx.createMediaStreamSource(localStreamRef.current);
-                        aiAudioRefs.current.gainNode = ctx.createGain();
-                        aiAudioRefs.current.scriptProcessor = ctx.createScriptProcessor(4096, 1, 1);
-                        aiAudioRefs.current.scriptProcessor.onaudioprocess = (e) => {
-                            const inputData = e.inputBuffer.getChannelData(0);
-                            sessionPromiseRef.current?.then((s) => s.sendRealtimeInput({ media: createBlob(inputData) }));
-                        };
-                        aiAudioRefs.current.micSource.connect(aiAudioRefs.current.gainNode);
-                        aiAudioRefs.current.gainNode.connect(aiAudioRefs.current.scriptProcessor);
-                        aiAudioRefs.current.scriptProcessor.connect(ctx.destination);
-                    },
-                    onmessage: async (message: LiveServerMessage) => {
-                        const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-                        const ctx = aiAudioRefs.current.outputAudioContext;
-                        if (base64Audio && ctx) {
-                            aiAudioRefs.current.nextStartTime = Math.max(aiAudioRefs.current.nextStartTime, ctx.currentTime);
-                            const audioBuffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
-                            const source = ctx.createBufferSource();
-                            source.buffer = audioBuffer;
-                            source.connect(ctx.destination);
-                            source.addEventListener('ended', () => aiAudioRefs.current.playbackSources.delete(source));
-                            source.start(aiAudioRefs.current.nextStartTime);
-                            aiAudioRefs.current.nextStartTime += audioBuffer.duration;
-                            aiAudioRefs.current.playbackSources.add(source);
-                        }
-                    },
-                    onerror: (e: ErrorEvent) => endCall(),
-                    onclose: () => endCall(),
-                },
-                config: { responseModalities: [Modality.AUDIO], systemInstruction: `You are ${persona}. Be friendly and concise.` },
-            });
-        } catch (error) {
-            console.error('Failed to start AI call:', error);
-            setCallStatus('Failed to start call');
-            endCall();
-        }
+        recognition.onend = () => {
+            if (isCallingRef.current && !isMuted && !isPlayingAudioRef.current) {
+                setCallStatus("Listening...");
+                recognition.start();
+            }
+        };
+        
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            if (event.error === 'no-speech' || event.error === 'audio-capture') {
+                if (isCallingRef.current && !isMuted && !isPlayingAudioRef.current) {
+                     setCallStatus("Listening...");
+                     recognition.start();
+                }
+            } else {
+                setCallStatus("Mic Error");
+            }
+        };
     };
     
     const startP2PCall = async (calleeUsername: string) => {
@@ -283,6 +363,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const stream = new MediaStream();
                 stream.addTrack(event.track);
                 setRemoteStream(stream);
+                setCallStatus('Connected');
             };
 
             const offer = await pc.createOffer();
@@ -348,14 +429,23 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const toggleMute = () => {
         const newMutedState = !isMuted;
-        if (callType === 'p2p' && localStreamRef.current) {
+        setIsMuted(newMutedState);
+    
+        if (callType === 'ai' && speechRecognitionRef.current) {
+            if (newMutedState) {
+                speechRecognitionRef.current.stop();
+                setCallStatus("Muted");
+            } else {
+                if (!isPlayingAudioRef.current) {
+                    speechRecognitionRef.current.start();
+                    setCallStatus("Listening...");
+                }
+            }
+        } else if (callType === 'p2p' && localStreamRef.current) {
             localStreamRef.current.getAudioTracks().forEach(track => {
                 track.enabled = !newMutedState;
             });
-        } else if (callType === 'ai' && aiAudioRefs.current.gainNode) {
-            aiAudioRefs.current.gainNode.gain.setValueAtTime(newMutedState ? 0 : 1, aiAudioRefs.current.inputAudioContext?.currentTime || 0);
         }
-        setIsMuted(newMutedState);
     };
 
     const toggleKeypad = () => setShowKeypad(prev => !prev);
