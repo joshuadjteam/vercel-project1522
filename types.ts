@@ -59,7 +59,7 @@ export interface Note {
 
 export interface CallRecord {
     id: number;
-    owner_username: string;
+    owner: string; // username of the user who owns the record
     caller_username: string;
     callee_username: string;
     direction: 'incoming' | 'outgoing';

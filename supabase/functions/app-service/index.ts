@@ -229,7 +229,7 @@ serve(async (req)=>{
             ({ data, error } = await supabaseAdmin
               .from('call_history')
               .select('*')
-              .eq('owner_username', userProfile.username)
+              .eq('owner', userProfile.username)
               .order('timestamp', { ascending: false }));
             if (error) throw error;
             return new Response(JSON.stringify({ history: data }), {
@@ -240,7 +240,7 @@ serve(async (req)=>{
           case 'add': {
             const record = { 
               ...payload, 
-              owner_username: userProfile.username,
+              owner: userProfile.username,
               timestamp: new Date().toISOString(),
             };
             ({ data, error } = await supabaseAdmin

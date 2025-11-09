@@ -294,7 +294,7 @@ export const database = {
         return data.history || [];
     },
 
-    addCallHistoryRecord: async (recordData: Omit<CallRecord, 'id' | 'owner_username' | 'timestamp'>): Promise<CallRecord | null> => {
+    addCallHistoryRecord: async (recordData: Omit<CallRecord, 'id' | 'owner' | 'timestamp'>): Promise<CallRecord | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'call-history', action: 'add', payload: recordData }
         });

@@ -211,7 +211,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
     
             if (remoteUser) {
-                const record: Omit<CallRecord, 'id' | 'owner_username' | 'timestamp'> = {
+                const record: Omit<CallRecord, 'id' | 'owner' | 'timestamp'> = {
                     caller_username: callDirectionRef.current === 'outgoing' ? user.username : remoteUser,
                     callee_username: callDirectionRef.current === 'outgoing' ? remoteUser : user.username,
                     direction: callDirectionRef.current,
@@ -499,7 +499,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!incomingCall || !user) return;
         supabase.channel(`call-channel-${incomingCall.from}`).send({ type: 'broadcast', event: 'call-event', payload: { type: 'decline', from: user.username }});
         
-        const record: Omit<CallRecord, 'id' | 'owner_username' | 'timestamp'> = {
+        const record: Omit<CallRecord, 'id' | 'owner' | 'timestamp'> = {
             caller_username: incomingCall.from,
             callee_username: user.username,
             direction: 'incoming',
