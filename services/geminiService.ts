@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, Modality } from "@google/genai";
 
 export const geminiService = {
@@ -40,10 +41,14 @@ export const geminiService = {
 
     getAITextToSpeech: async (text: string): Promise<string | null> => {
         try {
+            if (!text || text.trim() === '') {
+                console.error("TTS input text is empty.");
+                return null;
+            }
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash-preview-tts",
-                contents: [{ parts: [{ text: text }] }],
+                contents: [{ parts: [{ text }] }],
                 config: {
                     responseModalities: [Modality.AUDIO],
                     speechConfig: {
@@ -53,12 +58,17 @@ export const geminiService = {
                     },
                 },
             });
-            const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-            if (!base64Audio) {
-                console.error("TTS response did not contain audio data.");
-                return null;
+
+            // More robustly find the audio data by iterating through response parts
+            for (const part of response.candidates?.[0]?.content?.parts || []) {
+                if (part.inlineData?.data) {
+                    return part.inlineData.data;
+                }
             }
-            return base64Audio;
+            
+            console.error("TTS response did not contain audio data.", JSON.stringify(response, null, 2));
+            return null;
+
         } catch (error) {
             console.error("Error calling Gemini TTS API:", error);
             return null;

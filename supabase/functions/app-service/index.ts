@@ -1,4 +1,5 @@
 
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -237,7 +238,11 @@ serve(async (req)=>{
             });
           }
           case 'add': {
-            const record = { ...payload, owner_username: userProfile.username };
+            const record = { 
+              ...payload, 
+              owner_username: userProfile.username,
+              timestamp: new Date().toISOString(),
+            };
             ({ data, error } = await supabaseAdmin
               .from('call_history')
               .insert(record)

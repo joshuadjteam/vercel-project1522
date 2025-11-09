@@ -319,11 +319,22 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
         
+        const restartListening = (errorMsg: string) => {
+             if (isCallingRef.current) {
+                setCallStatus(errorMsg);
+                setTimeout(() => {
+                    if (isCallingRef.current && !isMutedRef.current) {
+                        speechRecognitionRef.current?.start();
+                        setCallStatus("Listening...");
+                    }
+                }, 1500);
+            }
+        };
+
         const aiTextResponse = await geminiService.getAIPersonaResponse(transcript, persona);
         
         if (!aiTextResponse || !isCallingRef.current) {
-            setCallStatus("Error from AI. Try again.");
-            if (isCallingRef.current && !isMutedRef.current) speechRecognitionRef.current?.start();
+            restartListening("AI Error. Retrying...");
             return;
         }
     
@@ -335,11 +346,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 playAudio(audioBuffer);
             } catch (e) {
                 console.error("Error decoding or playing TTS audio:", e);
-                if (isCallingRef.current && !isMutedRef.current) speechRecognitionRef.current?.start();
+                restartListening("Audio Error. Retrying...");
             }
         } else {
             console.error("Failed to get TTS audio.");
-            if (isCallingRef.current && !isMutedRef.current) speechRecognitionRef.current?.start();
+            restartListening("AI Voice Error. Retrying...");
         }
     }, [playAudio]);
     
