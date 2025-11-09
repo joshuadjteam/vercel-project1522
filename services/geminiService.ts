@@ -3,7 +3,6 @@ import { GoogleGenAI } from "@google/genai";
 export const geminiService = {
     getHelpResponse: async (prompt: string): Promise<string> => {
         try {
-            // FIX: Initialize GoogleGenAI with the API key from environment variables, removing the hardcoded key and associated checks.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
             const response = await ai.models.generateContent({
