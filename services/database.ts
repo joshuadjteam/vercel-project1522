@@ -18,21 +18,6 @@ const mapDbUserToUser = (dbUser: any): User => {
 
 export const database = {
     // --- Auth & User Functions (using Supabase) ---
-    login: async (email: string, pass: string): Promise<{ error: string | null }> => {
-        const { error: authError } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: pass,
-        });
-
-        if (authError) {
-            console.error('Login Error: Invalid credentials or authentication issue.', authError);
-            return { error: authError.message };
-        }
-
-        // Success. The onAuthStateChange listener in useAuth will handle fetching the profile.
-        return { error: null };
-    },
-
     getGuestUser: (): Promise<User> => {
         return Promise.resolve({
             id: 0,
@@ -47,9 +32,11 @@ export const database = {
     getUserProfile: async (auth_id: string): Promise<{ profile: User | null, error: string | null }> => {
         const { data, error } = await supabase.from('users').select('*').eq('auth_id', auth_id).single();
         if (error) {
-            const errorMessage = `Error fetching user profile: ${error.message}`;
-            console.error(errorMessage);
-            return { profile: null, error: errorMessage };
+            // Do not log "No rows found" as an error, as it's an expected case for missing profiles.
+            if (!error.message.includes('No rows found')) {
+                 console.error(`Error fetching user profile: ${error.message}`);
+            }
+            return { profile: null, error: error.message };
         }
         return { profile: mapDbUserToUser(data), error: null };
     },

@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { User, UserRole } from '../types';
+import { User } from '../types';
 import { database } from '../services/database';
 import { supabase } from '../supabaseClient';
 
@@ -20,21 +20,62 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
+    const updateUserState = (profile: User | null) => {
+        setUser(profile);
+        setIsLoggedIn(!!profile);
+    };
+
+    const login = async (email: string, pass: string): Promise<{ error: string | null }> => {
+        setIsLoading(true);
+        try {
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password: pass,
+            });
+
+            if (signInError) {
+                return { error: signInError.message };
+            }
+
+            if (!signInData.user) {
+                return { error: 'Login failed: No user session returned.' };
+            }
+
+            const { profile, error: profileError } = await database.getUserProfile(signInData.user.id);
+
+            if (profileError || !profile) {
+                await supabase.auth.signOut();
+                updateUserState(null);
+                return { error: 'Login successful, but failed to retrieve user profile. Please contact support.' };
+            }
+            
+            updateUserState(profile);
+            return { error: null };
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const loginAsGuest = async (): Promise<User | null> => {
+        setIsLoading(true);
+        const guestUser = await database.getGuestUser();
+        updateUserState(guestUser);
+        setIsLoading(false);
+        return guestUser;
+    };
+
+    const logout = async () => {
+        await supabase.auth.signOut();
+        updateUserState(null);
+    };
+
     useEffect(() => {
         const checkSession = async () => {
             setIsLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const { profile: userProfile, error } = await database.getUserProfile(session.user.id);
-                if (userProfile && !error) {
-                    setUser(userProfile);
-                    setIsLoggedIn(true);
-                } else {
-                    // If there's a session but we can't get a profile, sign out to prevent inconsistent state.
-                    await supabase.auth.signOut();
-                    setUser(null);
-                    setIsLoggedIn(false);
-                }
+                const { profile } = await database.getUserProfile(session.user.id);
+                updateUserState(profile); 
             }
             setIsLoading(false);
         };
@@ -42,20 +83,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session?.user) {
-                const { profile, error } = await database.getUserProfile(session.user.id);
-                if (profile && !error) {
-                    setUser(profile);
-                    setIsLoggedIn(true);
-                } else {
-                    // Profile fetch failed, force sign out to clear inconsistent state
-                    await supabase.auth.signOut();
-                    setUser(null);
-                    setIsLoggedIn(false);
-                }
+                const { profile } = await database.getUserProfile(session.user.id);
+                updateUserState(profile);
             } else {
-                // This will be triggered on sign out
-                setUser(null);
-                setIsLoggedIn(false);
+                updateUserState(null);
             }
         });
 
@@ -64,29 +95,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, []);
 
-    const login = async (email: string, pass: string): Promise<{ error: string | null }> => {
-        // The onAuthStateChange listener will handle setting the user profile and loggedIn state.
-        // This function's job is just to perform the login and return any auth error.
-        const { error } = await database.login(email, pass);
-        return { error };
-    };
-    
-    const loginAsGuest = async (): Promise<User | null> => {
-        const guestUser = await database.getGuestUser();
-        setUser(guestUser);
-        setIsLoggedIn(true);
-        return guestUser;
-    };
-
-    const logout = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-            console.error('Error logging out:', error);
-        }
-        // State is also cleared by the onAuthStateChange listener
-        setUser(null);
-        setIsLoggedIn(false);
-    };
 
     return (
         <AuthContext.Provider value={{ user, isLoggedIn, isLoading, login, loginAsGuest, logout }}>
