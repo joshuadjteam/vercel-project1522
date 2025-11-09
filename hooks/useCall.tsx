@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
@@ -57,6 +58,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
     const localStreamRef = useRef<MediaStream | null>(null);
     const callChannelRef = useRef<RealtimeChannel | null>(null);
+    const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
     const isCallingRef = useRef(isCalling);
 
     useEffect(() => {
@@ -76,6 +78,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsVideoEnabled(true);
         callStartTimeRef.current = null;
         callDirectionRef.current = null;
+        pendingCandidatesRef.current = [];
     }, []);
 
     const cleanupP2P = useCallback(() => {
@@ -101,7 +104,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const duration = Math.round((Date.now() - callStartTimeRef.current) / 1000);
             
             let status: CallRecord['status'] = 'ended';
-            const remoteUser = callDirectionRef.current === 'outgoing' ? callee : (incomingCall?.from || '');
+            
+            // FIX: The `callee` state variable is the single source of truth for the remote party's username
+            // for both incoming and outgoing calls once they are initiated or connected.
+            // The previous logic failed for incoming calls because `incomingCall` is cleared after acceptance.
+            const remoteUser = callee;
 
             if (callStatus === 'Connected') {
                 status = 'answered';
@@ -109,6 +116,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 status = 'declined';
             }
     
+            // The remoteUser might be an empty string if the call ends before the callee is set.
+            // This check prevents sending an invalid record.
             if (remoteUser) {
                 const record: Omit<CallRecord, 'id' | 'owner' | 'timestamp'> = {
                     caller_username: callDirectionRef.current === 'outgoing' ? user.username : remoteUser,
@@ -122,7 +131,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         resetState();
-    }, [callee, incomingCall, user, cleanupP2P, resetState, callStatus]);
+    }, [callee, user, cleanupP2P, resetState, callStatus]);
 
 
     const handleSignalingData = useCallback(async (payload: any) => {
@@ -136,11 +145,26 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             case 'answer':
                 if (peerConnectionRef.current && peerConnectionRef.current.signalingState !== 'closed') {
                     await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer));
+                    // Process any queued candidates after setting remote description
+                    pendingCandidatesRef.current.forEach(candidate => {
+                        peerConnectionRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
+                    });
+                    pendingCandidatesRef.current = [];
                 }
                 break;
             case 'ice-candidate':
-                if (peerConnectionRef.current && payload.candidate && peerConnectionRef.current.signalingState !== 'closed') {
-                    await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                try {
+                    if (peerConnectionRef.current && payload.candidate && peerConnectionRef.current.signalingState !== 'closed') {
+                        // FIX: Queue ICE candidates if the remote description isn't set yet.
+                        // This prevents the "Failed to execute 'addIceCandidate'" race condition.
+                        if (peerConnectionRef.current.remoteDescription) {
+                            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                        } else {
+                            pendingCandidatesRef.current.push(payload.candidate);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error adding received ICE candidate", e);
                 }
                 break;
             case 'decline':
@@ -243,6 +267,13 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
 
             await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+
+            // Process any queued candidates after setting remote description
+            pendingCandidatesRef.current.forEach(candidate => {
+                pc.addIceCandidate(new RTCIceCandidate(candidate));
+            });
+            pendingCandidatesRef.current = [];
+
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
 
