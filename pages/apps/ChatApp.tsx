@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
@@ -8,7 +7,14 @@ import { geminiService } from '../../services/geminiService';
 import { User, ChatMessage, UserRole } from '../../types';
 
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
-const AIIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>;
+
+const LynixLogo = () => (
+    <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+        <circle cx="16" cy="16" r="14" fill="#C9E1DE"/>
+        <path d="M9 13L19 13L16 23L6 23Z" fill="#EB5B4D"/>
+        <path d="M12 8L22 8L19 18L9 18Z" fill="#F37921"/>
+    </svg>
+);
 
 // Special constant for the AI user
 const LYNX_AI_USER: User = {
@@ -214,7 +220,7 @@ const ChatApp: React.FC = () => {
                                         >   
                                             {isAI ? (
                                                 <span className="flex items-center text-cyan-300">
-                                                   <AIIcon />
+                                                   <LynixLogo />
                                                    {user.username}
                                                 </span>
                                             ) : (
@@ -241,7 +247,7 @@ const ChatApp: React.FC = () => {
                         <header className="p-4 bg-white/5 flex-shrink-0 border-b border-white/10 backdrop-blur-md flex items-center">
                              {selectedUser.id === LYNX_AI_USER.id ? (
                                  <div className="flex items-center text-cyan-300">
-                                     <AIIcon />
+                                     <LynixLogo />
                                      <h2 className="text-xl font-bold">{selectedUser.username}</h2>
                                  </div>
                              ) : (
