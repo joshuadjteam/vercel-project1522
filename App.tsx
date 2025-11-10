@@ -19,7 +19,8 @@ import NotepadApp from './pages/apps/NotepadApp';
 import CalculatorApp from './pages/apps/CalculatorApp';
 import PaintApp from './pages/apps/PaintApp';
 import { Page, UserRole } from './types';
-import { SpeedInsights } from "@vercel/speed-insights/react";
+import { injectSpeedInsights } from '@vercel/speed-insights';
+import { inject as injectAnalytics } from '@vercel/analytics';
 
 const AppContent: React.FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -92,12 +93,16 @@ const AppContent: React.FC = () => {
             <Footer />
             <CallWidget />
             <IncomingCallWidget />
-            <SpeedInsights />
         </div>
     );
 };
 
 const App: React.FC = () => {
+    useEffect(() => {
+        injectSpeedInsights();
+        injectAnalytics();
+    }, []);
+
     return (
         <AuthProvider>
             <CallProvider>
