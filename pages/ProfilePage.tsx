@@ -168,15 +168,6 @@ const LynxAITabContent = () => {
             setIsLoading(false);
         }
     };
-
-    if (!user?.features.ai) {
-        return (
-            <div className="animate-fade-in">
-                <h3 className="text-2xl font-semibold mb-6">LynxAI Portal</h3>
-                <p className="text-gray-500 dark:text-gray-400">The LynxAI feature is not enabled for your account. Please contact an administrator to upgrade your plan.</p>
-            </div>
-        );
-    }
     
     return (
         <div className="h-[45vh] flex flex-col animate-fade-in">

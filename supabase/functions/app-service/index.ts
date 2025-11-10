@@ -1,5 +1,6 @@
 
 
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SmtpClient } from 'https://deno.land/x/smtp@v0.7.0/mod.ts';
@@ -34,7 +35,21 @@ serve(async (req)=>{
   }
 
   try {
-    const { resource, action, payload } = await req.json();
+    let body;
+    try {
+      const bodyText = await req.text();
+      // Safely parse the body, defaulting to an empty object if the body is empty.
+      body = JSON.parse(bodyText || '{}');
+    } catch (e) {
+      // If parsing fails, it's a bad request.
+      throw { status: 400, message: `Invalid JSON in request body: ${e.message}` };
+    }
+    // Ensure the parsed body is a non-null object before proceeding.
+    if (typeof body !== 'object' || body === null) {
+      throw { status: 400, message: 'Request body must be a JSON object.' };
+    }
+    const { resource, action, payload } = body;
+
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
     // All other endpoints require authentication
@@ -208,21 +223,6 @@ serve(async (req)=>{
                 const { error } = await supabaseAdmin.from('notes').delete().match({ id: payload.id, owner: userProfile.username });
                 if (error) throw error;
                 return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-            }
-        }
-        break;
-      }
-      case 'call-history': {
-        switch(action) {
-            case 'get': {
-                const { data, error } = await supabaseAdmin.from('call_history').select('*').eq('owner', userProfile.username);
-                if (error) throw error;
-                return new Response(JSON.stringify({ history: data || [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-            }
-            case 'add': {
-                const { data, error } = await supabaseAdmin.from('call_history').insert({ ...payload, owner: userProfile.username }).select().single();
-                if (error) throw error;
-                return new Response(JSON.stringify({ record: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
             }
         }
         break;

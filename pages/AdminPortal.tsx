@@ -14,9 +14,6 @@ const AdminPortal: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<User | null>(null);
     const [stats, setStats] = useState({ messages: 0, mails: 0, contacts: 0 });
-    const [broadcastMessage, setBroadcastMessage] = useState('');
-    const [isBroadcastActive, setIsBroadcastActive] = useState(false);
-    const [broadcastLoading, setBroadcastLoading] = useState(false);
 
 
     const fetchUsers = useCallback(async () => {
@@ -29,20 +26,10 @@ const AdminPortal: React.FC = () => {
         setStats(adminStats);
     }, []);
 
-    const fetchBroadcast = useCallback(async () => {
-        const message = await database.getBroadcastMessage();
-        if (message) {
-            setBroadcastMessage(message.message);
-            setIsBroadcastActive(message.is_active);
-        }
-    }, []);
-
-
     useEffect(() => {
         fetchUsers();
         fetchStats();
-        fetchBroadcast();
-    }, [fetchUsers, fetchStats, fetchBroadcast]);
+    }, [fetchUsers, fetchStats]);
 
     const handleAddUser = () => {
         setUserToEdit(null);
@@ -70,30 +57,6 @@ const AdminPortal: React.FC = () => {
         fetchUsers();
     };
 
-    const handleUpdateBroadcast = async () => {
-        setBroadcastLoading(true);
-        const success = await database.setBroadcastMessage(broadcastMessage);
-        if (success) {
-            setIsBroadcastActive(true);
-            alert('Broadcast message updated successfully!');
-        } else {
-            alert('Failed to update broadcast message.');
-        }
-        setBroadcastLoading(false);
-    };
-
-    const handleDeactivateBroadcast = async () => {
-        setBroadcastLoading(true);
-        const success = await database.deactivateBroadcastMessage();
-        if (success) {
-            setIsBroadcastActive(false);
-            alert('Broadcast message deactivated.');
-        } else {
-            alert('Failed to deactivate broadcast message.');
-        }
-        setBroadcastLoading(false);
-    };
-
     const StatCard: React.FC<{ title: string, value: string | number }> = ({ title, value }) => (
         <div className="bg-gray-100 dark:bg-teal-700/50 p-4 rounded-lg">
             <div>
@@ -113,25 +76,6 @@ const AdminPortal: React.FC = () => {
         <div className="w-full max-w-7xl bg-light-card/80 dark:bg-teal-900/50 backdrop-blur-sm border border-gray-300 dark:border-teal-700/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white h-[85vh] overflow-y-auto">
             <h1 className="text-4xl font-bold">Admin Portal</h1>
             <p className="text-gray-600 dark:text-gray-300 mb-6">System overview and user management.</p>
-
-            <div className="bg-black/5 dark:bg-black/20 p-6 rounded-lg mb-8">
-                <h2 className="text-2xl font-semibold mb-4">System Broadcast Message</h2>
-                <textarea
-                    value={broadcastMessage}
-                    onChange={(e) => setBroadcastMessage(e.target.value)}
-                    placeholder="Enter a system-wide broadcast message..."
-                    className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md p-2 h-24 resize-y"
-                />
-                <div className="flex justify-end items-center space-x-2 mt-2">
-                    {isBroadcastActive && <span className="text-sm text-green-400 mr-auto">Broadcast is currently active</span>}
-                    <button onClick={handleDeactivateBroadcast} disabled={!isBroadcastActive || broadcastLoading} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white transition-colors disabled:bg-gray-800 disabled:cursor-not-allowed">
-                        {broadcastLoading ? '...' : 'Deactivate'}
-                    </button>
-                    <button onClick={handleUpdateBroadcast} disabled={broadcastLoading} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:bg-blue-800 disabled:cursor-not-allowed">
-                        {broadcastLoading ? '...' : 'Publish / Update'}
-                    </button>
-                </div>
-            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <StatCard title="Total Users" value={users.length} />
@@ -157,7 +101,6 @@ const AdminPortal: React.FC = () => {
                                 <th className="p-2">Plan Name</th>
                                 <th className="p-2">Role</th>
                                 <th className="p-2 text-center">Chat</th>
-                                <th className="p-2 text-center">AI</th>
                                 <th className="p-2 text-center">Mail</th>
                                 <th className="p-2">Actions</th>
                             </tr>
@@ -170,7 +113,6 @@ const AdminPortal: React.FC = () => {
                                     <td className="p-2">{user.plan_name || 'N/A'}</td>
                                     <td className="p-2">{user.role}</td>
                                     <td className="p-2 text-center"><FeatureIndicator enabled={user.features.chat} /></td>
-                                    <td className="p-2 text-center"><FeatureIndicator enabled={user.features.ai} /></td>
                                     <td className="p-2 text-center"><FeatureIndicator enabled={user.features.mail} /></td>
                                     <td className="p-2">
                                         <div className="flex space-x-2">

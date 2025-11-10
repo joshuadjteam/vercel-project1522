@@ -20,7 +20,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
     const [sip, setSip] = useState('');
     const [planName, setPlanName] = useState('');
     const [role, setRole] = useState<UserRole>(UserRole.Standard);
-    const [features, setFeatures] = useState({ chat: true, ai: false, mail: false });
+    const [features, setFeatures] = useState({ chat: true, ai: true, mail: false });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -32,17 +32,18 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
             setSip(userToEdit.sipVoice || '');
             setRole(userToEdit.role);
             setPlanName(userToEdit.plan_name || '');
-            setFeatures(userToEdit.features);
+            // Ensure AI feature is always enabled when editing
+            setFeatures({ ...userToEdit.features, ai: true });
             setPassword(''); // Don't pre-fill password for editing
         } else {
-            // Reset form for adding new user
+            // Reset form for adding new user, with AI enabled by default
             setUsername('');
             setPassword('');
             setEmail('');
             setSip('');
             setRole(UserRole.Standard);
             setPlanName('');
-            setFeatures({ chat: true, ai: false, mail: false });
+            setFeatures({ chat: true, ai: true, mail: false });
         }
     }, [userToEdit, isOpen]);
 
@@ -137,7 +138,6 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
                         <h3 className="text-lg font-semibold mb-3 text-center">Features</h3>
                         <div className="flex justify-around items-center">
                             <Toggle label="Chat" enabled={features.chat} onChange={(val) => setFeatures(f => ({...f, chat: val}))} />
-                            <Toggle label="AI" enabled={features.ai} onChange={(val) => setFeatures(f => ({...f, ai: val}))} />
                             <Toggle label="Mail" enabled={features.mail} onChange={(val) => setFeatures(f => ({...f, mail: val}))} />
                         </div>
                     </div>

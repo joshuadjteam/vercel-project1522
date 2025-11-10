@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-import { User, UserRole, Mail, Contact, Note, CallRecord, MailAccount } from '../types';
+import { User, UserRole, Mail, Contact, Note, MailAccount } from '../types';
 
 // Helper to map DB user to app User
 const mapDbUserToUser = (dbUser: any): User => {
@@ -155,40 +155,6 @@ export const database = {
             return fallbackStats;
         }
         return data.stats || fallbackStats;
-    },
-
-    // --- Broadcast Service ---
-    getBroadcastMessage: async (): Promise<{ message: string; is_active: boolean } | null> => {
-        const { data, error } = await supabase.functions.invoke('manage-broadcast', {
-            body: { action: 'get' }
-        });
-        if (error || !data || data.error) {
-            console.error("Error fetching broadcast message:", error || data?.error);
-            return null;
-        }
-        return data.message;
-    },
-
-    setBroadcastMessage: async (message: string): Promise<boolean> => {
-        const { data, error } = await supabase.functions.invoke('manage-broadcast', {
-            body: { action: 'set', payload: { message } }
-        });
-        if (error || (data && data.error)) {
-            console.error('Error setting broadcast message:', error || data.error);
-            return false;
-        }
-        return true;
-    },
-
-    deactivateBroadcastMessage: async (): Promise<boolean> => {
-        const { data, error } = await supabase.functions.invoke('manage-broadcast', {
-            body: { action: 'deactivate' }
-        });
-        if (error || (data && data.error)) {
-            console.error('Error deactivating broadcast message:', error || data.error);
-            return false;
-        }
-        return true;
     },
 
     // --- Voice Service ---
@@ -378,28 +344,5 @@ export const database = {
             return false;
         }
         return true;
-    },
-
-    // --- Call History Service Functions ---
-    getCallHistoryForUser: async (): Promise<CallRecord[]> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'call-history', action: 'get' }
-        });
-        if (error || !data || data.error) {
-            console.error('Error fetching call history:', error || data?.error);
-            return [];
-        }
-        return data.history || [];
-    },
-
-    addCallHistoryRecord: async (recordData: Omit<CallRecord, 'id' | 'owner' | 'timestamp'>): Promise<CallRecord | null> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'call-history', action: 'add', payload: recordData }
-        });
-        if (error || !data || data.error) {
-            console.error('Error adding call record:', error || data?.error);
-            return null;
-        }
-        return data.record;
     },
 };

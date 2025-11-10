@@ -17,7 +17,21 @@ serve(async (req) => {
   }
 
   try {
-    const { action, payload } = await req.json();
+    let body;
+    try {
+      const bodyText = await req.text();
+      // Safely parse the body, defaulting to an empty object if the body is empty.
+      body = JSON.parse(bodyText || '{}');
+    } catch (e) {
+      // If parsing fails, it's a bad request.
+      throw { status: 400, message: `Invalid JSON in request body: ${e.message}` };
+    }
+    // Ensure the parsed body is a non-null object before proceeding.
+    if (typeof body !== 'object' || body === null) {
+      throw { status: 400, message: 'Request body must be a JSON object.' };
+    }
+    const { action, payload } = body;
+
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
     // Public endpoint: get broadcast message. No auth required.

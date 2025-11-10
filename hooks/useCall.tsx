@@ -1,11 +1,11 @@
 
 
+
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { database } from '../services/database';
-import { CallRecord } from '../types';
 
 const iceServers = {
   iceServers: [
@@ -47,8 +47,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [callDuration, setCallDuration] = useState(0);
 
     // Call Logging refs
-    const callStartTimeRef = useRef<number | null>(null);
-    const callDirectionRef = useRef<'incoming' | 'outgoing' | null>(null);
     const callTimerRef = useRef<number | null>(null);
 
     // P2P refs
@@ -74,8 +72,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setCallDuration(0);
         if (callTimerRef.current) clearInterval(callTimerRef.current);
         callTimerRef.current = null;
-        callStartTimeRef.current = null;
-        callDirectionRef.current = null;
         pendingCandidatesRef.current = [];
     }, []);
 
@@ -96,33 +92,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         }
         cleanupP2P();
-
-        // Log the call
-        if (callStartTimeRef.current && user && callDirectionRef.current) {
-            const duration = Math.round((Date.now() - callStartTimeRef.current) / 1000);
-            
-            let status: CallRecord['status'] = 'ended';
-            
-            const remoteUser = callee;
-
-            if (callStatus.startsWith('Connected')) {
-                status = 'answered';
-            } else if (callStatus === 'Call Declined') {
-                status = 'declined';
-            }
-    
-            if (remoteUser) {
-                const record: Omit<CallRecord, 'id' | 'owner' | 'timestamp'> = {
-                    caller_username: callDirectionRef.current === 'outgoing' ? user.username : remoteUser,
-                    callee_username: callDirectionRef.current === 'outgoing' ? remoteUser : user.username,
-                    direction: callDirectionRef.current,
-                    status,
-                    duration
-                };
-                database.addCallHistoryRecord(record);
-            }
-        }
-
         resetState();
     }, [callee, user, cleanupP2P, resetState, callStatus, incomingCall?.from]);
 
@@ -191,8 +160,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsCalling(true);
         setCallee(calleeUsername);
         setCallStatus(`Ringing ${calleeUsername}...`);
-        callStartTimeRef.current = Date.now();
-        callDirectionRef.current = 'outgoing';
         setIsVideoEnabled(withVideo);
         
         try {
@@ -237,8 +204,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsCalling(true);
         setCallee(incomingCall.from);
         setCallStatus('Connecting...');
-        callStartTimeRef.current = Date.now();
-        callDirectionRef.current = 'incoming';
         setIsVideoEnabled(!!incomingCall.isVideoCall);
 
         try {
@@ -287,16 +252,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const declineCall = () => {
         if (!incomingCall || !user) return;
         supabase.channel(`call-channel-${incomingCall.from}`).send({ type: 'broadcast', event: 'call-event', payload: { type: 'decline', from: user.username }});
-        
-        const record: Omit<CallRecord, 'id' | 'owner' | 'timestamp'> = {
-            caller_username: incomingCall.from,
-            callee_username: user.username,
-            direction: 'incoming',
-            status: 'declined',
-            duration: 0
-        };
-        database.addCallHistoryRecord(record);
-        
         setIncomingCall(null);
     };
 
