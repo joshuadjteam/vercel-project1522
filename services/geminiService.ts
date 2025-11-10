@@ -7,12 +7,12 @@ export const geminiService = {
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: prompt,
+                contents: { parts: [{ text: prompt }] },
                 config: {
                     systemInstruction: "You are a helpful and friendly customer support agent for a company called Lynix. Your goal is to assist users with their questions about the Lynix portal, its features (like Phone, Chat, Mail), billing, and account management. Keep your responses concise and to the point.",
                 }
             });
-            return String(response.text ?? '');
+            return response.text;
         } catch (error) {
             console.error("Error calling Gemini API:", error);
             // In a real app, you might want more sophisticated error handling
@@ -25,12 +25,12 @@ export const geminiService = {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: prompt,
+                contents: { parts: [{ text: prompt }] },
                 config: {
                     systemInstruction: `You are ${persona}. Be friendly, helpful, and keep your responses conversational and relatively brief.`,
                 }
             });
-            return String(response.text ?? '');
+            return response.text;
         } catch (error) {
             console.error("Error calling Gemini API for persona response:", error);
             return "I'm sorry, I'm having trouble connecting right now.";

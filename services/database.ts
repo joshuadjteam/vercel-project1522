@@ -58,6 +58,17 @@ export const database = {
         }
         return (data.users || []).map(mapDbUserToUser);
     },
+
+    getUserDirectory: async (): Promise<User[]> => {
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+            body: { action: 'getDirectory' }
+        });
+        if (error || !data || data.error) {
+            console.error('Error from manage-users function (getDirectory):', error || data?.error);
+            return [];
+        }
+        return (data.users || []).map(mapDbUserToUser);
+    },
     
     addUser: async (userData: Partial<User> & { password?: string }): Promise<{ user: User | null; error: string | null }> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {

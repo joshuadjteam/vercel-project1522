@@ -148,6 +148,16 @@ serve(async (req) => {
           status: 200,
         });
       }
+      case 'getDirectory': {
+        // Public directory for authenticated users, no admin check required.
+        const { data, error } = await supabaseAdmin.from('users').select('*').order('username', { ascending: true });
+        if (error) throw error;
+        
+        return new Response(JSON.stringify({ users: data }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
       case 'getUserByUsername': {
         const { username } = payload;
         if (!username) throw { message: 'Username is required.', status: 400 };

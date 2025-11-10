@@ -89,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
         <button
             onClick={onClick}
             title={text}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 flex items-center space-x-2 ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/20 hover:text-gray-900 dark:hover:text-white'}`}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 flex items-center space-x-2 ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-white/20 hover:text-white'}`}
         >
             {icon}
             <span className="hidden sm:inline">{text}</span>
@@ -230,11 +230,15 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
     );
 
     return (
-        <header className="w-full bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm text-light-text dark:text-dark-text shadow-lg z-50">
+        <header className="w-full bg-[#385A64] text-white shadow-lg z-50">
             <div className="container mx-auto px-4 py-2 flex justify-between items-center">
-                <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('home')}>
-                    <div className="w-6 h-6 bg-blue-500 rounded-full"></div>
-                    <span className="text-xl font-bold">Lynix</span>
+                <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('home')}>
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="16" cy="16" r="14" fill="#C9E1DE"/>
+                        <path d="M9 13L19 13L16 23L6 23Z" fill="#EB5B4D"/>
+                        <path d="M12 8L22 8L19 18L9 18Z" fill="#F37921"/>
+                    </svg>
+                    <span className="text-2xl font-bold text-white">Lynix</span>
                 </div>
                 {isMobile ? renderMobileNav() : renderDesktopNav()}
             </div>
