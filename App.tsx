@@ -19,7 +19,6 @@ import NotepadApp from './pages/apps/NotepadApp';
 import CalculatorApp from './pages/apps/CalculatorApp';
 import PaintApp from './pages/apps/PaintApp';
 import { Page, UserRole } from './types';
-import { database } from './services/database';
 
 const AppContent: React.FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>('home');
