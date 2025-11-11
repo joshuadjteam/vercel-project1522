@@ -64,6 +64,16 @@ const AppContent: React.FC = () => {
         }
 
         // Logged in
+        const isGuest = user?.role === UserRole.Trial;
+
+        const RestrictedAccess = () => (
+            <div className="w-full max-w-lg bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-red-500/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white text-center flex flex-col items-center">
+                <img src="https://i.imgur.com/gY2VgC2.png" alt="Access Denied" className="w-32 h-32 mb-6" />
+                <h2 className="text-2xl font-bold text-red-500 dark:text-red-400 mb-4">Access Denied</h2>
+                <p className="text-lg">We cannot allow you to use this service! Please login using your credentials to use these features.</p>
+            </div>
+        );
+
         switch (currentPage) {
             case 'home':
                 return <HomePage />;
@@ -76,21 +86,21 @@ const AppContent: React.FC = () => {
             case 'app-phone':
                 return <PhoneApp />;
             case 'app-chat':
-                return <ChatApp />;
+                return isGuest ? <RestrictedAccess /> : <ChatApp />;
             case 'app-localmail':
-                return <LocalMailApp />;
+                return isGuest ? <RestrictedAccess /> : <LocalMailApp />;
             case 'app-contacts':
                 return <ContactsApp />;
             case 'app-notepad':
-                return <NotepadApp />;
+                return isGuest ? <RestrictedAccess /> : <NotepadApp />;
             case 'app-calculator':
                 return <CalculatorApp />;
             case 'app-paint':
                 return <PaintApp />;
             case 'app-files':
-                return <FileExplorerApp navigate={navigate} />;
+                return isGuest ? <RestrictedAccess /> : <FileExplorerApp navigate={navigate} />;
             case 'app-editor':
-                return <EditorApp navigate={navigate} initialFile={currentFile} />;
+                return isGuest ? <RestrictedAccess /> : <EditorApp navigate={navigate} initialFile={currentFile} />;
             case 'app-converter':
                 return <UnitConverterApp />;
             case 'app-calendar':

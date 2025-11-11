@@ -129,13 +129,13 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                     {appsMenuOpen && (
                         <div className="absolute top-full right-0 mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2 z-20 max-h-[80vh] overflow-y-auto custom-scrollbar">
                             <AppDropdownButton onClick={() => { navigate('app-phone'); setAppsMenuOpen(false); }} icon={<PhoneIcon />} text="Phone" />
-                            <AppDropdownButton onClick={() => { navigate('app-chat'); setAppsMenuOpen(false); }} icon={<ChatIcon />} text="Chat" />
-                            <AppDropdownButton onClick={() => { navigate('app-localmail'); setAppsMenuOpen(false); }} icon={<MailIcon />} text="LocalMail" />
-                            <AppDropdownButton onClick={() => { navigate('app-files'); setAppsMenuOpen(false); }} icon={<FilesIcon />} text="Files" />
+                            {user?.features.chat && <AppDropdownButton onClick={() => { navigate('app-chat'); setAppsMenuOpen(false); }} icon={<ChatIcon />} text="Chat" />}
+                            {user?.features.mail && <AppDropdownButton onClick={() => { navigate('app-localmail'); setAppsMenuOpen(false); }} icon={<MailIcon />} text="LocalMail" />}
+                            {user?.role !== UserRole.Trial && <AppDropdownButton onClick={() => { navigate('app-files'); setAppsMenuOpen(false); }} icon={<FilesIcon />} text="Files" />}
                             <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
                             <AppDropdownButton onClick={() => { navigate('app-contacts'); setAppsMenuOpen(false); }} icon={<ContactsIcon />} text="Contacts" />
-                            <AppDropdownButton onClick={() => { navigate('app-notepad'); setAppsMenuOpen(false); }} icon={<NotepadIcon />} text="Notepad" />
-                            <AppDropdownButton onClick={() => { navigate('app-editor'); setAppsMenuOpen(false); }} icon={<EditorIcon />} text="Code Editor" />
+                            {user?.role !== UserRole.Trial && <AppDropdownButton onClick={() => { navigate('app-notepad'); setAppsMenuOpen(false); }} icon={<NotepadIcon />} text="Notepad" />}
+                            {user?.role !== UserRole.Trial && <AppDropdownButton onClick={() => { navigate('app-editor'); setAppsMenuOpen(false); }} icon={<EditorIcon />} text="Code Editor" />}
                             <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
                             <AppDropdownButton onClick={() => { navigate('app-calculator'); setAppsMenuOpen(false); }} icon={<CalculatorIcon />} text="Calculator" />
                             <AppDropdownButton onClick={() => { navigate('app-converter'); setAppsMenuOpen(false); }} icon={<ConverterIcon />} text="Converter" />
@@ -192,12 +192,12 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                         <>
                             <h3 className="px-4 pt-2 pb-1 text-xs font-semibold text-gray-500">Apps</h3>
                             <AppDropdownButton onClick={() => { navigate('app-phone'); setMobileMenuOpen(false); }} icon={<PhoneIcon />} text="Phone" />
-                            <AppDropdownButton onClick={() => { navigate('app-chat'); setMobileMenuOpen(false); }} icon={<ChatIcon />} text="Chat" />
-                            <AppDropdownButton onClick={() => { navigate('app-localmail'); setMobileMenuOpen(false); }} icon={<MailIcon />} text="LocalMail" />
-                            <AppDropdownButton onClick={() => { navigate('app-files'); setMobileMenuOpen(false); }} icon={<FilesIcon />} text="Files" />
+                            {user?.features.chat && <AppDropdownButton onClick={() => { navigate('app-chat'); setMobileMenuOpen(false); }} icon={<ChatIcon />} text="Chat" />}
+                            {user?.features.mail && <AppDropdownButton onClick={() => { navigate('app-localmail'); setMobileMenuOpen(false); }} icon={<MailIcon />} text="LocalMail" />}
+                            {user?.role !== UserRole.Trial && <AppDropdownButton onClick={() => { navigate('app-files'); setMobileMenuOpen(false); }} icon={<FilesIcon />} text="Files" />}
                             <AppDropdownButton onClick={() => { navigate('app-contacts'); setMobileMenuOpen(false); }} icon={<ContactsIcon />} text="Contacts" />
-                            <AppDropdownButton onClick={() => { navigate('app-notepad'); setMobileMenuOpen(false); }} icon={<NotepadIcon />} text="Notepad" />
-                            <AppDropdownButton onClick={() => { navigate('app-editor'); setMobileMenuOpen(false); }} icon={<EditorIcon />} text="Code Editor" />
+                            {user?.role !== UserRole.Trial && <AppDropdownButton onClick={() => { navigate('app-notepad'); setMobileMenuOpen(false); }} icon={<NotepadIcon />} text="Notepad" />}
+                            {user?.role !== UserRole.Trial && <AppDropdownButton onClick={() => { navigate('app-editor'); setMobileMenuOpen(false); }} icon={<EditorIcon />} text="Code Editor" />}
                             <AppDropdownButton onClick={() => { navigate('app-calculator'); setMobileMenuOpen(false); }} icon={<CalculatorIcon />} text="Calculator" />
                             <AppDropdownButton onClick={() => { navigate('app-converter'); setMobileMenuOpen(false); }} icon={<ConverterIcon />} text="Converter" />
                             <AppDropdownButton onClick={() => { navigate('app-calendar'); setMobileMenuOpen(false); }} icon={<CalendarIcon />} text="Calendar" />

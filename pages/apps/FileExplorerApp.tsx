@@ -109,7 +109,7 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
         navigate('app-editor', { file: fileName });
     };
 
-    const fileList = Object.values(files).sort((a, b) => b.modified - a.modified);
+    const fileList = (Object.values(files) as VirtualFile[]).sort((a, b) => b.modified - a.modified);
 
     return (
         <div className="w-full max-w-5xl h-[80vh] bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl p-6 text-light-text dark:text-white flex flex-col">

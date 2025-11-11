@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabaseClient';
 import { User, UserRole, Mail, Contact, Note, MailAccount } from '../types';
 
@@ -170,9 +171,11 @@ export const database = {
 
     // --- Voice Service ---
     getVoiceResponse: async (text: string): Promise<{ audioDataUrl: string, transcription: string }> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'voice-service', payload: { text } }
+        // Call the dedicated voice-service instead of the monolithic app-service
+        const { data, error } = await supabase.functions.invoke('voice-service', {
+            body: { text }
         });
+
         if (error || (data && data.error)) {
             const errorMessage = error?.message || data?.error || 'Unknown error invoking voice service.';
             console.error('Error invoking voice-service:', errorMessage);
