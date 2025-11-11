@@ -5,9 +5,10 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // By disabling session persistence, the user's session will only be stored in memory
-    // and will be lost when the page is refreshed. This directly addresses the issue
-    // of getting stuck during session restoration, as there will be no session to restore.
-    persistSession: false,
+    // Session persistence must be enabled for OAuth to work across redirects.
+    // The Supabase client library will automatically handle the session
+    // from the URL fragment when the user is redirected back from the provider.
+    persistSession: true,
+    detectSessionInUrl: true,
   },
 });

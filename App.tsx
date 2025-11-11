@@ -26,9 +26,40 @@ import { Page, UserRole } from './types';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
 
+const pageToPath: Record<Page, string> = {
+    'home': '/',
+    'contact': '/contact',
+    'signin': '/signin',
+    'profile': '/profile',
+    'admin': '/admin',
+    'app-phone': '/apps/phone',
+    'app-chat': '/apps/chat',
+    'app-localmail': '/apps/localmail',
+    'app-contacts': '/apps/contacts',
+    'app-notepad': '/apps/notepad',
+    'app-calculator': '/apps/calculator',
+    'app-paint': '/apps/paint',
+    'app-files': '/apps/files',
+    'app-editor': '/apps/editor', // Base path for editor
+    'app-converter': '/apps/converter',
+    'app-calendar': '/apps/calendar',
+};
+
+const pathToPage = Object.fromEntries(Object.entries(pageToPath).map(([key, value]) => [value, key as Page]));
+
+const getCurrentPageFromUrl = (): { page: Page, file: string | null } => {
+    const path = window.location.pathname;
+    if (path.startsWith('/apps/editor/')) {
+        const fileName = decodeURIComponent(path.substring('/apps/editor/'.length));
+        return { page: 'app-editor', file: fileName || null };
+    }
+    return { page: pathToPage[path] || 'home', file: null };
+};
+
+
 const AppContent: React.FC = () => {
-    const [currentPage, setCurrentPage] = useState<Page>('home');
-    const [currentFile, setCurrentFile] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState<Page>(() => getCurrentPageFromUrl().page);
+    const [currentFile, setCurrentFile] = useState<string | null>(() => getCurrentPageFromUrl().file);
     const [isDark, setIsDark] = useState(true);
     const { user, isLoggedIn } = useAuth();
 
@@ -41,6 +72,20 @@ const AppContent: React.FC = () => {
     }, [isDark]);
 
     const navigate = useCallback((page: Page, params?: any) => {
+        let path: string;
+        let file: string | null = null;
+    
+        if (page === 'app-editor' && params?.file) {
+            file = params.file;
+            path = `/apps/editor/${encodeURIComponent(file)}`;
+        } else {
+            path = pageToPath[page] || '/';
+        }
+    
+        if (window.location.pathname !== path) {
+            window.history.pushState({ page, file }, '', path);
+        }
+    
         setCurrentPage(page);
         if (page === 'app-editor' && params?.file) {
             setCurrentFile(params.file);
@@ -48,6 +93,17 @@ const AppContent: React.FC = () => {
             setCurrentFile(null);
         }
     }, []);
+
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
+            const { page, file } = getCurrentPageFromUrl();
+            setCurrentPage(page);
+            setCurrentFile(file);
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
 
     const renderPage = () => {
         if (!isLoggedIn) {
@@ -114,7 +170,7 @@ const AppContent: React.FC = () => {
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500 font-sans transition-colors duration-300">
             <Header navigate={navigate} isDark={isDark} setIsDark={setIsDark} />
             <main className="flex-grow flex items-center justify-center p-4 overflow-hidden">
-                <div key={currentPage} className="w-full h-full flex items-center justify-center animate-fade-in">
+                <div key={currentPage + (currentFile || '')} className="w-full h-full flex items-center justify-center animate-fade-in">
                     {renderPage()}
                 </div>
             </main>

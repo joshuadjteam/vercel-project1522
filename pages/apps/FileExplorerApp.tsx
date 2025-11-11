@@ -7,6 +7,14 @@ import { Page } from '../../types';
 const FileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const CloudIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>;
+const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const GoogleIcon = () => (
+    <svg className="h-6 w-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,5 12,5C14.6,5 16.1,6.2 17.1,7.2L19,5.2C17.2,3.4 14.8,2 12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,11.63 21.95,11.36 21.89,11.1H21.35Z" fill="#fff"/>
+    </svg>
+);
+
 
 interface FileExplorerAppProps {
     navigate: (page: Page, params?: any) => void;
@@ -27,6 +35,7 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
     const [newFileName, setNewFileName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState('');
+    const [driveLinkStatus, setDriveLinkStatus] = useState<'unlinked' | 'linking' | 'linked'>('unlinked');
 
     const storageKey = useMemo(() => `lynix_drive_${user?.username}`, [user]);
 
@@ -40,6 +49,10 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
                 console.error("Failed to parse user files", e);
                 setFiles({});
             }
+        }
+        const isLinked = localStorage.getItem(`lynix_drive_linked_${user?.username}`);
+        if (isLinked === 'true') {
+            setDriveLinkStatus('linked');
         }
     }, [user, storageKey]);
 
@@ -56,6 +69,19 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
+    
+    const handleLinkDrive = () => {
+        setDriveLinkStatus('linking');
+        setTimeout(() => {
+            setDriveLinkStatus('linked');
+            if(user) localStorage.setItem(`lynix_drive_linked_${user?.username}`, 'true');
+        }, 2000); // Simulate linking process
+    };
+
+    const handleUnlinkDrive = () => {
+        if(user) localStorage.removeItem(`lynix_drive_linked_${user?.username}`);
+        setDriveLinkStatus('unlinked');
+    };
 
     const handleCreateFile = (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,8 +96,7 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
             return;
         }
 
-        // Simple check before creation (rough estimate)
-        if (usedBytes + 500 > MAX_STORAGE_BYTES) { // Assume min 500 bytes overhead for new file entry
+        if (usedBytes + 500 > MAX_STORAGE_BYTES) { 
              setError('Not enough storage space.');
              return;
         }
@@ -89,7 +114,6 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
             setFiles(updatedFiles);
             setNewFileName('');
             setIsCreating(false);
-            // Open newly created file
             navigate('app-editor', { file: fileName });
         } catch (e) {
             setError('Storage quota exceeded.');
@@ -111,12 +135,51 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
 
     const fileList = (Object.values(files) as VirtualFile[]).sort((a, b) => b.modified - a.modified);
 
+    if (driveLinkStatus !== 'linked') {
+        return (
+            <div className="w-full max-w-5xl h-[80vh] bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl p-6 text-light-text dark:text-white flex flex-col items-center justify-center text-center">
+                <CloudIcon />
+                <h1 className="text-3xl font-bold mt-4">Connect to the Cloud</h1>
+                <p className="mt-2 max-w-md text-gray-600 dark:text-gray-300">
+                    Link your Google Drive account to access your files from anywhere and get more storage. Your local files will be synced.
+                </p>
+                <div className="mt-8">
+                    <button 
+                        onClick={handleLinkDrive} 
+                        disabled={driveLinkStatus === 'linking'}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center space-x-3"
+                    >
+                        <GoogleIcon />
+                        <span>
+                            {driveLinkStatus === 'linking' ? 'Connecting...' : 'Link with your Google Account'}
+                        </span>
+                    </button>
+                </div>
+                <div className="mt-8 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-300 dark:border-teal-700 pt-4 w-full max-w-md">
+                    <p className="font-semibold">Current Usage (Local Storage)</p>
+                     <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-2">
+                        <div 
+                            className={`h-full ${usedPercentage > 90 ? 'bg-red-500' : 'bg-blue-500'}`} 
+                            style={{ width: `${usedPercentage}%` }}
+                        ></div>
+                    </div>
+                    <p className="mt-1">{formatBytes(usedBytes)} / {formatBytes(MAX_STORAGE_BYTES)}</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full max-w-5xl h-[80vh] bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl p-6 text-light-text dark:text-white flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold flex items-center">
-                    <span className="mr-2">📁</span> My Files
-                </h1>
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+                <div className="flex items-center space-x-3">
+                    <h1 className="text-3xl font-bold">My Files</h1>
+                    <div className="flex items-center space-x-2 text-sm text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/50 px-3 py-1 rounded-full">
+                        <CheckCircleIcon />
+                        <span>Google Drive</span>
+                        <button onClick={handleUnlinkDrive} className="text-xs text-gray-500 hover:underline">(unlink)</button>
+                    </div>
+                </div>
                 <div className="flex items-center space-x-4">
                     <div className="text-right">
                         <p className="text-sm font-medium">{formatBytes(usedBytes)} / {formatBytes(MAX_STORAGE_BYTES)}</p>
