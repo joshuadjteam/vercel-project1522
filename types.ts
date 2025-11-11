@@ -89,4 +89,8 @@ export type Page =
     | 'app-contacts'
     | 'app-notepad'
     | 'app-calculator'
-    | 'app-paint';
+    | 'app-paint'
+    | 'app-files'
+    | 'app-editor'
+    | 'app-converter'
+    | 'app-calendar';

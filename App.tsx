@@ -18,12 +18,17 @@ import ContactsApp from './pages/apps/ContactsApp';
 import NotepadApp from './pages/apps/NotepadApp';
 import CalculatorApp from './pages/apps/CalculatorApp';
 import PaintApp from './pages/apps/PaintApp';
+import FileExplorerApp from './pages/apps/FileExplorerApp';
+import EditorApp from './pages/apps/EditorApp';
+import UnitConverterApp from './pages/apps/UnitConverterApp';
+import CalendarApp from './pages/apps/CalendarApp';
 import { Page, UserRole } from './types';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
 
 const AppContent: React.FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>('home');
+    const [currentFile, setCurrentFile] = useState<string | null>(null);
     const [isDark, setIsDark] = useState(true);
     const { user, isLoggedIn } = useAuth();
 
@@ -35,8 +40,13 @@ const AppContent: React.FC = () => {
         }
     }, [isDark]);
 
-    const navigate = useCallback((page: Page) => {
+    const navigate = useCallback((page: Page, params?: any) => {
         setCurrentPage(page);
+        if (page === 'app-editor' && params?.file) {
+            setCurrentFile(params.file);
+        } else if (page !== 'app-editor') {
+            setCurrentFile(null);
+        }
     }, []);
 
     const renderPage = () => {
@@ -77,6 +87,14 @@ const AppContent: React.FC = () => {
                 return <CalculatorApp />;
             case 'app-paint':
                 return <PaintApp />;
+            case 'app-files':
+                return <FileExplorerApp navigate={navigate} />;
+            case 'app-editor':
+                return <EditorApp navigate={navigate} initialFile={currentFile} />;
+            case 'app-converter':
+                return <UnitConverterApp />;
+            case 'app-calendar':
+                return <CalendarApp />;
             default:
                 return <ProfilePage navigate={navigate}/>;
         }

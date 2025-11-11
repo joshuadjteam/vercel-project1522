@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page, UserRole } from '../types';
@@ -20,6 +21,10 @@ const ContactsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-
 const NotepadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
 const CalculatorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m-6 4h6m-6 4h6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" /></svg>;
 const PaintIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4Zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343a2 2 0 01-1.414-.586l-2.828-2.828a2 2 0 00-1.414-.586H7M9 11h2" /></svg>;
+const FilesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>;
+const EditorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>;
+const ConverterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>;
+const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16m4 6H4" /></svg>;
 
@@ -39,7 +44,7 @@ const useIsMobile = (breakpoint = 768) => {
 };
 
 interface HeaderProps {
-    navigate: (page: Page) => void;
+    navigate: (page: Page, params?: any) => void;
     isDark: boolean;
     setIsDark: (isDark: boolean) => void;
 }
@@ -122,14 +127,19 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                  <div className="relative" ref={appsMenuRef}>
                     <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" icon={<AppsIcon />} />
                     {appsMenuOpen && (
-                        <div className="absolute top-full right-0 mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2 z-20">
+                        <div className="absolute top-full right-0 mt-2 w-48 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2 z-20 max-h-[80vh] overflow-y-auto custom-scrollbar">
                             <AppDropdownButton onClick={() => { navigate('app-phone'); setAppsMenuOpen(false); }} icon={<PhoneIcon />} text="Phone" />
                             <AppDropdownButton onClick={() => { navigate('app-chat'); setAppsMenuOpen(false); }} icon={<ChatIcon />} text="Chat" />
                             <AppDropdownButton onClick={() => { navigate('app-localmail'); setAppsMenuOpen(false); }} icon={<MailIcon />} text="LocalMail" />
+                            <AppDropdownButton onClick={() => { navigate('app-files'); setAppsMenuOpen(false); }} icon={<FilesIcon />} text="Files" />
                             <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
                             <AppDropdownButton onClick={() => { navigate('app-contacts'); setAppsMenuOpen(false); }} icon={<ContactsIcon />} text="Contacts" />
                             <AppDropdownButton onClick={() => { navigate('app-notepad'); setAppsMenuOpen(false); }} icon={<NotepadIcon />} text="Notepad" />
+                            <AppDropdownButton onClick={() => { navigate('app-editor'); setAppsMenuOpen(false); }} icon={<EditorIcon />} text="Code Editor" />
+                            <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
                             <AppDropdownButton onClick={() => { navigate('app-calculator'); setAppsMenuOpen(false); }} icon={<CalculatorIcon />} text="Calculator" />
+                            <AppDropdownButton onClick={() => { navigate('app-converter'); setAppsMenuOpen(false); }} icon={<ConverterIcon />} text="Converter" />
+                            <AppDropdownButton onClick={() => { navigate('app-calendar'); setAppsMenuOpen(false); }} icon={<CalendarIcon />} text="Calendar" />
                             <AppDropdownButton onClick={() => { navigate('app-paint'); setAppsMenuOpen(false); }} icon={<PaintIcon />} text="Paint" />
                         </div>
                     )}
@@ -173,7 +183,7 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                 <MenuIcon />
             </button>
             {mobileMenuOpen && (
-                <div ref={mobileMenuRef} className="absolute top-full right-0 mt-2 w-64 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2 z-50">
+                <div ref={mobileMenuRef} className="absolute top-full right-0 mt-2 w-64 bg-light-card dark:bg-slate-800 text-light-text dark:text-dark-text rounded-lg shadow-xl py-2 z-50 max-h-[90vh] overflow-y-auto">
                     <AppDropdownButton onClick={() => { navigate('home'); setMobileMenuOpen(false); }} icon={<HomeIcon />} text="Home" />
                     <AppDropdownButton onClick={() => { navigate('contact'); setMobileMenuOpen(false); }} icon={<ContactIcon />} text="Contact" />
                     <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
@@ -184,9 +194,13 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
                             <AppDropdownButton onClick={() => { navigate('app-phone'); setMobileMenuOpen(false); }} icon={<PhoneIcon />} text="Phone" />
                             <AppDropdownButton onClick={() => { navigate('app-chat'); setMobileMenuOpen(false); }} icon={<ChatIcon />} text="Chat" />
                             <AppDropdownButton onClick={() => { navigate('app-localmail'); setMobileMenuOpen(false); }} icon={<MailIcon />} text="LocalMail" />
+                            <AppDropdownButton onClick={() => { navigate('app-files'); setMobileMenuOpen(false); }} icon={<FilesIcon />} text="Files" />
                             <AppDropdownButton onClick={() => { navigate('app-contacts'); setMobileMenuOpen(false); }} icon={<ContactsIcon />} text="Contacts" />
                             <AppDropdownButton onClick={() => { navigate('app-notepad'); setMobileMenuOpen(false); }} icon={<NotepadIcon />} text="Notepad" />
+                            <AppDropdownButton onClick={() => { navigate('app-editor'); setMobileMenuOpen(false); }} icon={<EditorIcon />} text="Code Editor" />
                             <AppDropdownButton onClick={() => { navigate('app-calculator'); setMobileMenuOpen(false); }} icon={<CalculatorIcon />} text="Calculator" />
+                            <AppDropdownButton onClick={() => { navigate('app-converter'); setMobileMenuOpen(false); }} icon={<ConverterIcon />} text="Converter" />
+                            <AppDropdownButton onClick={() => { navigate('app-calendar'); setMobileMenuOpen(false); }} icon={<CalendarIcon />} text="Calendar" />
                             <AppDropdownButton onClick={() => { navigate('app-paint'); setMobileMenuOpen(false); }} icon={<PaintIcon />} text="Paint" />
                             <div className="border-t border-gray-200 dark:border-slate-700 my-1"></div>
                         </>
@@ -230,13 +244,13 @@ const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
     );
 
     return (
-        <header className="w-full bg-[#385A64] text-white shadow-lg z-50">
+        <header className="w-full bg-[#0F2830] text-white shadow-lg z-50">
             <div className="container mx-auto px-4 py-2 flex justify-between items-center">
                 <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('home')}>
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="16" cy="16" r="14" fill="#C9E1DE"/>
-                        <path d="M9 13L19 13L16 23L6 23Z" fill="#EB5B4D"/>
-                        <path d="M12 8L22 8L19 18L9 18Z" fill="#F37921"/>
+                    <svg width="32" height="32" viewBox="0 0 135 105" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M39.7627 0.853516L0.678711 104.172H30.7177L54.7852 40.5664H80.0264L55.9629 104.172H86.002L134.051 0.853516H104.012L79.9482 64.459H54.707L78.7744 0.853516H39.7627Z" fill="#1155cc"/>
+                        <path d="M39.7627 0.853516L0.678711 104.172H30.7177L54.7852 40.5664H54.707L78.7744 0.853516H39.7627Z" fill="#6fa8dc"/>
+                        <path d="M79.9482 64.459H54.707L54.7852 40.5664H80.0264L55.9629 104.172H86.002L134.051 0.853516H104.012L79.9482 64.459Z" fill="#0b5394"/>
                     </svg>
                     <span className="text-2xl font-bold text-white">Lynix</span>
                 </div>
