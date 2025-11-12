@@ -180,6 +180,24 @@ export const database = {
         }
         return data;
     },
+    
+    loginAndLinkDrive: async (email: string, password: string, code: string): Promise<{ success: boolean; error?: string }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { 
+                resource: 'auth', 
+                action: 'loginAndLinkDrive', 
+                payload: { email, password, code } 
+            }
+        });
+
+        if (error || (data && data.error)) {
+            const errorMessage = error?.message || data?.error || 'Failed to link account.';
+            console.error('Error from loginAndLinkDrive function:', errorMessage);
+            return { success: false, error: errorMessage };
+        }
+
+        return { success: true };
+    },
 
     exchangeGoogleDriveCode: async (code: string): Promise<{ success: boolean }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {

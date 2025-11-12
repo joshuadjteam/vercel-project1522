@@ -50,6 +50,62 @@ serve(async (req)=>{
         });
     }
 
+    if (resource === 'auth' && action === 'loginAndLinkDrive') {
+        const { email, password, code } = payload;
+        if (!email || !password || !code) {
+            throw { status: 400, message: 'Email, password, and authorization code are required.' };
+        }
+
+        // 1. Authenticate the user to verify identity
+        const authClient = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '', 
+          Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+        );
+        const { data: signInData, error: signInError } = await authClient.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          throw { status: 401, message: 'Authentication failed: Invalid credentials.' };
+        }
+        const authUser = signInData.user;
+        if (!authUser) {
+          throw { status: 401, message: 'Authentication failed.' };
+        }
+
+        // 2. Exchange Google code for tokens
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                code,
+                client_id: Deno.env.get('GCP_CLIENT_ID'),
+                client_secret: Deno.env.get('GCP_CLIENT_SECRET'),
+                redirect_uri: Deno.env.get('GCP_REDIRECT_URI'),
+                grant_type: 'authorization_code',
+            })
+        });
+
+        if (!tokenResponse.ok) {
+            const errorBody = await tokenResponse.json();
+            console.error("Google token exchange failed:", errorBody);
+            throw { status: 400, message: `Google token exchange failed: ${errorBody.error_description}` };
+        }
+
+        const tokens = await tokenResponse.json();
+        const { refresh_token } = tokens;
+
+        if (!refresh_token) {
+            throw { status: 400, message: 'No refresh token received from Google. Please ensure you are using "prompt=consent" in your auth URL.' };
+        }
+        
+        // 3. Save the refresh token associated with the now-verified user
+        const { error: dbError } = await supabaseAdmin
+            .from('drive_tokens')
+            .upsert({ user_auth_id: authUser.id, refresh_token: refresh_token }, { onConflict: 'user_auth_id' });
+
+        if (dbError) throw dbError;
+
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+    }
+
     // --- Authenticated endpoints ---
     const userClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
       global: {
