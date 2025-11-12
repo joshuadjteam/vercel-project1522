@@ -1,4 +1,3 @@
-
 export enum UserRole {
     Admin = 'Admin',
     Standard = 'Standard',
@@ -94,4 +93,5 @@ export type Page =
     | 'app-files'
     | 'app-editor'
     | 'app-converter'
-    | 'app-calendar';
+    | 'app-calendar'
+    | 'auth-callback';

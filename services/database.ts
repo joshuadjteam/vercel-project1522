@@ -214,6 +214,27 @@ export const database = {
         return { success: data.success };
     },
 
+    getDriveFiles: async (): Promise<{ files?: any[], error?: string, reauth?: boolean }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'drive', action: 'list-files' }
+        });
+
+        if (error) {
+            console.error('Error invoking list-files function:', error);
+            return { error: error.message };
+        }
+        if (data?.error) {
+            console.error('Error from list-files function:', data.error);
+            // Check for the special re-authentication error
+            if (data.error.includes('Access revoked')) {
+                return { error: data.error, reauth: true };
+            }
+            return { error: data.error };
+        }
+
+        return { files: data.files };
+    },
+
     // --- Voice Service ---
     getVoiceResponse: async (text: string): Promise<{ audioDataUrl: string, transcription: string }> => {
         // Call the dedicated voice-service instead of the monolithic app-service

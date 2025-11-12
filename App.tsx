@@ -23,13 +23,20 @@ import FileExplorerApp from './pages/apps/FileExplorerApp';
 import EditorApp from './pages/apps/EditorApp';
 import UnitConverterApp from './pages/apps/UnitConverterApp';
 import CalendarApp from './pages/apps/CalendarApp';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 import { Page, UserRole } from './types';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
-import { database } from './services/database';
+
+const getInitialPage = (): Page => {
+    if (window.location.pathname === '/auth/callback') {
+        return 'auth-callback';
+    }
+    return 'home';
+};
 
 const AppContent: React.FC = () => {
-    const [currentPage, setCurrentPage] = useState<Page>('home');
+    const [currentPage, setCurrentPage] = useState<Page>(getInitialPage());
     const [currentFile, setCurrentFile] = useState<string | null>(null);
     const [initialChatTargetId, setInitialChatTargetId] = useState<number | null>(null);
     const [isDark, setIsDark] = useState(true);
@@ -44,6 +51,11 @@ const AppContent: React.FC = () => {
     }, [isDark]);
 
     const navigate = useCallback((page: Page, params?: any) => {
+        // When navigating away from the callback page, update the URL
+        if (window.location.pathname === '/auth/callback' && page !== 'auth-callback') {
+             window.history.replaceState({}, document.title, '/');
+        }
+
         setCurrentPage(page);
         if (page === 'app-editor' && params?.file) {
             setCurrentFile(params.file);
@@ -57,34 +69,6 @@ const AppContent: React.FC = () => {
             setInitialChatTargetId(null);
         }
     }, []);
-
-    useEffect(() => {
-        const handleOAuthCallback = async () => {
-            const params = new URLSearchParams(window.location.search);
-            const code = params.get('code');
-            const state = params.get('state');
-
-            // Check if this is a Google Drive OAuth callback
-            if (window.location.pathname === '/auth/callback' && code && state) {
-                // Clean the URL to remove the code and state parameters
-                window.history.replaceState({}, document.title, '/');
-
-                // Exchange the code for a token
-                const { success } = await database.exchangeGoogleDriveCode(code);
-                if (success) {
-                    console.log('Successfully linked Google Drive account.');
-                } else {
-                    console.error('Failed to link Google Drive account.');
-                    alert('There was an error linking your Google Drive account. Please try again.');
-                }
-
-                // Navigate to the page the user was on before starting the flow
-                navigate(state as Page);
-            }
-        };
-
-        handleOAuthCallback();
-    }, [navigate, isLoggedIn]);
 
     if (isLoading) {
         return (
@@ -103,6 +87,8 @@ const AppContent: React.FC = () => {
                     return <ContactPage />;
                 case 'signin':
                     return <SignInPage navigate={navigate} />;
+                case 'auth-callback':
+                    return <AuthCallbackPage navigate={navigate} />;
                 default:
                     return <SignInPage navigate={navigate} />;
             }
@@ -151,6 +137,8 @@ const AppContent: React.FC = () => {
                 return <UnitConverterApp />;
             case 'app-calendar':
                 return <CalendarApp />;
+            case 'auth-callback':
+                return <AuthCallbackPage navigate={navigate} />;
             default:
                 return <ConsolePage navigate={navigate}/>;
         }

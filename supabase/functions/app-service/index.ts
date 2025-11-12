@@ -138,6 +138,65 @@ serve(async (req)=>{
                 if (error) throw error;
                 return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
             }
+            case 'list-files': {
+                // 1. Get refresh token from DB
+                const { data: tokenData, error: tokenError } = await supabaseAdmin
+                    .from('drive_tokens')
+                    .select('refresh_token')
+                    .eq('user_auth_id', authUser.id)
+                    .single();
+                
+                if (tokenError || !tokenData) {
+                    throw { status: 404, message: 'Google Drive token not found. Please link your account.' };
+                }
+                const { refresh_token } = tokenData;
+            
+                // 2. Exchange refresh token for access token
+                const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        client_id: Deno.env.get('GCP_CLIENT_ID'),
+                        client_secret: Deno.env.get('GCP_CLIENT_SECRET'),
+                        refresh_token: refresh_token,
+                        grant_type: 'refresh_token',
+                    })
+                });
+            
+                if (!tokenResponse.ok) {
+                    const errorBody = await tokenResponse.json();
+                    if (errorBody.error === 'invalid_grant') {
+                        // Token was revoked by user
+                        await supabaseAdmin.from('drive_tokens').delete().eq('user_auth_id', authUser.id);
+                        throw { status: 401, message: 'Access revoked. Please re-link your Google Drive account.' };
+                    }
+                    console.error("Google access token refresh failed:", errorBody);
+                    throw { status: 500, message: 'Failed to refresh Google access token.' };
+                }
+            
+                const { access_token } = await tokenResponse.json();
+                
+                // 3. Call Google Drive API
+                const driveApiUrl = new URL('https://www.googleapis.com/drive/v3/files');
+                driveApiUrl.searchParams.set('fields', 'files(id, name, mimeType, modifiedTime, webViewLink, iconLink)');
+                driveApiUrl.searchParams.set('pageSize', '100'); // Limit to 100 files for now
+            
+                const driveResponse = await fetch(driveApiUrl.toString(), {
+                    headers: {
+                        'Authorization': `Bearer ${access_token}`
+                    }
+                });
+            
+                if (!driveResponse.ok) {
+                    const errorBody = await driveResponse.json();
+                    console.error("Google Drive API error:", errorBody);
+                    throw { status: 500, message: `Failed to fetch files from Google Drive: ${errorBody.error.message}` };
+                }
+            
+                const driveData = await driveResponse.json();
+                
+                return new Response(JSON.stringify({ files: driveData.files }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
         }
       }
       break;
