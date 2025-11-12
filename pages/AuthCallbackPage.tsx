@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { database } from '../services/database';
 import { Page } from '../types';
@@ -12,6 +12,7 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
     const { isLoggedIn, isLoading: isAuthLoading } = useAuth();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [errorMessage, setErrorMessage] = useState('');
+    const processedRef = useRef(false);
 
     useEffect(() => {
         const processCallback = async () => {
@@ -20,17 +21,10 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
             const state = params.get('state');
 
             if (!code || !state) {
-                // This can happen if the effect re-runs after the URL is cleaned.
-                // If we're already in a success/error state, do nothing.
-                if (status === 'loading') {
-                    setErrorMessage('Missing required parameters for authentication.');
-                    setStatus('error');
-                }
+                setErrorMessage('Missing required parameters for authentication.');
+                setStatus('error');
                 return;
             }
-
-            // Clean the URL now that we've extracted the parameters to prevent re-use
-            window.history.replaceState({}, document.title, window.location.pathname);
 
             if (!isLoggedIn) {
                 setErrorMessage('You must be signed in to link an account. Redirecting to sign in...');
@@ -51,14 +45,18 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
                 console.error('An exception occurred while linking Google Drive:', error);
                 setErrorMessage(error.message || 'An unexpected error occurred. Please try again.');
                 setStatus('error');
+            } finally {
+                // Clean the URL only after processing is fully complete (success or error).
+                window.history.replaceState({}, document.title, window.location.pathname);
             }
         };
 
-        // Wait until the authentication state is resolved before processing the callback
-        if (!isAuthLoading) {
+        // Wait until auth is resolved, and ensure we only process the callback once.
+        if (!isAuthLoading && !processedRef.current) {
+            processedRef.current = true;
             processCallback();
         }
-    }, [isAuthLoading, isLoggedIn, navigate, status]);
+    }, [isAuthLoading, isLoggedIn, navigate]);
 
     const renderContent = () => {
         switch (status) {
