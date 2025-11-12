@@ -41,12 +41,12 @@ const DownloadLoginFileModal: React.FC<DownloadLoginFileModalProps> = ({ isOpen,
             return;
         }
 
-        // Generate a clean, human-readable, and consistent format.
+        // Generate a clean, human-readable, and consistent format without extra spaces.
         const fileContent = [
-            `[{Username : ${user.username}}=user]`,
-            `[{Password : ${password}}=pass]`,
-            `[{Acctype : ${user.role.toUpperCase()}}=typeone]`,
-            `[{Email : ${user.email}}=typeemailreq]`
+            `[{Username:${user.username}}=user]`,
+            `[{Password:${password}}=pass]`,
+            `[{Acctype:${user.role.toUpperCase()}}=typeone]`,
+            `[{Email:${user.email}}=typeemailreq]`
         ].join('\n');
 
         const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });

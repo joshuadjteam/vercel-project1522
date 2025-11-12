@@ -6,19 +6,32 @@ import { useAuth } from '../hooks/useAuth';
 // Icon for file upload
 const FileUploadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>;
 
-// Re-use the parser from SignInPage
 const parseDjlogin = (content: string): { email?: string; password?: string } => {
-    const credentials: { email?: string; password?:string } = {};
-    const lines = content.split(/[\r\n]+/);
-    const regex = /\[\{(\w+)\s*:\s*(.*?)\s*\}\]=(\w+)\]/i;
+    const credentials: { email?: string; password?: string } = {};
+    
+    // 1. Clean up the raw content: remove leading/trailing whitespace and optional surrounding quotes.
+    let cleanContent = content.trim();
+    if (cleanContent.startsWith('"') && cleanContent.endsWith('"')) {
+        cleanContent = cleanContent.substring(1, cleanContent.length - 1).trim();
+    }
+    
+    const lines = cleanContent.split(/[\r\n]+/);
 
     for (const line of lines) {
-        const match = line.match(regex);
-        if (match) {
-            const value = match[2].trim();
-            const shortKey = match[3];
-            if (shortKey.toLowerCase() === 'pass') credentials.password = value;
-            if (shortKey.toLowerCase() === 'typeemailreq') credentials.email = value;
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('[{') && trimmedLine.endsWith(']')) {
+            const inner = trimmedLine.substring(2, trimmedLine.length - 1);
+            const parts = inner.split('}]=');
+            if (parts.length === 2) {
+                const shortKey = parts[1];
+                const keyValuePart = parts[0];
+                const colonIndex = keyValuePart.indexOf(':');
+                if (colonIndex > -1) {
+                    const value = keyValuePart.substring(colonIndex + 1);
+                    if (shortKey.toLowerCase() === 'pass') credentials.password = value;
+                    if (shortKey.toLowerCase() === 'typeemailreq') credentials.email = value;
+                }
+            }
         }
     }
     return credentials;
@@ -97,7 +110,6 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
                 return;
             }
             
-            // FIX: Changed setStatus to setStep to match the declared state setter.
             setStep('success');
             setMessage('All set! Redirecting you to your files...');
             setTimeout(() => navigate('app-files'), 1500);
@@ -112,6 +124,26 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
     const triggerFileUpload = () => {
         fileInputRef.current?.click();
     };
+    
+    if (step === 'error') {
+        return (
+            <div className="w-full max-w-lg bg-teal-900/80 backdrop-blur-sm rounded-2xl shadow-2xl p-12 text-white flex flex-col items-center justify-center text-center">
+                <div className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center mb-6">
+                    <svg className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </div>
+                <h1 className="text-3xl font-bold text-red-500 mb-4">An Error Occurred</h1>
+                <p className="mb-8">Invalid .djlogin file. Please upload a valid file and try again.</p>
+                <button 
+                    onClick={() => navigate('signin')} 
+                    className="mt-4 bg-[#4c1d95] hover:bg-[#581c87] text-white font-bold py-3 px-8 rounded-lg transition-colors"
+                >
+                    Back to Sign In
+                </button>
+            </div>
+        );
+    }
     
     if (step === 'consent') {
         return (
@@ -160,7 +192,6 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
                 </>
             )}
 
-            {/* FIX: Changed status to step to match the declared state variable. */}
             {(step === 'processing' || step === 'logging_in') && (
                 <>
                     <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-6"></div>
@@ -177,25 +208,6 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
                     <p className="mb-8 text-gray-600 dark:text-gray-300">Your account has been linked and you are now logged in.</p>
                     <button onClick={() => navigate('app-files')} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg">
                         Go to My Files
-                    </button>
-                </>
-            )}
-            
-            {/* FIX: Changed status to step to match the declared state variable. */}
-            {step === 'error' && (
-                <>
-                    <div className="w-24 h-24 rounded-full bg-red-500/90 flex items-center justify-center mb-6 ring-4 ring-red-500/20">
-                        <svg className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </div>
-                    <h1 className="text-3xl font-bold text-red-400 mb-4">An Error Occurred</h1>
-                    <p className="mb-8">{message}</p>
-                    <button 
-                        onClick={() => navigate('signin')} 
-                        className="mt-4 bg-purple-900/50 hover:bg-purple-800/60 backdrop-blur-sm border border-purple-700/50 text-white font-bold py-3 px-8 rounded-xl transition-colors"
-                    >
-                        Back to Sign In
                     </button>
                 </>
             )}
