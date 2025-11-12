@@ -1,6 +1,6 @@
-
 import { supabase } from '../supabaseClient';
-import { User, UserRole, Mail, Contact, Note, MailAccount } from '../types';
+// Add DriveFile to imports
+import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile } from '../types';
 
 // Helper to map DB user to app User
 const mapDbUserToUser = (dbUser: any): User => {
@@ -192,6 +192,21 @@ export const database = {
         return { success: data.success };
     },
 
+    getDriveFiles: async (): Promise<{ files?: DriveFile[], error?: string, reauth?: boolean }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'drive', action: 'list-files' }
+        });
+
+        if (error || (data && data.error)) {
+            const errorMessage = error?.message || data?.error || 'Failed to list files.';
+            console.error('Error from drive/list-files function:', errorMessage);
+            const reauth = errorMessage.includes('re-link');
+            return { error: errorMessage, reauth };
+        }
+
+        return { files: data.files || [] };
+    },
+
     isDriveLinked: async (): Promise<boolean> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'drive', action: 'check-status' }
@@ -212,27 +227,6 @@ export const database = {
             return { success: false };
         }
         return { success: data.success };
-    },
-
-    getDriveFiles: async (): Promise<{ files?: any[], error?: string, reauth?: boolean }> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'drive', action: 'list-files' }
-        });
-
-        if (error) {
-            console.error('Error invoking list-files function:', error);
-            return { error: error.message };
-        }
-        if (data?.error) {
-            console.error('Error from list-files function:', data.error);
-            // Check for the special re-authentication error
-            if (data.error.includes('Access revoked')) {
-                return { error: data.error, reauth: true };
-            }
-            return { error: data.error };
-        }
-
-        return { files: data.files };
     },
 
     // --- Voice Service ---
@@ -420,7 +414,7 @@ export const database = {
             body: { resource: 'notes', action: 'delete', payload: { id: noteId } }
         });
         if (error || (data && data.error)) {
-            console.error('Error deleting note:', error || data.error);
+            console.error('Error deleting note:', error || data?.error);
             return false;
         }
         return true;

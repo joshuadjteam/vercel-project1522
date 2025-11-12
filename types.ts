@@ -76,6 +76,16 @@ export interface Note {
     createdAt: Date;
 }
 
+// Add DriveFile interface for Google Drive files
+export interface DriveFile {
+    id: string;
+    name: string;
+    mimeType: string;
+    modifiedTime: string;
+    webViewLink: string;
+    iconLink: string;
+}
+
 export type Page = 
     | 'home' 
     | 'contact' 

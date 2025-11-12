@@ -50,7 +50,6 @@ serve(async (req)=>{
         });
     }
 
-
     // --- Authenticated endpoints ---
     const userClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
       global: {

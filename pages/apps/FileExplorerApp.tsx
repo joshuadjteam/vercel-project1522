@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { Page } from '../../types';
+// Import DriveFile from types.ts
+import { Page, DriveFile } from '../../types';
 import { database } from '../../services/database';
 
 // Icons
@@ -12,7 +13,7 @@ const CloudIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 
 const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const GoogleIcon = () => (
     <svg className="h-6 w-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,5 12,5C14.6,5 16.1,6.2 17.1,7.2L19,5.2C17.2,3.4 14.8,2 12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,11.63 21.95,11.36 21.89,11.1H21.35Z" fill="#fff"/>
+        <path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64,15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,5 12,5C14.6,5 16.1,6.2 17.1,7.2L19,5.2C17.2,3.4 14.8,2 12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,11.63 21.95,11.36 21.89,11.1H21.35Z" fill="#fff"/>
     </svg>
 );
 
@@ -26,15 +27,6 @@ interface VirtualFile {
     content: string;
     created: number;
     modified: number;
-}
-
-interface DriveFile {
-    id: string;
-    name: string;
-    mimeType: string;
-    modifiedTime: string;
-    webViewLink: string;
-    iconLink: string;
 }
 
 const MAX_STORAGE_BYTES = 1.5 * 1024 * 1024; // 1.5 MB

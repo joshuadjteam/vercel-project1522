@@ -1,10 +1,33 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
 
-const SignInIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>;
 const GuestIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
+const FileUploadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>;
+const SignInIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>;
+
+
+const parseDjlogin = (content: string): { username?: string; password?: string; email?: string } => {
+    const credentials: { username?: string; password?: string; email?: string } = {};
+    const lines = content.split(/[\r\n]+/);
+    // This robust regex handles optional whitespace and is case-insensitive.
+    // It correctly parses the format: [{Key : value}=shortkey]
+    const regex = /\[\{(\w+)\s*:\s*(.*?)\s*\}\]=(\w+)\]/i;
+
+    for (const line of lines) {
+        const match = line.match(regex);
+        if (match) {
+            const value = match[2].trim();
+            const shortKey = match[3];
+            
+            if (shortKey.toLowerCase() === 'user') credentials.username = value;
+            if (shortKey.toLowerCase() === 'pass') credentials.password = value;
+            if (shortKey.toLowerCase() === 'typeemailreq') credentials.email = value;
+        }
+    }
+    return credentials;
+};
+
 
 interface SignInPageProps {
     navigate: (page: Page) => void;
@@ -15,72 +38,133 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const { login, loginAsGuest, isLoggedIn, isLoading } = useAuth();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        // Navigate to console page if user is logged in
         if (isLoggedIn) {
             navigate('home');
         }
     }, [isLoggedIn, navigate]);
-
-    const handleSignIn = async (e: React.FormEvent) => {
+    
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         const { error: loginError } = await login(email, password);
         if (loginError) {
             setError(loginError);
         }
-        // If login is successful, `isLoggedIn` will become true,
-        // and the `useEffect` will handle navigation.
     };
     
     const handleTryOut = async () => {
         setError('');
         await loginAsGuest();
-        // The useEffect will handle navigation once `isLoggedIn` is updated.
+    };
+    
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setError('');
+
+        try {
+            const content = await file.text();
+            const credentials = parseDjlogin(content);
+
+            if (!credentials.email || !credentials.password) {
+                setError('Invalid .djlogin file format. Please select a valid file.');
+                return;
+            }
+
+            const { error: loginError } = await login(credentials.email, credentials.password);
+            if (loginError) {
+                setError(loginError);
+            }
+        } catch (err) {
+            setError('Failed to read or process the file.');
+            console.error(err);
+        } finally {
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+    
+    const triggerFileUpload = () => {
+        fileInputRef.current?.click();
     };
 
 
     return (
-        <div className="w-full max-w-md bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-purple-600/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white">
-            <h1 className="text-3xl font-bold mb-2 text-center">Access Your Lynix Account</h1>
-            <p className="text-gray-600 dark:text-gray-300 text-center mb-6">Sign in with your email and password to continue.</p>
+        <div className="w-full max-w-md bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-purple-600/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white flex flex-col items-center">
+            <h1 className="text-3xl font-bold mb-6 text-center">Access Your Lynix Account</h1>
             
-            <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="flex items-center space-x-4">
-                    <label className="w-1/4 font-semibold">Email:</label>
-                    <input
-                        type="email"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-3/4 bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                    />
-                </div>
-                 <div className="flex items-center space-x-4">
-                    <label className="w-1/4 font-semibold">Password:</label>
-                    <input
-                        type="password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-3/4 bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                    />
-                </div>
-                {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-                <div className="pt-4 space-y-3">
-                    <button type="submit" disabled={isLoading} className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-800 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
-                        <SignInIcon />
-                        <span>{isLoading ? 'Signing In...' : 'Sign In'}</span>
-                    </button>
-                     <button type="button" onClick={handleTryOut} disabled={isLoading} className="w-full bg-gray-600 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-700 transition-colors disabled:bg-gray-800 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
-                        <GuestIcon />
-                        <span>Try Out</span>
-                    </button>
-                </div>
+            <form onSubmit={handleLogin} className="w-full space-y-4">
+                <input 
+                    type="email" 
+                    placeholder="Email" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoading}
+                    required
+                />
+                <input 
+                    type="password" 
+                    placeholder="Password" 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoading}
+                    required
+                />
+                <button 
+                    type="submit" 
+                    disabled={isLoading} 
+                    className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-800 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-lg"
+                >
+                    <SignInIcon />
+                    <span>{isLoading ? 'Signing In...' : 'Sign In'}</span>
+                </button>
             </form>
+            
+            {error && <p className="text-red-400 text-sm text-center pt-4">{error}</p>}
+            
+            <div className="relative flex items-center py-5 w-full">
+                <div className="flex-grow border-t border-gray-400 dark:border-slate-600"></div>
+                <span className="flex-shrink mx-4 text-xs text-gray-500 dark:text-gray-400">OR</span>
+                <div className="flex-grow border-t border-gray-400 dark:border-slate-600"></div>
+            </div>
+
+             <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept=".djlogin" 
+                className="hidden" 
+                disabled={isLoading}
+            />
+
+            <div className="w-full space-y-3">
+                 <button 
+                    type="button" 
+                    onClick={triggerFileUpload}
+                    disabled={isLoading} 
+                    className="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-md hover:bg-purple-700 transition-colors disabled:bg-purple-800 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                    <FileUploadIcon />
+                    <span>Login with your .djlogin file?</span>
+                </button>
+
+                <button 
+                    type="button" 
+                    onClick={handleTryOut} 
+                    disabled={isLoading} 
+                    className="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 transition-colors disabled:bg-gray-800 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                    <GuestIcon />
+                    <span>Try as Guest?</span>
+                </button>
+            </div>
         </div>
     );
 };

@@ -4,10 +4,13 @@ import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
 import { geminiService } from '../services/geminiService';
 import { database } from '../services/database';
+import DownloadLoginFileModal from '../components/DownloadLoginFileModal';
 
 const SignOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
 const KeyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>;
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
+const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
+
 
 const InfoTabContent = () => {
     const { user } = useAuth();
@@ -61,6 +64,8 @@ const SecurityTabContent: React.FC = () => {
     const [message, setMessage] = useState('');
     const [isSuccess, setIsSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -127,6 +132,21 @@ const SecurityTabContent: React.FC = () => {
                     <span>{isLoading ? 'Updating...' : 'Update Password'}</span>
                 </button>
             </form>
+
+            <div className="border-t border-gray-300 dark:border-slate-600 mt-6 pt-6">
+                <h3 className="text-xl font-semibold mb-4">Login File</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-sm">
+                    Download a `.djlogin` file for use with other Lynix services or for quick sign-in with Google Drive linking.
+                </p>
+                <button 
+                    onClick={() => setIsDownloadModalOpen(true)} 
+                    className="bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2"
+                >
+                    <DownloadIcon />
+                    <span>Download Login File</span>
+                </button>
+            </div>
+            <DownloadLoginFileModal isOpen={isDownloadModalOpen} onClose={() => setIsDownloadModalOpen(false)} />
         </div>
     );
 };

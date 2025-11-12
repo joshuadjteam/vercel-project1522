@@ -1,6 +1,4 @@
-
-import React, { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import React, { useEffect, useState } from 'react';
 import { database } from '../services/database';
 import { Page } from '../types';
 
@@ -9,94 +7,69 @@ interface AuthCallbackPageProps {
 }
 
 const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
-    const { isLoggedIn, isLoading: isAuthLoading } = useAuth();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-    const [errorMessage, setErrorMessage] = useState('');
-    const processedRef = useRef(false);
+    const [message, setMessage] = useState('Linking your Google Drive account...');
 
     useEffect(() => {
-        const processCallback = async () => {
-            const params = new URLSearchParams(window.location.search);
-            const code = params.get('code');
-            const state = params.get('state');
-
-            if (!code || !state) {
-                setErrorMessage('Missing required parameters for authentication.');
+        const processDriveLink = async (code: string) => {
+            const { success } = await database.exchangeGoogleDriveCode(code);
+            if (success) {
+                setStatus('success');
+                setMessage('Google Drive linked successfully! Redirecting...');
+                setTimeout(() => navigate('app-files'), 2000);
+            } else {
                 setStatus('error');
-                return;
-            }
-
-            if (!isLoggedIn) {
-                setErrorMessage('You must be signed in to link an account. Redirecting to sign in...');
-                setStatus('error');
-                setTimeout(() => navigate('signin'), 3000);
-                return;
-            }
-
-            try {
-                const { success } = await database.exchangeGoogleDriveCode(code);
-                if (success) {
-                    setStatus('success');
-                } else {
-                    setErrorMessage('Failed to link your Google Drive account. The server rejected the request.');
-                    setStatus('error');
-                }
-            } catch (error: any) {
-                console.error('An exception occurred while linking Google Drive:', error);
-                setErrorMessage(error.message || 'An unexpected error occurred. Please try again.');
-                setStatus('error');
-            } finally {
-                // Clean the URL only after processing is fully complete (success or error).
-                window.history.replaceState({}, document.title, window.location.pathname);
+                setMessage('Failed to link Google Drive. Please try again from the File Explorer.');
             }
         };
 
-        // Wait until auth is resolved, and ensure we only process the callback once.
-        if (!isAuthLoading && !processedRef.current) {
-            processedRef.current = true;
-            processCallback();
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const state = params.get('state');
+
+        // Clean the URL to remove auth params after they are read.
+        window.history.replaceState({}, document.title, '/');
+
+        if (code && state?.startsWith('app-files')) {
+            processDriveLink(code);
+        } else {
+            setStatus('error');
+            setMessage('Invalid authentication request. No authorization code found.');
         }
-    }, [isAuthLoading, isLoggedIn, navigate]);
+    }, [navigate]);
 
     const renderContent = () => {
+        let icon;
+        let textColorClass = 'text-gray-600 dark:text-gray-300';
+
         switch (status) {
-            case 'loading':
-                return (
-                    <div className="flex flex-col items-center">
-                        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
-                        <h1 className="text-3xl font-bold">Linking your Google Drive...</h1>
-                        <p className="mt-2 text-gray-600 dark:text-gray-300">Please wait, this should only take a moment.</p>
-                    </div>
-                );
             case 'success':
-                return (
-                    <div className="flex flex-col items-center text-center">
-                        <svg className="h-24 w-24 text-green-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <h1 className="text-4xl font-bold">Success!</h1>
-                        <p className="mt-2 text-lg text-gray-600 dark:text-gray-300">Your Google Drive account has been successfully linked.</p>
-                        <button 
-                            onClick={() => navigate('app-files')}
-                            className="mt-8 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
-                        >
-                            Go to My Files
-                        </button>
-                    </div>
-                );
+                icon = <svg className="h-24 w-24 text-green-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+                textColorClass = 'text-green-500';
+                break;
             case 'error':
-                return (
-                    <div className="flex flex-col items-center text-center">
-                         <svg className="h-24 w-24 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <h1 className="text-3xl font-bold">Linking Failed</h1>
-                        <p className="mt-2 text-lg text-red-400 max-w-md">{errorMessage}</p>
-                        <button 
-                            onClick={() => navigate('app-files')}
-                            className="mt-8 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition-colors"
-                        >
-                            Back to File Explorer
-                        </button>
-                    </div>
-                );
+                icon = <svg className="h-24 w-24 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+                textColorClass = 'text-red-400';
+                break;
+            default: // loading
+                icon = <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>;
+                break;
         }
+
+        return (
+            <div className="flex flex-col items-center text-center">
+                {icon}
+                <h1 className={`text-3xl font-bold ${textColorClass}`}>{message}</h1>
+                {status === 'error' && (
+                    <button 
+                        onClick={() => navigate('app-files')}
+                        className="mt-8 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition-colors"
+                    >
+                        Back to File Explorer
+                    </button>
+                )}
+            </div>
+        );
     };
 
     return (
