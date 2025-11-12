@@ -71,7 +71,7 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
             const credentials = parseDjlogin(content);
 
             if (!credentials.email || !credentials.password) {
-                setError('Invalid .djlogin file format. Please select a valid file.');
+                setError('Invalid .djlogin file. Please upload a valid file and try again.');
                 return;
             }
 
@@ -93,6 +93,26 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
         fileInputRef.current?.click();
     };
 
+
+    if (error) {
+        return (
+            <div className="w-full max-w-lg bg-light-card/80 dark:bg-teal-800 backdrop-blur-sm border border-gray-300 dark:border-teal-700/50 rounded-2xl shadow-2xl p-12 text-light-text dark:text-white flex flex-col items-center justify-center text-center">
+                <div className="w-24 h-24 rounded-full bg-red-500/90 flex items-center justify-center mb-6 ring-4 ring-red-500/20">
+                    <svg className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </div>
+                <h1 className="text-3xl font-bold text-red-400 mb-4">An Error Occurred</h1>
+                <p className="mb-8">{error}</p>
+                <button 
+                    onClick={() => setError('')} 
+                    className="mt-4 bg-purple-900/50 hover:bg-purple-800/60 backdrop-blur-sm border border-purple-700/50 text-white font-bold py-3 px-8 rounded-xl transition-colors"
+                >
+                    Back to Sign In
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-md bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-purple-600/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white flex flex-col items-center">
@@ -126,8 +146,6 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
                     <span>{isLoading ? 'Signing In...' : 'Sign In'}</span>
                 </button>
             </form>
-            
-            {error && <p className="text-red-400 text-sm text-center pt-4">{error}</p>}
             
             <div className="relative flex items-center py-5 w-full">
                 <div className="flex-grow border-t border-gray-400 dark:border-slate-600"></div>

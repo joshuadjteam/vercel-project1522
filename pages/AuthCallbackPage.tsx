@@ -141,7 +141,7 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
     }
 
     return (
-        <div className="w-full max-w-lg bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl p-12 text-light-text dark:text-white flex flex-col items-center justify-center text-center">
+        <div className="w-full max-w-lg bg-light-card/80 dark:bg-teal-800 backdrop-blur-sm border border-gray-300 dark:border-teal-700/50 rounded-2xl shadow-2xl p-12 text-light-text dark:text-white flex flex-col items-center justify-center text-center">
             {step === 'upload' && (
                 <>
                     <h1 className="text-3xl font-bold mb-4">Complete Link</h1>
@@ -184,10 +184,17 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
             {/* FIX: Changed status to step to match the declared state variable. */}
             {step === 'error' && (
                 <>
-                    <svg className="h-24 w-24 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <h1 className="text-2xl font-bold text-red-400 mb-4">An Error Occurred</h1>
-                    <p className="mb-6">{message}</p>
-                    <button onClick={() => navigate('signin')} className="mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg">
+                    <div className="w-24 h-24 rounded-full bg-red-500/90 flex items-center justify-center mb-6 ring-4 ring-red-500/20">
+                        <svg className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </div>
+                    <h1 className="text-3xl font-bold text-red-400 mb-4">An Error Occurred</h1>
+                    <p className="mb-8">{message}</p>
+                    <button 
+                        onClick={() => navigate('signin')} 
+                        className="mt-4 bg-purple-900/50 hover:bg-purple-800/60 backdrop-blur-sm border border-purple-700/50 text-white font-bold py-3 px-8 rounded-xl transition-colors"
+                    >
                         Back to Sign In
                     </button>
                 </>
