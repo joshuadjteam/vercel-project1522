@@ -5,10 +5,10 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Session persistence is enabled to ensure the user's session is maintained
-    // across page redirects. This is critical for OAuth flows, such as linking
-    // a Google Drive account, so the user remains logged in after returning
-    // from the external provider.
-    persistSession: true,
+    // Session persistence is disabled. The user's session will only last for
+    // the duration of the browser tab. This is to align with the request to
+    // "not save cookies" and enhance user privacy by not storing session
+    // information in localStorage.
+    persistSession: false,
   },
 });
