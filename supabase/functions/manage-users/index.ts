@@ -22,7 +22,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization') } } }
     );
-    const { data: { user: authUser }, error: authError } = await userClient.auth.getUser();
+    // Use safe destructuring to prevent crashes on unauthenticated requests
+    const { data: authData, error: authError } = await userClient.auth.getUser();
+    const authUser = authData?.user;
+
     if (authError || !authUser) {
       throw { message: 'Not authenticated', status: 401 };
     }
@@ -130,10 +133,10 @@ serve(async (req) => {
         const { auth_id } = payload;
         if (!auth_id) throw { message: 'auth_id is required for deletion.', status: 400 };
 
-        // Step 1: Get the user's profile to get their integer ID and username for cleanup.
+        // Step 1: Get the user's profile to get their username for cleanup.
         const { data: userToDelete, error: profileFindError } = await supabaseAdmin
             .from('users')
-            .select('id, username')
+            .select('username')
             .eq('auth_id', auth_id)
             .single();
 
@@ -143,15 +146,13 @@ serve(async (req) => {
         }
 
         if (userToDelete) {
-            const userId = userToDelete.id;
             const username = userToDelete.username;
 
             // Step 2: Clean up all related data.
-            // These operations should not throw an error if no records are found.
             await supabaseAdmin.from('contacts').delete().eq('owner', username);
             await supabaseAdmin.from('notes').delete().eq('owner', username);
-            await supabaseAdmin.from('mail_accounts').delete().eq('user_id', userId);
-            // Mails are not deleted as they might be relevant for other users (e.g., in their inbox).
+            // Use the auth_id (UUID) to delete mail accounts as per schema
+            await supabaseAdmin.from('mail_accounts').delete().eq('user_id', auth_id);
             
             // Step 3: Delete the public user profile.
             await supabaseAdmin.from('users').delete().eq('auth_id', auth_id);

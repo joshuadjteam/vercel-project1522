@@ -62,7 +62,8 @@ serve(async (req) => {
       }
     });
 
-    const { data: { user: authUser }, error: authError } = await userClient.auth.getUser();
+    const { data: authData, error: authError } = await userClient.auth.getUser();
+    const authUser = authData?.user;
     if (authError || !authUser) throw { message: 'User not authenticated', status: 401 };
     
     const { data: userProfile, error: profileError } = await supabaseAdmin.from('users').select('role').eq('auth_id', authUser.id).single();
