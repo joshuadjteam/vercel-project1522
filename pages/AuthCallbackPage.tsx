@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { database } from '../services/database';
@@ -18,14 +19,18 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
             const code = params.get('code');
             const state = params.get('state');
 
-            // Clean the URL immediately to prevent re-processing on refresh
-            window.history.replaceState({}, document.title, '/auth/callback');
-
             if (!code || !state) {
-                setErrorMessage('Missing required parameters for authentication.');
-                setStatus('error');
+                // This can happen if the effect re-runs after the URL is cleaned.
+                // If we're already in a success/error state, do nothing.
+                if (status === 'loading') {
+                    setErrorMessage('Missing required parameters for authentication.');
+                    setStatus('error');
+                }
                 return;
             }
+
+            // Clean the URL now that we've extracted the parameters to prevent re-use
+            window.history.replaceState({}, document.title, window.location.pathname);
 
             if (!isLoggedIn) {
                 setErrorMessage('You must be signed in to link an account. Redirecting to sign in...');
@@ -53,7 +58,7 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
         if (!isAuthLoading) {
             processCallback();
         }
-    }, [isAuthLoading, isLoggedIn, navigate]);
+    }, [isAuthLoading, isLoggedIn, navigate, status]);
 
     const renderContent = () => {
         switch (status) {
