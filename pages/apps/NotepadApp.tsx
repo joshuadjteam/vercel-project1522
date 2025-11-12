@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
@@ -46,8 +45,6 @@ const NotepadApp: React.FC = () => {
 
     const handleNewNote = async () => {
         if (!user) return;
-        // FIX: Removed the `owner` property to match the expected type for `database.addNote`.
-        // The owner is inferred from the user's session on the backend.
         const newNote = await database.addNote({
             title: 'New Note',
             content: '',

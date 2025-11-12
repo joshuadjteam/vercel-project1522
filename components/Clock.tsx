@@ -9,28 +9,24 @@ const Clock: React.FC = () => {
         return () => clearInterval(timerId);
     }, []);
 
-    const formatTime = (date: Date) => {
-        return date.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true,
-        });
-    };
+    // YYYY-MM-DD
+    const date1 = time.toISOString().split('T')[0];
 
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-US', {
-            month: '2-digit',
-            day: '2-digit',
-            year: 'numeric',
-        });
-    };
+    // YYYY Mon DD
+    const date2 = time.toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: '2-digit' }).replace(/,/, '');
+
+    // 7:52pm
+    const time1 = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+    
+    // (19:52)
+    const time2 = `(${time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })})`;
 
     return (
-        <div className="text-center text-gray-600 dark:text-gray-300 font-mono tracking-wider">
-            <span>{formatTime(time)}</span>
-            <span className="mx-2">/</span>
-            <span>{formatDate(time)}</span>
+        <div className="text-center font-semibold space-y-1">
+            <div className="text-sm">The date is</div>
+            <div className="text-lg">{date1}</div>
+            <div className="text-lg">{date2}</div>
+            <div className="pt-2 text-lg">{time1} {time2}</div>
         </div>
     );
 };

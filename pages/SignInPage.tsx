@@ -17,9 +17,9 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
     const { login, loginAsGuest, isLoggedIn, isLoading } = useAuth();
 
     useEffect(() => {
-        // Navigate to profile page if user is logged in
+        // Navigate to console page if user is logged in
         if (isLoggedIn) {
-            navigate('profile');
+            navigate('home');
         }
     }, [isLoggedIn, navigate]);
 

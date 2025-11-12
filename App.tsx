@@ -7,6 +7,7 @@ import Footer from './components/Footer';
 import CallWidget from './components/CallWidget';
 import IncomingCallWidget from './components/IncomingCallWidget';
 import HomePage from './pages/HomePage';
+import ConsolePage from './pages/ConsolePage';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
 import ProfilePage from './pages/ProfilePage';
@@ -25,43 +26,14 @@ import CalendarApp from './pages/apps/CalendarApp';
 import { Page, UserRole } from './types';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
-
-const pageToPath: Record<Page, string> = {
-    'home': '/',
-    'contact': '/contact',
-    'signin': '/signin',
-    'profile': '/profile',
-    'admin': '/admin',
-    'app-phone': '/apps/phone',
-    'app-chat': '/apps/chat',
-    'app-localmail': '/apps/localmail',
-    'app-contacts': '/apps/contacts',
-    'app-notepad': '/apps/notepad',
-    'app-calculator': '/apps/calculator',
-    'app-paint': '/apps/paint',
-    'app-files': '/apps/files',
-    'app-editor': '/apps/editor', // Base path for editor
-    'app-converter': '/apps/converter',
-    'app-calendar': '/apps/calendar',
-};
-
-const pathToPage = Object.fromEntries(Object.entries(pageToPath).map(([key, value]) => [value, key as Page]));
-
-const getCurrentPageFromUrl = (): { page: Page, file: string | null } => {
-    const path = window.location.pathname;
-    if (path.startsWith('/apps/editor/')) {
-        const fileName = decodeURIComponent(path.substring('/apps/editor/'.length));
-        return { page: 'app-editor', file: fileName || null };
-    }
-    return { page: pathToPage[path] || 'home', file: null };
-};
-
+import { database } from './services/database';
 
 const AppContent: React.FC = () => {
-    const [currentPage, setCurrentPage] = useState<Page>(() => getCurrentPageFromUrl().page);
-    const [currentFile, setCurrentFile] = useState<string | null>(() => getCurrentPageFromUrl().file);
+    const [currentPage, setCurrentPage] = useState<Page>('home');
+    const [currentFile, setCurrentFile] = useState<string | null>(null);
+    const [initialChatTargetId, setInitialChatTargetId] = useState<number | null>(null);
     const [isDark, setIsDark] = useState(true);
-    const { user, isLoggedIn } = useAuth();
+    const { user, isLoggedIn, isLoading } = useAuth();
 
     useEffect(() => {
         if (isDark) {
@@ -72,38 +44,55 @@ const AppContent: React.FC = () => {
     }, [isDark]);
 
     const navigate = useCallback((page: Page, params?: any) => {
-        let path: string;
-        let file: string | null = null;
-    
-        if (page === 'app-editor' && params?.file) {
-            file = params.file;
-            path = `/apps/editor/${encodeURIComponent(file)}`;
-        } else {
-            path = pageToPath[page] || '/';
-        }
-    
-        if (window.location.pathname !== path) {
-            window.history.pushState({ page, file }, '', path);
-        }
-    
         setCurrentPage(page);
         if (page === 'app-editor' && params?.file) {
             setCurrentFile(params.file);
         } else if (page !== 'app-editor') {
             setCurrentFile(null);
         }
+
+        if (page === 'app-chat' && params?.targetUserId !== undefined) {
+            setInitialChatTargetId(params.targetUserId);
+        } else if (page !== 'app-chat') {
+            setInitialChatTargetId(null);
+        }
     }, []);
 
     useEffect(() => {
-        const handlePopState = (event: PopStateEvent) => {
-            const { page, file } = getCurrentPageFromUrl();
-            setCurrentPage(page);
-            setCurrentFile(file);
-        };
-        window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
-    }, []);
+        const handleOAuthCallback = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            const state = params.get('state');
 
+            // Check if this is a Google Drive OAuth callback
+            if (window.location.pathname === '/auth/callback' && code && state) {
+                // Clean the URL to remove the code and state parameters
+                window.history.replaceState({}, document.title, '/');
+
+                // Exchange the code for a token
+                const { success } = await database.exchangeGoogleDriveCode(code);
+                if (success) {
+                    console.log('Successfully linked Google Drive account.');
+                } else {
+                    console.error('Failed to link Google Drive account.');
+                    alert('There was an error linking your Google Drive account. Please try again.');
+                }
+
+                // Navigate to the page the user was on before starting the flow
+                navigate(state as Page);
+            }
+        };
+
+        handleOAuthCallback();
+    }, [navigate, isLoggedIn]);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex flex-col bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500 font-sans items-center justify-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
+            </div>
+        );
+    }
 
     const renderPage = () => {
         if (!isLoggedIn) {
@@ -132,7 +121,8 @@ const AppContent: React.FC = () => {
 
         switch (currentPage) {
             case 'home':
-                return <HomePage />;
+            case 'console':
+                return <ConsolePage navigate={navigate} />;
             case 'contact':
                 return <ContactPage />;
             case 'profile':
@@ -142,7 +132,7 @@ const AppContent: React.FC = () => {
             case 'app-phone':
                 return <PhoneApp />;
             case 'app-chat':
-                return isGuest ? <RestrictedAccess /> : <ChatApp />;
+                return isGuest ? <RestrictedAccess /> : <ChatApp initialTargetId={initialChatTargetId} />;
             case 'app-localmail':
                 return isGuest ? <RestrictedAccess /> : <LocalMailApp />;
             case 'app-contacts':
@@ -162,7 +152,7 @@ const AppContent: React.FC = () => {
             case 'app-calendar':
                 return <CalendarApp />;
             default:
-                return <ProfilePage navigate={navigate}/>;
+                return <ConsolePage navigate={navigate}/>;
         }
     };
     
@@ -170,7 +160,7 @@ const AppContent: React.FC = () => {
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500 font-sans transition-colors duration-300">
             <Header navigate={navigate} isDark={isDark} setIsDark={setIsDark} />
             <main className="flex-grow flex items-center justify-center p-4 overflow-hidden">
-                <div key={currentPage + (currentFile || '')} className="w-full h-full flex items-center justify-center animate-fade-in">
+                <div key={currentPage} className="w-full h-full flex items-center justify-center animate-fade-in">
                     {renderPage()}
                 </div>
             </main>

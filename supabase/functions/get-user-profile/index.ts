@@ -24,8 +24,10 @@ serve(async (req)=>{
         }
       }
     });
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
+    const { data, error: authError } = await supabaseClient.auth.getUser();
+    const user = data?.user;
+
+    if (authError || !user) {
       return new Response(JSON.stringify({
         error: 'Authentication error: Invalid JWT.'
       }), {

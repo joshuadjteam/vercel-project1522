@@ -45,7 +45,7 @@ export interface Mail {
 
 export interface MailAccount {
     id: number;
-    user_id: string; // auth_id of the owner
+    user_id: string; // Foreign key to auth.users.id
     display_name: string;
     email_address: string;
     smtp_server: string;
@@ -83,6 +83,7 @@ export type Page =
     | 'signin' 
     | 'profile' 
     | 'admin'
+    | 'console'
     | 'app-phone'
     | 'app-chat'
     | 'app-localmail'

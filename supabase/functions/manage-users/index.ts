@@ -1,5 +1,3 @@
-
-
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, linting, and type checking.
@@ -130,10 +128,43 @@ serve(async (req) => {
       case 'deleteUser': {
         await ensureAdmin();
         const { auth_id } = payload;
-        const { error } = await supabaseAdmin.auth.admin.deleteUser(auth_id);
-        if (error) throw error;
+        if (!auth_id) throw { message: 'auth_id is required for deletion.', status: 400 };
 
-        return new Response(JSON.stringify({ message: `User ${auth_id} deleted successfully.` }), {
+        // Step 1: Get the user's profile to get their integer ID and username for cleanup.
+        const { data: userToDelete, error: profileFindError } = await supabaseAdmin
+            .from('users')
+            .select('id, username')
+            .eq('auth_id', auth_id)
+            .single();
+
+        if (profileFindError && profileFindError.code !== 'PGRST116') {
+            // An actual error occurred, not just 'not found'.
+            throw profileFindError;
+        }
+
+        if (userToDelete) {
+            const userId = userToDelete.id;
+            const username = userToDelete.username;
+
+            // Step 2: Clean up all related data.
+            // These operations should not throw an error if no records are found.
+            await supabaseAdmin.from('contacts').delete().eq('owner', username);
+            await supabaseAdmin.from('notes').delete().eq('owner', username);
+            await supabaseAdmin.from('mail_accounts').delete().eq('user_id', userId);
+            // Mails are not deleted as they might be relevant for other users (e.g., in their inbox).
+            
+            // Step 3: Delete the public user profile.
+            await supabaseAdmin.from('users').delete().eq('auth_id', auth_id);
+        }
+
+        // Step 4: Delete the user from the authentication system.
+        const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(auth_id);
+        if (authDeleteError && authDeleteError.message !== 'User not found') {
+            // We throw the error only if it's not a "not found" error, as data might have been cleaned up anyway.
+            throw authDeleteError;
+        }
+
+        return new Response(JSON.stringify({ message: `User ${auth_id} and associated data deleted successfully.` }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         });

@@ -27,7 +27,11 @@ const LYNX_AI_USER: User = {
     features: { chat: true, ai: true, mail: false }
 };
 
-const ChatApp: React.FC = () => {
+interface ChatAppProps {
+    initialTargetId?: number | null;
+}
+
+const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -36,26 +40,30 @@ const ChatApp: React.FC = () => {
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [isAiThinking, setIsAiThinking] = useState(false);
     
-    // Keep AI history in memory so it doesn't disappear when switching contacts
-    const [aiHistory, setAiHistory] = useState<ChatMessage[]>([
-        {
-            id: Date.now(),
-            senderId: LYNX_AI_USER.id,
-            receiverId: 0, // Placeholder
-            text: "Hello! I'm Lynx AI. How can I help you today?",
-            timestamp: new Date(),
-            sender: LYNX_AI_USER,
-            receiver: currentUser!
-        }
-    ]);
-
+    const [aiHistory, setAiHistory] = useState<ChatMessage[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // 1. Fetch directory users and prepend Lynx AI
+    // Initialize AI history once the current user is loaded
+    useEffect(() => {
+        if (currentUser && aiHistory.length === 0) {
+            setAiHistory([
+                {
+                    id: Date.now(),
+                    senderId: LYNX_AI_USER.id,
+                    receiverId: currentUser.id,
+                    text: "Hello! I'm Lynx AI. How can I help you today?",
+                    timestamp: new Date(),
+                    sender: LYNX_AI_USER,
+                    receiver: currentUser
+                }
+            ]);
+        }
+    }, [currentUser, aiHistory.length]);
+
+    // Fetch directory users and prepend Lynx AI
     useEffect(() => {
         const fetchUsers = async () => {
             if (!currentUser) return;
-            // Use getUserDirectory instead of getUsers to avoid admin permission issues
             const allUsers = await database.getUserDirectory();
             const realUsers = allUsers.filter(u => u.id !== currentUser.id);
             setUsers([LYNX_AI_USER, ...realUsers]);
@@ -63,23 +71,39 @@ const ChatApp: React.FC = () => {
         fetchUsers();
     }, [currentUser]);
 
+    const handleSelectUser = (user: User) => {
+        if (selectedUser?.id !== user.id) {
+            setSelectedUser(user);
+        }
+    };
+
+    // Handle initial user selection from props
+    useEffect(() => {
+        if (initialTargetId !== undefined && initialTargetId !== null && users.length > 0) {
+            const target = users.find(u => u.id === initialTargetId);
+            if (target) {
+                handleSelectUser(target);
+            }
+        }
+    }, [initialTargetId, users]);
+
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, []);
 
     useEffect(scrollToBottom, [messages, isAiThinking]);
 
-    // 2. Handle user selection (switch between AI and P2P)
+    // Handle user selection (switch between AI and P2P)
     useEffect(() => {
         if (!currentUser || !selectedUser) return;
 
-        // If AI selected, load AI history
         if (selectedUser.id === LYNX_AI_USER.id) {
-            setMessages(aiHistory);
+            if (aiHistory.length > 0) {
+                setMessages(aiHistory);
+            }
             return;
         }
 
-        // If standard user selected, load P2P history
         const chatId = chatService.getChatId(currentUser.id, selectedUser.id);
         let isMounted = true;
 
@@ -114,7 +138,7 @@ const ChatApp: React.FC = () => {
             isMounted = false;
             chatService.unsubscribe(chatId);
         };
-    }, [currentUser, selectedUser]); // Removed aiHistory from dependency to avoid re-triggering on every AI message
+    }, [currentUser, selectedUser]);
     
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -135,7 +159,6 @@ const ChatApp: React.FC = () => {
                 receiver: LYNX_AI_USER
             };
             
-            // Update both current view and persistent AI history
             const updatedHistory = [...aiHistory, userMsg];
             setAiHistory(updatedHistory);
             setMessages(updatedHistory);
@@ -177,7 +200,6 @@ const ChatApp: React.FC = () => {
                 receiverId: selectedUser.id,
                 text: textToSend,
             };
-            // Optimistic update
             const optimisticMsg: ChatMessage = {
                 id: Date.now(),
                 ...messageData,
@@ -187,12 +209,6 @@ const ChatApp: React.FC = () => {
             };
             setMessages(prev => [...prev, optimisticMsg]);
             await chatService.sendMessage(messageData);
-        }
-    };
-
-    const handleSelectUser = (user: User) => {
-        if (selectedUser?.id !== user.id) {
-            setSelectedUser(user);
         }
     };
 

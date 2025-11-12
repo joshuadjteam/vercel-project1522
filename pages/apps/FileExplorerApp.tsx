@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Page } from '../../types';
+import { database } from '../../services/database';
 
 // Icons
 const FileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
@@ -35,26 +36,30 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
     const [newFileName, setNewFileName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState('');
-    const [driveLinkStatus, setDriveLinkStatus] = useState<'unlinked' | 'linking' | 'linked'>('unlinked');
+    const [driveLinkStatus, setDriveLinkStatus] = useState<'checking' | 'unlinked' | 'linking' | 'linked'>('checking');
 
     const storageKey = useMemo(() => `lynix_drive_${user?.username}`, [user]);
 
+    const checkDriveStatus = useCallback(async () => {
+        setDriveLinkStatus('checking');
+        const isLinked = await database.isDriveLinked();
+        setDriveLinkStatus(isLinked ? 'linked' : 'unlinked');
+    }, []);
+    
     useEffect(() => {
-        if (!user) return;
-        const storedFiles = localStorage.getItem(storageKey);
-        if (storedFiles) {
-            try {
-                setFiles(JSON.parse(storedFiles));
-            } catch (e) {
-                console.error("Failed to parse user files", e);
-                setFiles({});
+        if (user) {
+            checkDriveStatus();
+            const storedFiles = localStorage.getItem(storageKey);
+            if (storedFiles) {
+                try {
+                    setFiles(JSON.parse(storedFiles));
+                } catch (e) {
+                    console.error("Failed to parse user files", e);
+                    setFiles({});
+                }
             }
         }
-        const isLinked = localStorage.getItem(`lynix_drive_linked_${user?.username}`);
-        if (isLinked === 'true') {
-            setDriveLinkStatus('linked');
-        }
-    }, [user, storageKey]);
+    }, [user, storageKey, checkDriveStatus]);
 
     const usedBytes = useMemo(() => {
         return new Blob([JSON.stringify(files)]).size;
@@ -72,15 +77,25 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
     
     const handleLinkDrive = () => {
         setDriveLinkStatus('linking');
-        setTimeout(() => {
-            setDriveLinkStatus('linked');
-            if(user) localStorage.setItem(`lynix_drive_linked_${user?.username}`, 'true');
-        }, 2000); // Simulate linking process
+        const clientId = '882400805267-69qloo9ekoc2j6hrdprqf80q90u28fnh.apps.googleusercontent.com';
+        const redirectUri = 'https://vercel-project1522.vercel.app/auth/callback';
+        const scope = 'https://www.googleapis.com/auth/drive';
+        const state = 'app-files';
+        
+        const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent&state=${state}`;
+
+        window.location.href = oauthUrl;
     };
 
-    const handleUnlinkDrive = () => {
-        if(user) localStorage.removeItem(`lynix_drive_linked_${user?.username}`);
-        setDriveLinkStatus('unlinked');
+    const handleUnlinkDrive = async () => {
+        if (window.confirm('Are you sure you want to unlink your Google Drive account? This will not delete your files.')) {
+            const { success } = await database.unlinkDrive();
+            if (success) {
+                setDriveLinkStatus('unlinked');
+            } else {
+                alert('Failed to unlink your account. Please try again.');
+            }
+        }
     };
 
     const handleCreateFile = (e: React.FormEvent) => {
@@ -136,26 +151,33 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
     const fileList = (Object.values(files) as VirtualFile[]).sort((a, b) => b.modified - a.modified);
 
     if (driveLinkStatus !== 'linked') {
+        const isLoading = driveLinkStatus === 'checking' || driveLinkStatus === 'linking';
         return (
             <div className="w-full max-w-5xl h-[80vh] bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl p-6 text-light-text dark:text-white flex flex-col items-center justify-center text-center">
-                <CloudIcon />
-                <h1 className="text-3xl font-bold mt-4">Connect to the Cloud</h1>
-                <p className="mt-2 max-w-md text-gray-600 dark:text-gray-300">
-                    Link your Google Drive account to access your files from anywhere and get more storage. Your local files will be synced.
-                </p>
-                <div className="mt-8">
-                    <button 
-                        onClick={handleLinkDrive} 
-                        disabled={driveLinkStatus === 'linking'}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center space-x-3"
-                    >
-                        <GoogleIcon />
-                        <span>
-                            {driveLinkStatus === 'linking' ? 'Connecting...' : 'Link with your Google Account'}
-                        </span>
-                    </button>
-                </div>
-                <div className="mt-8 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-300 dark:border-teal-700 pt-4 w-full max-w-md">
+                {isLoading ? (
+                    <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
+                        <p className="text-lg">{driveLinkStatus === 'checking' ? 'Checking connection status...' : 'Connecting to Google...'}</p>
+                    </div>
+                ) : (
+                    <>
+                        <CloudIcon />
+                        <h1 className="text-3xl font-bold mt-4">Connect to the Cloud</h1>
+                        <p className="mt-2 max-w-md text-gray-600 dark:text-gray-300">
+                            Link your Google Drive account to access your files from anywhere and get more storage. Your local files will be synced.
+                        </p>
+                        <div className="mt-8">
+                            <button 
+                                onClick={handleLinkDrive} 
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center space-x-3"
+                            >
+                                <GoogleIcon />
+                                <span>Link with your Google Account</span>
+                            </button>
+                        </div>
+                    </>
+                )}
+                 <div className="mt-8 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-300 dark:border-teal-700 pt-4 w-full max-w-md">
                     <p className="font-semibold">Current Usage (Local Storage)</p>
                      <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-2">
                         <div 

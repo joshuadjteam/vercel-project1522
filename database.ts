@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 import { User, UserRole, Mail, Contact, Note, MailAccount } from '../types';
 

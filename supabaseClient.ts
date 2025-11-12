@@ -5,10 +5,10 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Session persistence must be enabled for OAuth to work across redirects.
-    // The Supabase client library will automatically handle the session
-    // from the URL fragment when the user is redirected back from the provider.
+    // Session persistence is enabled to ensure the user's session is maintained
+    // across page redirects. This is critical for OAuth flows, such as linking
+    // a Google Drive account, so the user remains logged in after returning
+    // from the external provider.
     persistSession: true,
-    detectSessionInUrl: true,
   },
 });

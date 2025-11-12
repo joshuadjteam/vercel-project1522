@@ -7,7 +7,6 @@ import { Mail, MailAccount } from '../../types';
 // Icons
 const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const ComposeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
-const SyncIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l1.5 1.5A9 9 0 0120 12M20 20l-1.5-1.5A9 9 0 004 12" /></svg>;
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
@@ -42,7 +41,6 @@ const themes: Record<string, { name: string; classes: string }> = {
 interface MailSettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAccountAdded: () => void;
     userDisplayName: string;
     setUserDisplayName: (name: string) => void;
     theme: string;
@@ -52,47 +50,10 @@ interface MailSettingsModalProps {
 }
 
 const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
-    isOpen, onClose, onAccountAdded,
+    isOpen, onClose,
     userDisplayName, setUserDisplayName, theme, setTheme, wallpaper, setWallpaper
 }) => {
-    const [activeTab, setActiveTab] = useState('account');
-    const [displayName, setDisplayName] = useState('');
-    const [emailAddress, setEmailAddress] = useState('');
-    const [smtpServer, setSmtpServer] = useState('');
-    const [smtpUsername, setSmtpUsername] = useState('');
-    const [smtpPassword, setSmtpPassword] = useState('');
-    const [smtpPort, setSmtpPort] = useState('587');
-    const [smtpEncryption, setSmtpEncryption] = useState('STARTTLS');
-    const [imapServer, setImapServer] = useState('');
-    const [imapPort, setImapPort] = useState('993');
-    const [imapEncryption, setImapEncryption] = useState('SSL/TLS');
-    const [imapUsername, setImapUsername] = useState('');
-    const [imapPassword, setImapPassword] = useState('');
-
-    const handleAddAccount = async () => {
-        const email = emailAddress || imapUsername;
-        if (email) {
-            const newAccountData: Omit<MailAccount, 'id' | 'user_id'> = {
-                display_name: displayName || email,
-                email_address: email,
-                smtp_server: smtpServer,
-                smtp_port: parseInt(smtpPort) || 587,
-                smtp_user: smtpUsername,
-                smtp_pass: smtpPassword,
-                smtp_encryption: smtpEncryption,
-                imap_server: imapServer,
-                imap_port: parseInt(imapPort) || 993,
-                imap_user: imapUsername,
-                imap_pass: imapPassword,
-                imap_encryption: imapEncryption,
-            };
-            const added = await database.addMailAccount(newAccountData);
-            if (added) {
-                onAccountAdded();
-            }
-            onClose();
-        }
-    };
+    const [activeTab, setActiveTab] = useState('display');
 
     const TabButton: React.FC<{ tabName: string; label: string; }> = ({ tabName, label }) => (
         <button onClick={() => setActiveTab(tabName)} className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === tabName ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
@@ -112,60 +73,12 @@ const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
                 <div className="flex flex-grow overflow-hidden">
                     <div className="w-1/4 p-4 border-r border-gray-200 dark:border-slate-700">
                         <nav className="space-y-1">
-                            <TabButton tabName="account" label="Account" />
                             <TabButton tabName="display" label="Display Name" />
                             <TabButton tabName="wallpaper" label="Wallpaper" />
                             <TabButton tabName="theme" label="Theme" />
                         </nav>
                     </div>
                     <div className="w-3/4 p-6 flex flex-col overflow-y-auto">
-                        {activeTab === 'account' && (
-                             <div className="flex-grow flex flex-col overflow-hidden">
-                                <h3 className="text-lg font-semibold mb-4">Add External Account</h3>
-                                <div className="flex-grow space-y-4 overflow-y-auto pr-3">
-                                    <input type="text" placeholder="Display Name" value={displayName} onChange={e => setDisplayName(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2" />
-                                    <input type="email" placeholder="Email Address (for display)" value={emailAddress} onChange={e => setEmailAddress(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2" />
-                                    <fieldset className="border border-gray-300 dark:border-slate-600 rounded-md p-3 space-y-3">
-                                        <legend className="px-2 font-semibold text-sm">SMTP (Outgoing Mail)</legend>
-                                        <input type="text" placeholder="SMTP Server" value={smtpServer} onChange={e => setSmtpServer(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                            <input type="text" placeholder="Username (Auth)" value={smtpUsername} onChange={e => setSmtpUsername(e.target.value)} className="md:col-span-2 bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
-                                            <input type="number" placeholder="Port (SMTP)" value={smtpPort} onChange={e => setSmtpPort(e.target.value)} className="bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
-                                        </div>
-                                        <input type="password" placeholder="Password (Auth)" value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
-                                        <div>
-                                            <label className="text-sm font-medium mr-2">Encryption:</label>
-                                            <select value={smtpEncryption} onChange={e => setSmtpEncryption(e.target.value)} className="bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-1.5 text-sm">
-                                                <option>STARTTLS</option>
-                                                <option>SSL/TLS</option>
-                                                <option>None</option>
-                                            </select>
-                                        </div>
-                                    </fieldset>
-                                    <fieldset className="border border-gray-300 dark:border-slate-600 rounded-md p-3 space-y-3">
-                                        <legend className="px-2 font-semibold text-sm">IMAP (Incoming Mail)</legend>
-                                        <input type="text" placeholder="IMAP Server" value={imapServer} onChange={e => setImapServer(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                            <input type="text" placeholder="(Auth IMAP) Username" value={imapUsername} onChange={e => setImapUsername(e.target.value)} className="md:col-span-2 bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
-                                            <input type="number" placeholder="IMAP Port" value={imapPort} onChange={e => setImapPort(e.target.value)} className="bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
-                                        </div>
-                                        <input type="password" placeholder="(Auth IMAP) Password" value={imapPassword} onChange={e => setImapPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-2 text-sm" />
-                                        <div>
-                                            <label className="text-sm font-medium mr-2">Encryption:</label>
-                                            <select value={imapEncryption} onChange={e => setImapEncryption(e.target.value)} className="bg-gray-100 dark:bg-slate-600 border-gray-300 dark:border-slate-500 rounded-md px-3 py-1.5 text-sm">
-                                                <option>SSL/TLS</option>
-                                                <option>STARTTLS</option>
-                                                <option>None</option>
-                                            </select>
-                                        </div>
-                                    </fieldset>
-                                </div>
-                                <div className="flex justify-end pt-4 mt-4 border-t border-gray-200 dark:border-slate-700 flex-shrink-0 space-x-2">
-                                    <button onClick={onClose} className="px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white flex items-center space-x-2"><span>Cancel</span></button>
-                                    <button onClick={handleAddAccount} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"><ComposeIcon /> <span>Add Account</span></button>
-                                </div>
-                            </div>
-                        )}
                         {activeTab === 'display' && (
                              <div>
                                 <h3 className="text-lg font-semibold mb-2">Set Display Name</h3>
@@ -215,17 +128,11 @@ const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
 
 const ComposeView: React.FC<{ onMailSent: () => void, availableSenders: UI_Account[] }> = ({ onMailSent, availableSenders }) => {
     const { user } = useAuth();
-    const [from, setFrom] = useState(availableSenders[0]?.email || '');
+    const from = availableSenders[0]?.email || '';
     const [recipient, setRecipient] = useState('');
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [status, setStatus] = useState('');
-
-    useEffect(() => {
-        if (availableSenders.length > 0 && !from) {
-            setFrom(availableSenders[0].email);
-        }
-    }, [availableSenders, from]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -251,18 +158,9 @@ const ComposeView: React.FC<{ onMailSent: () => void, availableSenders: UI_Accou
             <div className="space-y-3">
                 <div className="flex items-center">
                     <label htmlFor="from-select" className="pr-2 text-sm opacity-80">From:</label>
-                    <select 
-                        id="from-select" 
-                        value={from} 
-                        onChange={e => setFrom(e.target.value)}
-                        className="flex-grow p-2 bg-black/10 border-b-2 border-current border-opacity-20 focus:outline-none focus:border-opacity-50"
-                    >
-                        {availableSenders.map(acc => (
-                            <option key={acc.email} value={acc.email}>
-                                {acc.name} &lt;{acc.email}&gt;
-                            </option>
-                        ))}
-                    </select>
+                    <div className="flex-grow p-2 bg-black/10 border-b-2 border-current border-opacity-10">
+                        {availableSenders[0] ? `${availableSenders[0].name} <${availableSenders[0].email}>` : '...'}
+                    </div>
                 </div>
                 <input type="text" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="To (username or email)" className="w-full p-2 bg-black/10 border-b-2 border-current border-opacity-20 focus:outline-none focus:border-opacity-50" />
                 <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" className="w-full p-2 bg-black/10 border-b-2 border-current border-opacity-20 focus:outline-none focus:border-opacity-50" />
@@ -295,8 +193,7 @@ const LocalMailApp: React.FC = () => {
 
     const [accounts, setAccounts] = useState<UI_Account[]>([]);
     const [selectedAccount, setSelectedAccount] = useState<UI_Account | null>(null);
-    const [expandedAccounts, setExpandedAccounts] = useState<string[]>([]);
-
+    
     const fetchMails = useCallback(async () => {
         if (!currentUser) return;
         setIsLoading(true);
@@ -309,30 +206,15 @@ const LocalMailApp: React.FC = () => {
     
     const fetchAccounts = useCallback(async () => {
         if (!currentUser) return;
-        const externalAccounts = await database.getMailAccounts();
-        const formattedExternal: UI_Account[] = externalAccounts.map(acc => ({
-            id: acc.id,
-            name: acc.display_name,
-            email: acc.email_address,
-            folders: ['Inbox', 'Spam', 'Sent'],
-        }));
         const localAccount: UI_Account = {
             id: undefined,
             name: userDisplayName,
             email: `${currentUser.username}@lynix.local`,
             folders: ['Inbox', 'Spam', 'Sent'],
         };
-        const allAccounts = [localAccount, ...formattedExternal];
-        setAccounts(allAccounts);
-
-        if (!selectedAccount) {
-            setSelectedAccount(localAccount);
-        }
-
-        if (!expandedAccounts.includes(localAccount.email)) {
-            setExpandedAccounts(prev => [localAccount.email, ...prev]);
-        }
-    }, [currentUser, userDisplayName, selectedAccount]);
+        setAccounts([localAccount]);
+        setSelectedAccount(localAccount);
+    }, [currentUser, userDisplayName]);
 
 
     useEffect(() => {
@@ -355,12 +237,6 @@ const LocalMailApp: React.FC = () => {
             fetchMails();
         }
     };
-    
-    const handleSyncAccount = async (accountId: number) => {
-        const { message } = await database.syncMailAccount(accountId);
-        alert(message);
-        fetchMails();
-    };
 
     const handleMailSent = () => {
         setView('sent');
@@ -370,8 +246,8 @@ const LocalMailApp: React.FC = () => {
 
     const currentMailList = (() => {
         const list = view === 'inbox' ? inbox : view === 'sent' ? sent : spam;
-        if (!selectedAccount) return list.filter(m => !m.account_id);
-        return list.filter(m => (m.account_id ?? undefined) === selectedAccount.id);
+        // Only show local mail (where account_id is null/undefined)
+        return list.filter(m => !m.account_id);
     })();
 
     return (
@@ -390,31 +266,23 @@ const LocalMailApp: React.FC = () => {
                 <nav className="flex-grow overflow-y-auto">
                     {accounts.map(account => (
                         <div key={account.email}>
-                            <div className="w-full text-left p-3 font-semibold flex justify-between items-center">
-                                <button onClick={() => setExpandedAccounts(prev => prev.includes(account.email) ? prev.filter(name => name !== account.email) : [...prev, account.email])} className="flex-grow flex justify-between items-center">
-                                    <span>{account.name} &gt;</span>
-                                    <span className={`transform transition-transform duration-200 ${expandedAccounts.includes(account.email) ? 'rotate-90' : ''}`}>›</span>
-                                </button>
-                                {account.id && (
-                                    <button onClick={() => handleSyncAccount(account.id!)} title="Sync Mail" className="ml-2 p-1 rounded-full text-sm hover:bg-white/20"><SyncIcon /></button>
-                                )}
+                            <div className="w-full text-left p-3 font-semibold">
+                                <span>{account.name}</span>
                             </div>
-                            {expandedAccounts.includes(account.email) && (
-                                <div className="pl-6">
-                                    {account.folders.map(folder => (
-                                        <button key={folder} onClick={() => {
-                                            setSelectedAccount(account);
-                                            const folderView = folder.toLowerCase() as MailView;
-                                            if (['inbox', 'sent', 'spam'].includes(folderView)) {
-                                                setView(folderView);
-                                                setSelectedMail(null);
-                                            }
-                                        }} className={`w-full text-left p-2 rounded-md transition-colors text-lg ${view === folder.toLowerCase() && selectedAccount?.email === account.email ? 'font-bold' : 'hover:bg-white/10'}`}>
-                                            {folder}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            <div className="pl-6">
+                                {account.folders.map(folder => (
+                                    <button key={folder} onClick={() => {
+                                        setSelectedAccount(account);
+                                        const folderView = folder.toLowerCase() as MailView;
+                                        if (['inbox', 'sent', 'spam'].includes(folderView)) {
+                                            setView(folderView);
+                                            setSelectedMail(null);
+                                        }
+                                    }} className={`w-full text-left p-2 rounded-md transition-colors text-lg ${view === folder.toLowerCase() ? 'font-bold' : 'hover:bg-white/10'}`}>
+                                        {folder}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     ))}
                 </nav>
@@ -474,7 +342,7 @@ const LocalMailApp: React.FC = () => {
                 )}
             </div>
             
-            <MailSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} onAccountAdded={fetchAccounts} userDisplayName={userDisplayName} setUserDisplayName={setUserDisplayName} theme={theme} setTheme={setTheme} wallpaper={wallpaper} setWallpaper={setWallpaper}/>
+            <MailSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} userDisplayName={userDisplayName} setUserDisplayName={setUserDisplayName} theme={theme} setTheme={setTheme} wallpaper={wallpaper} setWallpaper={setWallpaper}/>
         </div>
     );
 };
