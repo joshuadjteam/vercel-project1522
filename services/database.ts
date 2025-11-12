@@ -170,6 +170,17 @@ export const database = {
     },
     
     // --- Google Drive Service ---
+    getDriveOAuthConfig: async (): Promise<{ clientId: string; redirectUri: string } | null> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'drive', action: 'get-oauth-config' }
+        });
+        if (error || !data || data.error) {
+            console.error('Error fetching Google Drive OAuth config:', error || data?.error);
+            return null;
+        }
+        return data;
+    },
+
     exchangeGoogleDriveCode: async (code: string): Promise<{ success: boolean }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'drive', action: 'exchange-code', payload: { code } }

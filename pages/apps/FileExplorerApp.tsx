@@ -75,10 +75,17 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
     
-    const handleLinkDrive = () => {
+    const handleLinkDrive = async () => {
         setDriveLinkStatus('linking');
-        const clientId = '882400805267-69qloo9ekoc2j6hrdprqf80q90u28fnh.apps.googleusercontent.com';
-        const redirectUri = 'https://vercel-project1522.vercel.app/auth/callback';
+        
+        const config = await database.getDriveOAuthConfig();
+        if (!config) {
+            alert('Could not retrieve Google Drive configuration from the server. Please try again later.');
+            setDriveLinkStatus('unlinked');
+            return;
+        }
+
+        const { clientId, redirectUri } = config;
         const scope = 'https://www.googleapis.com/auth/drive';
         const state = 'app-files';
         

@@ -1,7 +1,4 @@
 
-
-
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -37,7 +34,24 @@ serve(async (req)=>{
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
-    // All other endpoints require authentication
+    // --- Public endpoints that do not require auth ---
+    if (resource === 'drive' && action === 'get-oauth-config') {
+        const clientId = Deno.env.get('GCP_CLIENT_ID');
+        const redirectUri = Deno.env.get('GCP_REDIRECT_URI');
+        if (!clientId || !redirectUri) {
+            throw { status: 500, message: 'Google Drive OAuth is not configured on the server.' };
+        }
+        return new Response(JSON.stringify({
+            clientId,
+            redirectUri
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+    }
+
+
+    // --- Authenticated endpoints ---
     const userClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
       global: {
         headers: {
