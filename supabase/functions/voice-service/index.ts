@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { GoogleGenAI, GenerateContentResponse } from 'npm:@google/genai';
 
@@ -30,9 +29,14 @@ serve(async (req) => {
     if (!userText) {
       throw new Error("Text prompt is required.");
     }
+    
+    const geminiApiKey = Deno.env.get('GEMINI_VOICE_API_KEY');
+    if (!geminiApiKey) {
+        throw new Error("Gemini API key for voice is not configured on the server.");
+    }
 
     // --- 1. Get AI Response from Gemini ---
-    const ai = new GoogleGenAI({ apiKey: 'AIzaSyC_t4h2CfS-gS5j4c5dLon84ay9l8dW9fU' });
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
     const geminiResponse: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
