@@ -160,7 +160,7 @@ export const database = {
     getAdminStats: async (): Promise<{ messages: number, mails: number, contacts: number }> => {
         const fallbackStats = { messages: 0, mails: 0, contacts: 0 };
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'stats' }
+            body: JSON.stringify({ resource: 'stats' })
         });
         if (error || !data || data.error) {
             console.error('Error fetching admin stats:', error || data?.error);
@@ -172,7 +172,7 @@ export const database = {
     // --- Google Drive Service ---
     getDriveOAuthConfig: async (): Promise<{ clientId: string; redirectUri: string } | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'drive', action: 'get-oauth-config' }
+            body: JSON.stringify({ resource: 'drive', action: 'get-oauth-config' })
         });
         if (error || !data || data.error) {
             console.error('Error fetching Google Drive OAuth config:', error || data?.error);
@@ -183,11 +183,11 @@ export const database = {
     
     loginAndLinkDrive: async (email: string, password: string, code: string): Promise<{ success: boolean; error?: string }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { 
+            body: JSON.stringify({ 
                 resource: 'auth', 
                 action: 'loginAndLinkDrive', 
                 payload: { email, password, code } 
-            }
+            })
         });
 
         if (error || (data && data.error)) {
@@ -201,7 +201,7 @@ export const database = {
 
     exchangeGoogleDriveCode: async (code: string): Promise<{ success: boolean }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'drive', action: 'exchange-code', payload: { code } }
+            body: JSON.stringify({ resource: 'drive', action: 'exchange-code', payload: { code } })
         });
         if (error || !data || data.error) {
             console.error('Error exchanging Google Drive code:', error || data?.error);
@@ -212,7 +212,7 @@ export const database = {
 
     getDriveFiles: async (): Promise<{ files?: DriveFile[], error?: string, reauth?: boolean }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'drive', action: 'list-files' }
+            body: JSON.stringify({ resource: 'drive', action: 'list-files' })
         });
 
         if (error || (data && data.error)) {
@@ -227,7 +227,7 @@ export const database = {
 
     isDriveLinked: async (): Promise<boolean> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'drive', action: 'check-status' }
+            body: JSON.stringify({ resource: 'drive', action: 'check-status' })
         });
         if (error || !data || data.error) {
             console.error('Error checking Drive link status:', error || data?.error);
@@ -238,7 +238,7 @@ export const database = {
 
     unlinkDrive: async (): Promise<{ success: boolean }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'drive', action: 'unlink' }
+            body: JSON.stringify({ resource: 'drive', action: 'unlink' })
         });
         if (error || !data || data.error) {
             console.error('Error unlinking Drive:', error || data?.error);
@@ -265,7 +265,7 @@ export const database = {
     // --- Mail Service Functions ---
     getMailsForUser: async (username: string): Promise<{ inbox: Mail[], sent: Mail[] }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'mails', action: 'get' }
+            body: JSON.stringify({ resource: 'mails', action: 'get' })
         });
         if (error || !data || data.error) {
             console.error("Error fetching mails:", error || data?.error);
@@ -279,7 +279,7 @@ export const database = {
 
     sendMail: async (mailData: { recipient: string; subject: string; body: string; sender: string; }): Promise<Mail | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'mails', action: 'send', payload: mailData }
+            body: JSON.stringify({ resource: 'mails', action: 'send', payload: mailData })
         });
         if (error || !data || data.error) {
             console.error('Error sending mail:', error || data?.error);
@@ -290,7 +290,7 @@ export const database = {
     
     markMailAsRead: async (mailId: number): Promise<boolean> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'mails', action: 'markAsRead', payload: { id: mailId } }
+            body: JSON.stringify({ resource: 'mails', action: 'markAsRead', payload: { id: mailId } })
         });
         if (error || (data && data.error)) {
             console.error('Error marking mail as read:', error || data.error);
@@ -301,7 +301,7 @@ export const database = {
 
     deleteMail: async (mailId: number): Promise<boolean> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'mails', action: 'delete', payload: { id: mailId } }
+            body: JSON.stringify({ resource: 'mails', action: 'delete', payload: { id: mailId } })
         });
         if (error || (data && data.error)) {
             console.error('Error deleting mail:', error || data.error);
@@ -312,7 +312,7 @@ export const database = {
 
     getMailAccounts: async (): Promise<MailAccount[]> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'mail_accounts', action: 'get' }
+            body: JSON.stringify({ resource: 'mail_accounts', action: 'get' })
         });
         if (error || !data || data.error) {
             console.error("Error fetching mail accounts:", error || data?.error);
@@ -323,7 +323,7 @@ export const database = {
 
     addMailAccount: async (accountData: Omit<MailAccount, 'id' | 'user_id'>): Promise<MailAccount | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'mail_accounts', action: 'add', payload: accountData }
+            body: JSON.stringify({ resource: 'mail_accounts', action: 'add', payload: accountData })
         });
         if (error || !data || data.error) {
             console.error('Error adding mail account:', error || data?.error);
@@ -334,7 +334,7 @@ export const database = {
 
     syncMailAccount: async (accountId: number): Promise<{ success: boolean, message: string }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'mails', action: 'sync', payload: { accountId } }
+            body: JSON.stringify({ resource: 'mails', action: 'sync', payload: { accountId } })
         });
         if (error || !data || data.error) {
             console.error('Error syncing mail account:', error || data?.error);
@@ -346,7 +346,7 @@ export const database = {
     // --- Contacts Service Functions ---
     getContactsForUser: async (username: string): Promise<Contact[]> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'contacts', action: 'get' }
+            body: JSON.stringify({ resource: 'contacts', action: 'get' })
         });
         if (error || !data || data.error) {
             console.error('Error fetching contacts:', error || data?.error);
@@ -357,7 +357,7 @@ export const database = {
 
     addContact: async (contactData: Omit<Contact, 'id' | 'owner'>): Promise<Contact | null> => {
          const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'contacts', action: 'add', payload: contactData }
+            body: JSON.stringify({ resource: 'contacts', action: 'add', payload: contactData })
         });
         if (error || !data || data.error) {
             console.error('Error adding contact:', error || data?.error);
@@ -368,7 +368,7 @@ export const database = {
 
     updateContact: async (contactData: Omit<Contact, 'owner'>): Promise<Contact | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'contacts', action: 'update', payload: contactData }
+            body: JSON.stringify({ resource: 'contacts', action: 'update', payload: contactData })
         });
         if (error || !data || data.error) {
             console.error('Error updating contact:', error || data?.error);
@@ -379,7 +379,7 @@ export const database = {
 
     deleteContact: async (contactId: number): Promise<boolean> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'contacts', action: 'delete', payload: { id: contactId } }
+            body: JSON.stringify({ resource: 'contacts', action: 'delete', payload: { id: contactId } })
         });
         if (error || (data && data.error)) {
             console.error('Error deleting contact:', error || data.error);
@@ -391,7 +391,7 @@ export const database = {
     // --- Notepad Service Functions ---
     getNotesForUser: async (username: string): Promise<Note[]> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'notes', action: 'get' }
+            body: JSON.stringify({ resource: 'notes', action: 'get' })
         });
 
         if (error || !data || data.error) {
@@ -403,7 +403,7 @@ export const database = {
 
     addNote: async (noteData: Omit<Note, 'id' | 'createdAt' | 'owner'>): Promise<Note | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'notes', action: 'add', payload: noteData }
+            body: JSON.stringify({ resource: 'notes', action: 'add', payload: noteData })
         });
         
         if (error || !data || data.error) {
@@ -416,7 +416,7 @@ export const database = {
 
     updateNote: async (noteData: Note): Promise<Note | null> => {
        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'notes', action: 'update', payload: noteData }
+            body: JSON.stringify({ resource: 'notes', action: 'update', payload: noteData })
         });
 
         if (error || !data || data.error) {
@@ -429,10 +429,10 @@ export const database = {
 
     deleteNote: async (noteId: number): Promise<boolean> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'notes', action: 'delete', payload: { id: noteId } }
+            body: JSON.stringify({ resource: 'notes', action: 'delete', payload: { id: noteId } })
         });
         if (error || (data && data.error)) {
-            console.error('Error deleting note:', error || data?.error);
+            console.error('Error deleting note:', error || data.error);
             return false;
         }
         return true;
