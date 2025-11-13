@@ -1,5 +1,6 @@
 
 import React, { useRef, useEffect, useState } from 'react';
+import AppContainer from '../../components/AppContainer';
 
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 
@@ -67,8 +68,8 @@ const PaintApp: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-5xl h-[80vh] bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl p-4 text-light-text dark:text-white flex flex-col items-center">
-            <h1 className="text-3xl font-bold mb-4">Paint</h1>
+        <AppContainer className="w-full max-w-5xl h-[80vh] p-4 text-light-text dark:text-white flex flex-col items-center">
+            <h1 className="text-3xl font-bold mb-4 flex-shrink-0">Paint</h1>
             <div className="w-full flex-grow relative rounded-lg overflow-hidden border-2 border-gray-400 dark:border-teal-700">
                 <canvas
                     ref={canvasRef}
@@ -79,7 +80,7 @@ const PaintApp: React.FC = () => {
                     className="absolute top-0 left-0"
                 />
             </div>
-            <div className="w-full flex items-center justify-center space-x-6 p-4 bg-black/5 dark:bg-black/20 rounded-b-lg">
+            <div className="w-full flex items-center justify-center space-x-6 p-4 bg-black/5 dark:bg-black/20 rounded-b-lg flex-shrink-0">
                 <div className="flex flex-col items-center">
                     <label htmlFor="color-picker" className="text-sm font-medium mb-1">Color</label>
                     <input id="color-picker" type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12 h-12 rounded-full cursor-pointer bg-transparent border-none p-0" />
@@ -93,7 +94,7 @@ const PaintApp: React.FC = () => {
                     <span>Clear</span>
                 </button>
             </div>
-        </div>
+        </AppContainer>
     );
 };
 

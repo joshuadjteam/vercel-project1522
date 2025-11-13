@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 // Import DriveFile from types.ts
 import { Page, DriveFile } from '../../types';
 import { database } from '../../services/database';
+import AppContainer from '../../components/AppContainer';
 
 // Icons
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
@@ -156,8 +157,8 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
     };
 
     return (
-        <div className="w-full max-w-7xl h-[80vh] bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl p-6 text-light-text dark:text-white flex flex-col">
-            <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <AppContainer className="w-full max-w-7xl h-[80vh] p-6 text-light-text dark:text-white flex flex-col">
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-2 flex-shrink-0">
                  <h1 className="text-3xl font-bold">File Explorer</h1>
                  {driveLinkStatus === 'linked' && (
                     <div className="flex items-center space-x-4">
@@ -176,7 +177,7 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
              <div className="flex-grow overflow-y-auto custom-scrollbar pt-2 border-t border-gray-300 dark:border-teal-700/50">
                 {renderContent()}
             </div>
-        </div>
+        </AppContainer>
     );
 };
 

@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
+import AppContainer from '../components/AppContainer';
 
 const GuestIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const SignInIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>;
@@ -37,7 +39,7 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
     };
     
     return (
-        <div className="w-full max-w-md bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-purple-600/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white flex flex-col items-center">
+        <AppContainer className="w-full max-w-md p-8 text-light-text dark:text-white flex flex-col items-center">
             <h1 className="text-3xl font-bold mb-6 text-center">Access Your Lynix Account</h1>
             
             <form onSubmit={handleLogin} className="w-full space-y-4">
@@ -89,7 +91,7 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
                     <span>Try as Guest?</span>
                 </button>
             </div>
-        </div>
+        </AppContainer>
     );
 };
 

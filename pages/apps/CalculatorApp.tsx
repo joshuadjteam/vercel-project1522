@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import AppContainer from '../../components/AppContainer';
 
 const CalculatorApp: React.FC = () => {
     const [display, setDisplay] = useState('0');
@@ -43,7 +44,7 @@ const CalculatorApp: React.FC = () => {
     );
 
     return (
-        <div className="w-full max-w-xs bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-gray-300 dark:border-slate-700 rounded-2xl shadow-2xl p-4 text-light-text dark:text-white">
+        <AppContainer className="w-full max-w-xs p-4 text-light-text dark:text-white">
              <h1 className="text-2xl font-bold mb-4 text-center">Calculator</h1>
             <div className="bg-gray-200 dark:bg-slate-900 rounded-lg p-4 text-right text-4xl font-mono mb-4 break-words">
                 {display}
@@ -71,7 +72,7 @@ const CalculatorApp: React.FC = () => {
                 <Button value="0" className="col-span-2" />
                 <Button value="." />
             </div>
-        </div>
+        </AppContainer>
     );
 };
 

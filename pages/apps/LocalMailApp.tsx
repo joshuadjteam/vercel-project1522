@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { Mail, MailAccount } from '../../types';
+import AppContainer from '../../components/AppContainer';
 
 // Icons
 const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
@@ -29,13 +30,13 @@ const wallpapers: Record<string, { name: string; style: React.CSSProperties }> =
     plus: { name: 'Plus', style: { backgroundImage: `url('data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path d="M 10 0 L 10 20 M 0 10 L 20 10" stroke-width="1" stroke="%23a1a1aa"/></svg>`)}`, backgroundSize: '15px 15px' } },
 };
 
-const themes: Record<string, { name: string; classes: string }> = {
-    system: { name: 'System', classes: 'bg-light-card/80 dark:bg-teal-800/50 border-gray-300 dark:border-teal-600/50 text-light-text dark:text-white' },
-    light: { name: 'Light', classes: 'bg-white/95 border-gray-200 text-gray-800' },
-    dark: { name: 'Dark', classes: 'bg-gray-800/95 border-gray-700 text-gray-200' },
-    green: { name: 'Green', classes: 'bg-green-100/95 dark:bg-green-900/95 border-green-300 dark:border-green-700 text-green-900 dark:text-green-100' },
-    blue: { name: 'Blue', classes: 'bg-blue-100/95 dark:bg-blue-900/95 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100' },
-    purple: { name: 'Purple', classes: 'bg-purple-100/95 dark:bg-purple-900/95 border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-100' },
+const themes: Record<string, { name: string; classes: string, lightBg: string, darkBg: string }> = {
+    system: { name: 'System', classes: 'text-light-text dark:text-white', lightBg: 'bg-light-card', darkBg: 'dark:bg-teal-800' },
+    light: { name: 'Light', classes: 'text-gray-800', lightBg: 'bg-white', darkBg: 'dark:bg-white' },
+    dark: { name: 'Dark', classes: 'text-gray-200', lightBg: 'bg-gray-800', darkBg: 'dark:bg-gray-800' },
+    green: { name: 'Green', classes: 'text-green-900 dark:text-green-100', lightBg: 'bg-green-100', darkBg: 'dark:bg-green-900' },
+    blue: { name: 'Blue', classes: 'text-blue-900 dark:text-blue-100', lightBg: 'bg-blue-100', darkBg: 'dark:bg-blue-900' },
+    purple: { name: 'Purple', classes: 'text-purple-900 dark:text-purple-100', lightBg: 'bg-purple-100', darkBg: 'dark:bg-purple-900' },
 };
 
 interface MailSettingsModalProps {
@@ -104,13 +105,12 @@ const MailSettingsModal: React.FC<MailSettingsModalProps> = ({
                              <div>
                                 <h3 className="text-lg font-semibold mb-4">Choose a Theme</h3>
                                 <div className="space-y-2">
-                                    {Object.entries(themes).map(([key, { name, classes }]) => {
-                                        const [lightBg, darkBg] = classes.split(' dark:');
+                                    {Object.entries(themes).map(([key, { name, lightBg, darkBg }]) => {
                                         return (
                                             <button key={key} onClick={() => setTheme(key)} className={`w-full max-w-sm p-2 flex items-center space-x-4 rounded-lg border-2 hover:border-blue-500 ${theme === key ? 'border-blue-500' : 'border-transparent'}`}>
                                                 <div className="w-8 h-8 rounded-full overflow-hidden flex">
-                                                    <div className={`w-1/2 h-full ${lightBg.replace('/80', '').replace('/95', '')}`} />
-                                                    <div className={`w-1/2 h-full ${darkBg.replace('/80', '').replace('/95', '')}`} />
+                                                    <div className={`w-1/2 h-full ${lightBg}`} />
+                                                    <div className={`w-1/2 h-full ${darkBg.replace('dark:', '')}`} />
                                                 </div>
                                                 <span className="font-medium">{name}</span>
                                             </button>
@@ -251,7 +251,10 @@ const LocalMailApp: React.FC = () => {
     })();
 
     return (
-        <div className={`w-full max-w-7xl h-[80vh] backdrop-blur-sm border rounded-2xl shadow-2xl flex overflow-hidden transition-colors duration-300 ${themes[theme].classes}`} style={wallpapers[wallpaper].style}>
+        <AppContainer 
+            className={`w-full max-w-7xl h-[80vh] flex transition-colors duration-300 ${themes[theme].classes}`} 
+            style={wallpapers[wallpaper].style}
+        >
             <div className="w-1/4 border-r border-current border-opacity-20 bg-black/5 flex flex-col">
                 <div className="p-4 border-b border-current border-opacity-20 flex justify-between items-center">
                     <h2 className="text-xl font-bold">LocalMail</h2>
@@ -343,7 +346,7 @@ const LocalMailApp: React.FC = () => {
             </div>
             
             <MailSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} userDisplayName={userDisplayName} setUserDisplayName={setUserDisplayName} theme={theme} setTheme={setTheme} wallpaper={wallpaper} setWallpaper={setWallpaper}/>
-        </div>
+        </AppContainer>
     );
 };
 

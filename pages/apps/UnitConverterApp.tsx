@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import AppContainer from '../../components/AppContainer';
 
 type UnitCategory = 'length' | 'weight' | 'temperature';
 
@@ -103,7 +104,7 @@ const UnitConverterApp: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-md bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white">
+        <AppContainer className="w-full max-w-md p-8 text-light-text dark:text-white">
             <h1 className="text-3xl font-bold mb-6 text-center">Unit Converter</h1>
             
             <div className="flex justify-center space-x-2 mb-8 bg-black/5 dark:bg-black/20 p-1 rounded-lg">
@@ -167,7 +168,7 @@ const UnitConverterApp: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </AppContainer>
     );
 };
 

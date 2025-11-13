@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { Page, UserRole } from '../types';
 
 // Icon components
@@ -33,12 +34,11 @@ const useIsMobile = (breakpoint = 768) => {
 
 interface HeaderProps {
     navigate: (page: Page, params?: any) => void;
-    isDark: boolean;
-    setIsDark: (isDark: boolean) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ navigate, isDark, setIsDark }) => {
+const Header: React.FC<HeaderProps> = ({ navigate }) => {
     const { isLoggedIn, user, logout } = useAuth();
+    const { isDark, setIsDark } = useTheme();
     const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const isMobile = useIsMobile();

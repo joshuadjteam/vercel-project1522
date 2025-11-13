@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Page } from '../types';
+import { useTheme } from '../hooks/useTheme';
 import Clock from '../components/Clock';
 
 // Icons
@@ -70,6 +72,7 @@ const ActionButton: React.FC<{ label: string; onClick?: () => void; href?: strin
 };
 
 const ConsolePage: React.FC<ConsolePageProps> = ({ navigate }) => {
+    const { glassBlur, setGlassBlur, glassTransparency, setGlassTransparency } = useTheme();
     const [wallpaper, setWallpaper] = useState('sky');
     const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
 
@@ -90,7 +93,7 @@ const ConsolePage: React.FC<ConsolePageProps> = ({ navigate }) => {
             <header className="flex justify-between items-center pb-4 border-b-2 border-white/30">
                 <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl p-3 shadow-lg flex items-center space-x-4">
                     <Clock />
-                    <button onClick={() => setIsCustomizeOpen(true)} className="p-2 rounded-full hover:bg-white/20 transition-colors" title="Customize Wallpaper">
+                    <button onClick={() => setIsCustomizeOpen(true)} className="p-2 rounded-full hover:bg-white/20 transition-colors" title="Customize">
                         <CustomizeIcon />
                     </button>
                 </div>
@@ -144,16 +147,36 @@ const ConsolePage: React.FC<ConsolePageProps> = ({ navigate }) => {
 
             {isCustomizeOpen && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" onClick={() => setIsCustomizeOpen(false)}>
-                    <div className="bg-slate-800/80 border border-white/20 p-8 rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <div className="bg-slate-800/80 border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
                         <h2 className="text-2xl font-bold mb-6 text-center text-white">Customize Console</h2>
-                        <div className="grid grid-cols-3 gap-4">
-                            {Object.entries(wallpapers).map(([key, { name, class: bgClass }]) => (
-                                <button key={key} onClick={() => setWallpaper(key)} className="flex flex-col items-center space-y-2 group">
-                                    <div className={`w-24 h-16 rounded-lg ${bgClass} shadow-md group-hover:scale-105 transition-transform border-2 ${wallpaper === key ? 'border-white' : 'border-transparent'}`}></div>
-                                    <span className="text-sm font-medium text-gray-200">{name}</span>
-                                </button>
-                            ))}
+                        
+                        <div className="space-y-6">
+                            <div>
+                                <h3 className="text-lg font-semibold mb-4 text-center text-white">Wallpaper</h3>
+                                <div className="grid grid-cols-3 gap-4">
+                                    {Object.entries(wallpapers).map(([key, { name, class: bgClass }]) => (
+                                        <button key={key} onClick={() => setWallpaper(key)} className="flex flex-col items-center space-y-2 group">
+                                            <div className={`w-24 h-16 rounded-lg ${bgClass} shadow-md group-hover:scale-105 transition-transform border-2 ${wallpaper === key ? 'border-white' : 'border-transparent'}`}></div>
+                                            <span className="text-sm font-medium text-gray-200">{name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="border-t border-white/20 pt-6">
+                                <h3 className="text-lg font-semibold mb-4 text-center text-white">Glass Effect</h3>
+                                <div className="space-y-4 text-gray-200">
+                                    <div>
+                                        <label htmlFor="blur-slider" className="text-sm font-medium">Blur ({glassBlur}px)</label>
+                                        <input id="blur-slider" type="range" min="0" max="24" value={glassBlur} onChange={e => setGlassBlur(Number(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="transparency-slider" className="text-sm font-medium">Transparency ({glassTransparency.toFixed(2)})</label>
+                                        <input id="transparency-slider" type="range" min="0.1" max="1.0" step="0.05" value={glassTransparency} onChange={e => setGlassTransparency(Number(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                         <button onClick={() => setIsCustomizeOpen(false)} className="mt-8 w-full bg-red-500/80 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg">Close</button>
                     </div>
                 </div>

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
 import { database } from '../services/database';
 import AddUserModal from '../components/AddUserModal';
+import AppContainer from '../components/AppContainer';
 
 const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>;
 const PencilIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>;
@@ -73,26 +74,28 @@ const AdminPortal: React.FC = () => {
     );
 
     return (
-        <div className="w-full max-w-7xl bg-light-card/80 dark:bg-teal-900/50 backdrop-blur-sm border border-gray-300 dark:border-teal-700/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white h-[85vh] overflow-y-auto">
-            <h1 className="text-4xl font-bold">Admin Portal</h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">System overview and user management.</p>
+        <AppContainer className="w-full max-w-7xl h-[85vh] p-8 text-light-text dark:text-white flex flex-col overflow-y-auto">
+            <div className='flex-shrink-0'>
+                <h1 className="text-4xl font-bold">Admin Portal</h1>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">System overview and user management.</p>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 flex-shrink-0">
                 <StatCard title="Total Users" value={users.length} />
                 <StatCard title="Chat Messages" value={stats.messages} />
                 <StatCard title="Local Mails" value={stats.mails} />
                 <StatCard title="Saved Contacts" value={stats.contacts} />
             </div>
 
-            <div className="bg-black/5 dark:bg-black/20 p-6 rounded-lg">
-                <div className="flex justify-between items-center mb-4">
+            <div className="bg-black/5 dark:bg-black/20 p-6 rounded-lg flex-grow flex flex-col overflow-hidden">
+                <div className="flex justify-between items-center mb-4 flex-shrink-0">
                     <h2 className="text-2xl font-semibold">User Management</h2>
                     <button onClick={handleAddUser} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center space-x-2">
                         <UserPlusIcon />
                         <span>Add User</span>
                     </button>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-y-auto flex-grow">
                     <table className="w-full text-left">
                         <thead className="border-b border-gray-300 dark:border-slate-600">
                             <tr>
@@ -134,7 +137,7 @@ const AdminPortal: React.FC = () => {
                     userToEdit={userToEdit} 
                 />
             )}
-        </div>
+        </AppContainer>
     );
 };
 

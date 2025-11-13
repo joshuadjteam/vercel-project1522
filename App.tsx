@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ThemeProvider, useTheme } from './hooks/useTheme';
 import { CallProvider } from './hooks/useCall';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import AppContainer from './components/AppContainer';
 import CallWidget from './components/CallWidget';
 import IncomingCallWidget from './components/IncomingCallWidget';
 import HomePage from './pages/HomePage';
@@ -39,8 +41,8 @@ const AppContent: React.FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>(getInitialPage());
     const [currentFile, setCurrentFile] = useState<string | null>(null);
     const [initialChatTargetId, setInitialChatTargetId] = useState<number | null>(null);
-    const [isDark, setIsDark] = useState(true);
     const { user, isLoggedIn, isLoading } = useAuth();
+    const { isDark } = useTheme();
 
     useEffect(() => {
         if (isDark) {
@@ -98,11 +100,11 @@ const AppContent: React.FC = () => {
         const isGuest = user?.role === UserRole.Trial;
 
         const RestrictedAccess = () => (
-            <div className="w-full max-w-lg bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-red-500/50 rounded-2xl shadow-2xl p-8 text-light-text dark:text-white text-center flex flex-col items-center">
+            <AppContainer className="w-full max-w-lg p-8 text-light-text dark:text-white text-center flex flex-col items-center">
                 <img src="https://i.imgur.com/gY2VgC2.png" alt="Access Denied" className="w-32 h-32 mb-6" />
                 <h2 className="text-2xl font-bold text-red-500 dark:text-red-400 mb-4">Access Denied</h2>
                 <p className="text-lg">We cannot allow you to use this service! Please login using your credentials to use these features.</p>
-            </div>
+            </AppContainer>
         );
 
         switch (currentPage) {
@@ -148,7 +150,7 @@ const AppContent: React.FC = () => {
 
     return (
         <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isConsolePage ? '' : 'bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500'}`}>
-            <Header navigate={navigate} isDark={isDark} setIsDark={setIsDark} />
+            <Header navigate={navigate} />
             <main className={`flex-grow flex items-center justify-center overflow-hidden ${isConsolePage ? '' : 'p-4'}`}>
                 <div key={currentPage} className="w-full h-full flex items-center justify-center animate-fade-in">
                     {renderPage()}
@@ -164,11 +166,13 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
     return (
         <AuthProvider>
-            <CallProvider>
-                <AppContent />
-                <SpeedInsights />
-                <Analytics />
-            </CallProvider>
+            <ThemeProvider>
+                <CallProvider>
+                    <AppContent />
+                    <SpeedInsights />
+                    <Analytics />
+                </CallProvider>
+            </ThemeProvider>
         </AuthProvider>
     );
 };

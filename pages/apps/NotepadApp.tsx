@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { DriveFile } from '../../types';
+import AppContainer from '../../components/AppContainer';
 
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>;
@@ -89,10 +91,10 @@ const NotepadApp: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-6xl h-[80vh] bg-light-card/80 dark:bg-teal-800/50 backdrop-blur-sm border border-gray-300 dark:border-teal-600/50 rounded-2xl shadow-2xl text-light-text dark:text-white flex overflow-hidden">
+        <AppContainer className="w-full max-w-6xl h-[80vh] text-light-text dark:text-white flex">
             {/* Notes List Sidebar */}
-            <div className="w-1/3 border-r border-gray-200 dark:border-teal-700/50 bg-black/5 dark:bg-black/10 flex flex-col">
-                <div className="p-4 border-b border-gray-200 dark:border-teal-700/50 flex justify-between items-center">
+            <div className="w-1/3 border-r border-current border-opacity-20 bg-black/10 flex flex-col">
+                <div className="p-4 border-b border-current border-opacity-20 flex justify-between items-center">
                     <h2 className="text-xl font-bold">My Notes (Drive)</h2>
                     <button onClick={handleNewNote} className="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2">
                         <PlusIcon />
@@ -101,9 +103,9 @@ const NotepadApp: React.FC = () => {
                 </div>
                 <div className="flex-grow overflow-y-auto">
                     {isLoading ? <p className="p-4">Loading notes from Drive...</p> : notes.map(note => (
-                        <button key={note.id} onClick={() => handleSelectNote(note)} className={`w-full text-left p-3 border-b border-gray-200 dark:border-teal-800/80 ${selectedNote?.id === note.id ? 'bg-teal-100 dark:bg-teal-600/50' : 'hover:bg-gray-100 dark:hover:bg-teal-700/40'}`}>
+                        <button key={note.id} onClick={() => handleSelectNote(note)} className={`w-full text-left p-3 border-b border-current border-opacity-10 ${selectedNote?.id === note.id ? 'bg-black/20' : 'hover:bg-black/10'}`}>
                             <h3 className="font-semibold truncate">{note.name}</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(note.modifiedTime).toLocaleDateString()}</p>
+                            <p className="text-xs opacity-70">{new Date(note.modifiedTime).toLocaleDateString()}</p>
                         </button>
                     ))}
                 </div>
@@ -113,7 +115,7 @@ const NotepadApp: React.FC = () => {
             <div className="w-2/3 flex flex-col">
                 {selectedNote ? (
                     <>
-                        <div className="p-3 border-b border-gray-200 dark:border-teal-700/50 flex justify-end items-center space-x-2 bg-black/5 dark:bg-black/10">
+                        <div className="p-3 border-b border-current border-opacity-20 flex justify-end items-center space-x-2 bg-black/10">
                             {saveStatus && <span className="text-sm text-green-600 dark:text-green-400">{saveStatus}</span>}
                              <button onClick={handleSaveNote} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm flex items-center space-x-2">
                                 <SaveIcon />
@@ -130,7 +132,7 @@ const NotepadApp: React.FC = () => {
                                 value={currentTitle}
                                 onChange={(e) => setCurrentTitle(e.target.value)}
                                 placeholder="Note Title"
-                                className="text-2xl font-bold bg-transparent focus:outline-none mb-4 pb-2 border-b-2 border-gray-200 dark:border-teal-700/50"
+                                className="text-2xl font-bold bg-transparent focus:outline-none mb-4 pb-2 border-b-2 border-current border-opacity-20"
                             />
                             <textarea
                                 value={currentContent}
@@ -141,7 +143,7 @@ const NotepadApp: React.FC = () => {
                         </div>
                     </>
                 ) : (
-                    <div className="flex-grow flex items-center justify-center text-center text-gray-500 dark:text-gray-400">
+                    <div className="flex-grow flex items-center justify-center text-center opacity-70">
                         <div>
                             <h2 className="text-2xl font-semibold">Select a note or create a new one</h2>
                             <p>Your notes saved in Google Drive will appear here.</p>
@@ -149,7 +151,7 @@ const NotepadApp: React.FC = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </AppContainer>
     );
 };
 

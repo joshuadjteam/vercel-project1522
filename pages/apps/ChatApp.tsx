@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { chatService } from '../../services/chatService';
 import { geminiService } from '../../services/geminiService';
 import { User, ChatMessage, UserRole } from '../../types';
+import AppContainer from '../../components/AppContainer';
 
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
 
@@ -212,9 +214,12 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
     };
 
     return (
-        <div className="w-full max-w-6xl h-[80vh] rounded-2xl shadow-2xl text-white flex overflow-hidden bg-gradient-to-br from-teal-700 to-green-800 animate-fade-in">
+        <AppContainer
+            className="w-full max-w-6xl h-[80vh] flex text-white bg-gradient-to-br from-teal-700 to-green-800 animate-fade-in"
+            overrideBg={true}
+        >
             {/* Sidebar with User List */}
-            <aside className="w-1/3 bg-teal-900/50 flex flex-col border-r border-white/10 backdrop-blur-md">
+            <aside className="w-1/3 bg-black/20 flex flex-col border-r border-white/10">
                 <header className="p-4 border-b border-white/10 flex-shrink-0">
                     <h2 className="text-xl font-bold tracking-wide">Chats</h2>
                 </header>
@@ -259,7 +264,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
             <main className="w-2/3 flex flex-col bg-black/10">
                 {selectedUser ? (
                     <>
-                        <header className="p-4 bg-white/5 flex-shrink-0 border-b border-white/10 backdrop-blur-md flex items-center">
+                        <header className="p-4 bg-white/5 flex-shrink-0 border-b border-white/10 flex items-center">
                              {selectedUser.id === LYNX_AI_USER.id ? (
                                  <div className="flex items-center text-cyan-300">
                                      <LynixLogo />
@@ -286,7 +291,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
                                         const isMe = msg.senderId === currentUser?.id;
                                         return (
                                             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                                                <div className={`max-w-[80%] lg:max-w-md px-5 py-3 rounded-2xl shadow-sm backdrop-blur-sm ${
+                                                <div className={`max-w-[80%] lg:max-w-md px-5 py-3 rounded-2xl shadow-sm ${
                                                     isMe 
                                                         ? 'bg-blue-600/90 text-white rounded-br-none' 
                                                         : 'bg-slate-700/80 text-white rounded-bl-none'
@@ -315,7 +320,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
                             <div ref={messagesEndRef} />
                         </div>
 
-                        <form onSubmit={handleSendMessage} className="p-4 bg-white/5 flex-shrink-0 border-t border-white/10 backdrop-blur-md">
+                        <form onSubmit={handleSendMessage} className="p-4 bg-white/5 flex-shrink-0 border-t border-white/10">
                             <div className="flex items-center relative">
                                 <input
                                     type="text"
@@ -347,7 +352,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
                     </div>
                 )}
             </main>
-        </div>
+        </AppContainer>
     );
 };
 
