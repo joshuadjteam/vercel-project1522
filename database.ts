@@ -33,13 +33,10 @@ export const database = {
     getUserProfile: async (auth_id: string): Promise<{ profile: User | null, error: string | null }> => {
         const { data, error } = await supabase.functions.invoke('get-user-profile');
 
-        if (error) {
-            console.error('Error invoking get-user-profile function:', error);
-            return { profile: null, error: error.message };
-        }
-        if (!data || data.error) {
-            const errorMessage = data?.error || 'No data returned from get-user-profile function.';
-            console.error('Error from get-user-profile function:', errorMessage);
+        if (error || (data && data.error)) {
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to get user profile.';
+            console.error('Error from get-user-profile function:', errorMessage, { error, data });
             return { profile: null, error: errorMessage };
         }
         if (!data.user) {
@@ -53,7 +50,9 @@ export const database = {
             body: { action: 'getUsers' }
         });
         if (error || !data || data.error) {
-            console.error('Error from manage-users function (getUsers):', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to get users.';
+            console.error('Error from manage-users function (getUsers):', errorMessage, { error, data });
             return [];
         }
         return (data.users || []).map(mapDbUserToUser);
@@ -64,7 +63,9 @@ export const database = {
             body: { action: 'getDirectory' }
         });
         if (error || !data || data.error) {
-            console.error('Error from manage-users function (getDirectory):', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to get directory.';
+            console.error('Error from manage-users function (getDirectory):', errorMessage, { error, data });
             return [];
         }
         return (data.users || []).map(mapDbUserToUser);
@@ -85,8 +86,9 @@ export const database = {
         });
         
         if (error || !data || data.error) {
-            const errorMessage = error?.message || data?.error || 'Failed to add user.';
-            console.error('Error from manage-users function (addUser):', errorMessage);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to add user.';
+            console.error('Error from manage-users function (addUser):', errorMessage, { error, data });
             return { user: null, error: errorMessage };
         }
         return { user: mapDbUserToUser(data.user), error: null };
@@ -101,7 +103,9 @@ export const database = {
             }
         });
         if (error || !data || data.error) {
-            console.error('Error from manage-users function (updateUser):', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to update user.';
+            console.error('Error from manage-users function (updateUser):', errorMessage, { error, data });
             return null;
         }
         return mapDbUserToUser(data.user);
@@ -117,8 +121,9 @@ export const database = {
         });
 
         if (error || (data && data.error)) {
-            const errorMessage = error?.message || data?.error || 'Failed to update password.';
-            console.error('Error from manage-users function (updatePassword):', errorMessage);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to update password.';
+            console.error('Error from manage-users function (updatePassword):', errorMessage, { error, data });
             return { error: errorMessage };
         }
         return { error: null };
@@ -134,8 +139,9 @@ export const database = {
             body: { action: 'deleteUser', auth_id: userToDelete.auth_id }
         });
         if (error || (data && data.error)) {
-            const errorMessage = error?.message || data?.error;
-            console.error('Error from manage-users function (deleteUser):', errorMessage);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to delete user.';
+            console.error('Error from manage-users function (deleteUser):', errorMessage, { error, data });
             return { error: errorMessage };
         }
         return { error: null };
@@ -146,11 +152,14 @@ export const database = {
             body: { action: 'getUserByUsername', username: username }
         });
         if (error) {
+            // This is a special case where a 404 is expected and not a system error
             console.log(`User ${username} not found.`);
             return null;
         }
         if (!data || data.error) {
-            console.error('Error from manage-users function (getUserByUsername):', data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || `Failed to get user ${username}.`;
+            console.error('Error from manage-users function (getUserByUsername):', errorMessage, { error, data });
             return null;
         }
         return mapDbUserToUser(data.user);
@@ -162,7 +171,9 @@ export const database = {
             body: JSON.stringify({ resource: 'stats' })
         });
         if (error || !data || data.error) {
-            console.error('Error fetching admin stats:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to get admin stats.';
+            console.error('Error fetching admin stats:', errorMessage, { error, data });
             return fallbackStats;
         }
         return data.stats || fallbackStats;
@@ -174,7 +185,9 @@ export const database = {
             body: JSON.stringify({ resource: 'drive', action: 'get-oauth-config' })
         });
         if (error || !data || data.error) {
-            console.error('Error fetching Google Drive OAuth config:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch Google Drive OAuth config.';
+            console.error('Error fetching Google Drive OAuth config:', errorMessage, { error, data });
             return null;
         }
         return data;
@@ -190,8 +203,9 @@ export const database = {
         });
 
         if (error || (data && data.error)) {
-            const errorMessage = error?.message || data?.error || 'Failed to link account.';
-            console.error('Error from loginAndLinkDrive function:', errorMessage);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to link account.';
+            console.error('Error from loginAndLinkDrive function:', errorMessage, { error, data });
             return { success: false, error: errorMessage };
         }
 
@@ -203,7 +217,9 @@ export const database = {
             body: JSON.stringify({ resource: 'drive', action: 'exchange-code', payload: { code } })
         });
         if (error || !data || data.error) {
-            console.error('Error exchanging Google Drive code:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to exchange code.';
+            console.error('Error exchanging Google Drive code:', errorMessage, { error, data });
             return { success: false };
         }
         return { success: data.success };
@@ -215,8 +231,9 @@ export const database = {
         });
 
         if (error || (data && data.error)) {
-            const errorMessage = error?.message || data?.error || 'Failed to list files.';
-            console.error('Error from drive/list-files function:', errorMessage);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to list files.';
+            console.error('Error from drive/list-files function:', errorMessage, { error, data });
             const reauth = errorMessage.includes('re-link');
             return { error: errorMessage, reauth };
         }
@@ -229,7 +246,9 @@ export const database = {
             body: JSON.stringify({ resource: 'drive', action: 'check-status' })
         });
         if (error || !data || data.error) {
-            console.error('Error checking Drive link status:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to check link status.';
+            console.error('Error checking Drive link status:', errorMessage, { error, data });
             return false;
         }
         return data.isLinked;
@@ -240,7 +259,9 @@ export const database = {
             body: JSON.stringify({ resource: 'drive', action: 'unlink' })
         });
         if (error || !data || data.error) {
-            console.error('Error unlinking Drive:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to unlink drive.';
+            console.error('Error unlinking Drive:', errorMessage, { error, data });
             return { success: false };
         }
         return { success: data.success };
@@ -254,8 +275,9 @@ export const database = {
         });
 
         if (error || (data && data.error)) {
-            const errorMessage = error?.message || data?.error || 'Unknown error invoking voice service.';
-            console.error('Error invoking voice-service:', errorMessage);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Unknown error invoking voice service.';
+            console.error('Error invoking voice-service:', errorMessage, { error, data });
             throw new Error(errorMessage);
         }
         return data;
@@ -267,7 +289,9 @@ export const database = {
             body: JSON.stringify({ resource: 'mails', action: 'get' })
         });
         if (error || !data || data.error) {
-            console.error("Error fetching mails:", error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch mails.';
+            console.error("Error fetching mails:", errorMessage, { error, data });
             return { inbox: [], sent: [] };
         }
         const mails = data.mails || [];
@@ -281,7 +305,9 @@ export const database = {
             body: JSON.stringify({ resource: 'mails', action: 'send', payload: mailData })
         });
         if (error || !data || data.error) {
-            console.error('Error sending mail:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to send mail.';
+            console.error('Error sending mail:', errorMessage, { error, data });
             return null;
         }
         return data.mail;
@@ -292,7 +318,9 @@ export const database = {
             body: JSON.stringify({ resource: 'mails', action: 'markAsRead', payload: { id: mailId } })
         });
         if (error || (data && data.error)) {
-            console.error('Error marking mail as read:', error || data.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to mark mail as read.';
+            console.error('Error marking mail as read:', errorMessage, { error, data });
             return false;
         }
         return true;
@@ -303,7 +331,9 @@ export const database = {
             body: JSON.stringify({ resource: 'mails', action: 'delete', payload: { id: mailId } })
         });
         if (error || (data && data.error)) {
-            console.error('Error deleting mail:', error || data.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to delete mail.';
+            console.error('Error deleting mail:', errorMessage, { error, data });
             return false;
         }
         return true;
@@ -314,7 +344,9 @@ export const database = {
             body: JSON.stringify({ resource: 'mail_accounts', action: 'get' })
         });
         if (error || !data || data.error) {
-            console.error("Error fetching mail accounts:", error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch mail accounts.';
+            console.error("Error fetching mail accounts:", errorMessage, { error, data });
             return [];
         }
         return data.accounts || [];
@@ -325,7 +357,9 @@ export const database = {
             body: JSON.stringify({ resource: 'mail_accounts', action: 'add', payload: accountData })
         });
         if (error || !data || data.error) {
-            console.error('Error adding mail account:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to add mail account.';
+            console.error('Error adding mail account:', errorMessage, { error, data });
             return null;
         }
         return data.account;
@@ -336,8 +370,10 @@ export const database = {
             body: JSON.stringify({ resource: 'mails', action: 'sync', payload: { accountId } })
         });
         if (error || !data || data.error) {
-            console.error('Error syncing mail account:', error || data?.error);
-            return { success: false, message: error?.message || data?.error || 'Sync failed.' };
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Sync failed.';
+            console.error('Error syncing mail account:', errorMessage, { error, data });
+            return { success: false, message: errorMessage };
         }
         return { success: true, message: data.message || 'Sync complete.' };
     },
@@ -348,7 +384,9 @@ export const database = {
             body: JSON.stringify({ resource: 'contacts', action: 'get' })
         });
         if (error || !data || data.error) {
-            console.error('Error fetching contacts:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch contacts.';
+            console.error('Error fetching contacts:', errorMessage, { error, data });
             return [];
         }
         return data.contacts || [];
@@ -359,7 +397,9 @@ export const database = {
             body: JSON.stringify({ resource: 'contacts', action: 'add', payload: contactData })
         });
         if (error || !data || data.error) {
-            console.error('Error adding contact:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to add contact.';
+            console.error('Error adding contact:', errorMessage, { error, data });
             return null;
         }
         return data.contact;
@@ -370,7 +410,9 @@ export const database = {
             body: JSON.stringify({ resource: 'contacts', action: 'update', payload: contactData })
         });
         if (error || !data || data.error) {
-            console.error('Error updating contact:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to update contact.';
+            console.error('Error updating contact:', errorMessage, { error, data });
             return null;
         }
         return data.contact;
@@ -381,7 +423,9 @@ export const database = {
             body: JSON.stringify({ resource: 'contacts', action: 'delete', payload: { id: contactId } })
         });
         if (error || (data && data.error)) {
-            console.error('Error deleting contact:', error || data.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to delete contact.';
+            console.error('Error deleting contact:', errorMessage, { error, data });
             return false;
         }
         return true;
@@ -394,7 +438,9 @@ export const database = {
         });
 
         if (error || !data || data.error) {
-            console.error('Error fetching notes:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch notes.';
+            console.error('Error fetching notes:', errorMessage, { error, data });
             return [];
         }
         return (data.notes || []).map((n: any) => ({ ...n, createdAt: new Date(n.created_at), content: n.content || '' }));
@@ -406,7 +452,9 @@ export const database = {
         });
         
         if (error || !data || data.error) {
-            console.error('Error adding note:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to add note.';
+            console.error('Error adding note:', errorMessage, { error, data });
             return null;
         }
         const note = data.note;
@@ -419,7 +467,9 @@ export const database = {
         });
 
         if (error || !data || data.error) {
-            console.error('Error updating note:', error || data?.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to update note.';
+            console.error('Error updating note:', errorMessage, { error, data });
             return null;
         }
         const note = data.note;
@@ -431,7 +481,9 @@ export const database = {
             body: JSON.stringify({ resource: 'notes', action: 'delete', payload: { id: noteId } })
         });
         if (error || (data && data.error)) {
-            console.error('Error deleting note:', error || data.error);
+            const detailedError = (error as any)?.context?.json?.error;
+            const errorMessage = detailedError || data?.error || error?.message || 'Failed to delete note.';
+            console.error('Error deleting note:', errorMessage, { error, data });
             return false;
         }
         return true;
