@@ -34,11 +34,15 @@ export const database = {
     getUserProfile: async (auth_id: string): Promise<{ profile: User | null, error: string | null }> => {
         const { data, error } = await supabase.functions.invoke('get-user-profile');
 
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to get user profile.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error from get-user-profile function:', errorMessage, { error, data });
             return { profile: null, error: errorMessage };
+        }
+        if (data?.error) {
+            console.error('Error from get-user-profile function:', data.error, { error, data });
+            return { profile: null, error: data.error };
         }
         if (!data.user) {
             return { profile: null, error: 'User profile not found.' };
@@ -50,10 +54,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: { action: 'getUsers' }
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to get users.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error from manage-users function (getUsers):', errorMessage, { error, data });
+            return [];
+        }
+        if (data?.error) {
+            console.error('Error from manage-users function (getUsers):', data.error, { error, data });
             return [];
         }
         return (data.users || []).map(mapDbUserToUser);
@@ -63,10 +71,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: { action: 'getDirectory' }
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to get directory.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error from manage-users function (getDirectory):', errorMessage, { error, data });
+            return [];
+        }
+        if (data?.error) {
+            console.error('Error from manage-users function (getDirectory):', data.error, { error, data });
             return [];
         }
         return (data.users || []).map(mapDbUserToUser);
@@ -86,11 +98,15 @@ export const database = {
             }
         });
         
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to add user.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error from manage-users function (addUser):', errorMessage, { error, data });
             return { user: null, error: errorMessage };
+        }
+        if (data?.error) {
+            console.error('Error from manage-users function (addUser):', data.error, { error, data });
+            return { user: null, error: data.error };
         }
         return { user: mapDbUserToUser(data.user), error: null };
     },
@@ -103,10 +119,14 @@ export const database = {
                 sipVoice: userData.sipVoice 
             }
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to update user.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error from manage-users function (updateUser):', errorMessage, { error, data });
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error from manage-users function (updateUser):', data.error, { error, data });
             return null;
         }
         return mapDbUserToUser(data.user);
@@ -121,11 +141,15 @@ export const database = {
             },
         });
 
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to update password.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error from manage-users function (updatePassword):', errorMessage, { error, data });
             return { error: errorMessage };
+        }
+        if (data?.error) {
+            console.error('Error from manage-users function (updatePassword):', data.error, { error, data });
+            return { error: data.error };
         }
         return { error: null };
     },
@@ -139,11 +163,15 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: { action: 'deleteUser', auth_id: userToDelete.auth_id }
         });
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to delete user.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error from manage-users function (deleteUser):', errorMessage, { error, data });
             return { error: errorMessage };
+        }
+        if (data?.error) {
+            console.error('Error from manage-users function (deleteUser):', data.error, { error, data });
+            return { error: data.error };
         }
         return { error: null };
     },
@@ -153,14 +181,11 @@ export const database = {
             body: { action: 'getUserByUsername', username: username }
         });
         if (error) {
-            // This is a special case where a 404 is expected and not a system error
             console.log(`User ${username} not found.`);
             return null;
         }
-        if (!data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || `Failed to get user ${username}.`;
-            console.error('Error from manage-users function (getUserByUsername):', errorMessage, { error, data });
+        if (data?.error) {
+            console.error('Error from manage-users function (getUserByUsername):', data.error, { error, data });
             return null;
         }
         return mapDbUserToUser(data.user);
@@ -171,10 +196,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'stats' })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to get admin stats.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error fetching admin stats:', errorMessage, { error, data });
+            return fallbackStats;
+        }
+        if (data?.error) {
+            console.error('Error fetching admin stats:', data.error, { error, data });
             return fallbackStats;
         }
         return data.stats || fallbackStats;
@@ -185,10 +214,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'drive', action: 'get-oauth-config' })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch Google Drive OAuth config.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error fetching Google Drive OAuth config:', errorMessage, { error, data });
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error fetching Google Drive OAuth config:', data.error, { error, data });
             return null;
         }
         return data;
@@ -203,13 +236,16 @@ export const database = {
             })
         });
 
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to link account.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error from loginAndLinkDrive function:', errorMessage, { error, data });
             return { success: false, error: errorMessage };
         }
-
+        if (data?.error) {
+            console.error('Error from loginAndLinkDrive function:', data.error, { error, data });
+            return { success: false, error: data.error };
+        }
         return { success: true };
     },
 
@@ -217,10 +253,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'drive', action: 'exchange-code', payload: { code } })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to exchange code.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error exchanging Google Drive code:', errorMessage, { error, data });
+            return { success: false };
+        }
+        if (data?.error) {
+            console.error('Error exchanging Google Drive code:', data.error, { error, data });
             return { success: false };
         }
         return { success: data.success };
@@ -230,10 +270,12 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'drive', action: 'list-files' })
         });
-
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to list files.';
+        let errorMessage = data?.error;
+        if (error) {
+            errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+        }
+        if(errorMessage) {
             console.error('Error from drive/list-files function:', errorMessage, { error, data });
             const reauth = errorMessage.includes('re-link');
             return { error: errorMessage, reauth };
@@ -246,10 +288,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'drive', action: 'check-status' })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to check link status.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error checking Drive link status:', errorMessage, { error, data });
+            return false;
+        }
+        if (data?.error) {
+            console.error('Error checking Drive link status:', data.error, { error, data });
             return false;
         }
         return data.isLinked;
@@ -259,10 +305,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'drive', action: 'unlink' })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to unlink drive.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error unlinking Drive:', errorMessage, { error, data });
+            return { success: false };
+        }
+        if (data?.error) {
+            console.error('Error unlinking Drive:', data.error, { error, data });
             return { success: false };
         }
         return { success: data.success };
@@ -275,11 +325,15 @@ export const database = {
             body: { text }
         });
 
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Unknown error invoking voice service.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error invoking voice-service:', errorMessage, { error, data });
             throw new Error(errorMessage);
+        }
+        if (data?.error) {
+            console.error('Error invoking voice-service:', data.error, { error, data });
+            throw new Error(data.error);
         }
         return data;
     },
@@ -289,10 +343,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'get' })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch mails.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error("Error fetching mails:", errorMessage, { error, data });
+            return { inbox: [], sent: [] };
+        }
+        if (data?.error) {
+            console.error("Error fetching mails:", data.error, { error, data });
             return { inbox: [], sent: [] };
         }
         const mails = data.mails || [];
@@ -305,10 +363,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'send', payload: mailData })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to send mail.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error sending mail:', errorMessage, { error, data });
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error sending mail:', data.error, { error, data });
             return null;
         }
         return data.mail;
@@ -318,10 +380,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'markAsRead', payload: { id: mailId } })
         });
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to mark mail as read.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error marking mail as read:', errorMessage, { error, data });
+            return false;
+        }
+        if (data?.error) {
+            console.error('Error marking mail as read:', data.error, { error, data });
             return false;
         }
         return true;
@@ -331,10 +397,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'delete', payload: { id: mailId } })
         });
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to delete mail.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error deleting mail:', errorMessage, { error, data });
+            return false;
+        }
+        if (data?.error) {
+            console.error('Error deleting mail:', data.error, { error, data });
             return false;
         }
         return true;
@@ -344,10 +414,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mail_accounts', action: 'get' })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch mail accounts.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error("Error fetching mail accounts:", errorMessage, { error, data });
+            return [];
+        }
+        if (data?.error) {
+            console.error("Error fetching mail accounts:", data.error, { error, data });
             return [];
         }
         return data.accounts || [];
@@ -357,10 +431,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mail_accounts', action: 'add', payload: accountData })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to add mail account.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error adding mail account:', errorMessage, { error, data });
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error adding mail account:', data.error, { error, data });
             return null;
         }
         return data.account;
@@ -370,11 +448,15 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'sync', payload: { accountId } })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Sync failed.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error syncing mail account:', errorMessage, { error, data });
             return { success: false, message: errorMessage };
+        }
+        if (data?.error) {
+            console.error('Error syncing mail account:', data.error, { error, data });
+            return { success: false, message: data.error };
         }
         return { success: true, message: data.message || 'Sync complete.' };
     },
@@ -384,10 +466,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'get' })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch contacts.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error fetching contacts:', errorMessage, { error, data });
+            return [];
+        }
+        if (data?.error) {
+            console.error('Error fetching contacts:', data.error, { error, data });
             return [];
         }
         return data.contacts || [];
@@ -397,10 +483,14 @@ export const database = {
          const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'add', payload: contactData })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to add contact.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error adding contact:', errorMessage, { error, data });
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error adding contact:', data.error, { error, data });
             return null;
         }
         return data.contact;
@@ -410,10 +500,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'update', payload: contactData })
         });
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to update contact.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error updating contact:', errorMessage, { error, data });
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error updating contact:', data.error, { error, data });
             return null;
         }
         return data.contact;
@@ -423,10 +517,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'delete', payload: { id: contactId } })
         });
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to delete contact.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error deleting contact:', errorMessage, { error, data });
+            return false;
+        }
+        if (data?.error) {
+            console.error('Error deleting contact:', data.error, { error, data });
             return false;
         }
         return true;
@@ -438,10 +536,14 @@ export const database = {
             body: JSON.stringify({ resource: 'notes', action: 'get' })
         });
 
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to fetch notes.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error fetching notes:', errorMessage, { error, data });
+            return [];
+        }
+        if (data?.error) {
+            console.error('Error fetching notes:', data.error, { error, data });
             return [];
         }
         return (data.notes || []).map((n: any) => ({ ...n, createdAt: new Date(n.created_at), content: n.content || '' }));
@@ -452,10 +554,14 @@ export const database = {
             body: JSON.stringify({ resource: 'notes', action: 'add', payload: noteData })
         });
         
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to add note.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error adding note:', errorMessage, { error, data });
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error adding note:', data.error, { error, data });
             return null;
         }
         const note = data.note;
@@ -467,10 +573,14 @@ export const database = {
             body: JSON.stringify({ resource: 'notes', action: 'update', payload: noteData })
         });
 
-        if (error || !data || data.error) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to update note.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error updating note:', errorMessage, { error, data });
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error updating note:', data.error, { error, data });
             return null;
         }
         const note = data.note;
@@ -481,10 +591,14 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'notes', action: 'delete', payload: { id: noteId } })
         });
-        if (error || (data && data.error)) {
-            const detailedError = (error as any)?.context?.json?.error;
-            const errorMessage = detailedError || data?.error || error?.message || 'Failed to delete note.';
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
             console.error('Error deleting note:', errorMessage, { error, data });
+            return false;
+        }
+        if (data?.error) {
+            console.error('Error deleting note:', data.error, { error, data });
             return false;
         }
         return true;

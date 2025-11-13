@@ -75,25 +75,24 @@ const AuthCallbackPage: React.FC<AuthCallbackPageProps> = ({ navigate }) => {
 
         } catch (err: any) {
             setStep('error');
-            const detailedError = err?.context?.json?.error;
-            setMessage(detailedError || err.message || 'An unexpected error occurred while linking your account.');
+            setMessage(err.message || 'An unexpected error occurred while linking your account.');
             console.error(err);
         }
     };
     
     if (step === 'error') {
         return (
-            <div className="w-full max-w-md bg-teal-900 rounded-2xl shadow-2xl p-10 text-white flex flex-col items-center justify-center text-center">
-                <div className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center mb-6 ring-4 ring-red-600/30">
+            <div className="w-full max-w-md bg-teal-900/80 backdrop-blur-sm rounded-2xl shadow-2xl p-10 text-white flex flex-col items-center justify-center text-center border border-teal-700">
+                <div className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mb-6">
                     <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </div>
-                <h1 className="text-3xl font-bold text-red-500 mb-3">An Error Occurred</h1>
+                <h1 className="text-3xl font-bold text-red-400 mb-3">An Error Occurred</h1>
                 <p className="mb-8 text-gray-200">{message}</p>
                 <button 
                     onClick={() => navigate('signin')} 
-                    className="bg-purple-800 hover:bg-purple-900 text-white font-bold py-3 px-8 rounded-lg transition-colors"
+                    className="bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 px-8 rounded-lg transition-colors"
                 >
                     Back to Sign In
                 </button>
