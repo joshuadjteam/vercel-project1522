@@ -96,12 +96,16 @@ serve(async (req)=>{
             throw { status: 400, message: 'No refresh token received from Google. Please ensure you are using "prompt=consent" in your auth URL.' };
         }
         
-        // 3. Save the refresh token associated with the now-verified user
-        const { error: dbError } = await supabaseAdmin
-            .from('drive_tokens')
-            .upsert({ user_auth_id: authUser.id, refresh_token: refresh_token }, { onConflict: 'user_auth_id' });
+        // 3. Save the refresh token to the user's metadata
+        const { data: { user: userToUpdate }, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(authUser.id);
+        if (getUserError) throw getUserError;
 
-        if (dbError) throw dbError;
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            authUser.id,
+            { user_metadata: { ...userToUpdate.user_metadata, drive_refresh_token: refresh_token } }
+        );
+
+        if (updateError) throw updateError;
 
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
@@ -136,121 +140,139 @@ serve(async (req)=>{
       }
       break;
       case 'drive': {
-        switch(action) {
-            case 'exchange-code': {
-                const { code } = payload;
-                if (!code) throw { status: 400, message: 'Authorization code is required.' };
+        // This block needs an access token for all its actions.
+        const { data: { user: userWithMetadata }, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(authUser.id);
+        if (getUserError) throw getUserError;
+        const refresh_token = userWithMetadata?.user_metadata?.drive_refresh_token;
+        if (!refresh_token) {
+            throw { status: 401, message: 'Google Drive token not found. Please link your account.' };
+        }
 
-                const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        code,
-                        client_id: Deno.env.get('GCP_CLIENT_ID'),
-                        client_secret: Deno.env.get('GCP_CLIENT_SECRET'),
-                        redirect_uri: Deno.env.get('GCP_REDIRECT_URI'),
-                        grant_type: 'authorization_code',
-                    })
-                });
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                client_id: Deno.env.get('GCP_CLIENT_ID'),
+                client_secret: Deno.env.get('GCP_CLIENT_SECRET'),
+                refresh_token: refresh_token,
+                grant_type: 'refresh_token',
+            })
+        });
 
-                if (!tokenResponse.ok) {
-                    const errorBody = await tokenResponse.json();
-                    console.error("Google token exchange failed:", errorBody);
-                    throw { status: 400, message: `Google token exchange failed: ${errorBody.error_description}` };
-                }
-
-                const tokens = await tokenResponse.json();
-                const { refresh_token } = tokens;
-
-                if (!refresh_token) {
-                    throw { status: 400, message: 'No refresh token received from Google. Please ensure you are using "prompt=consent" in your auth URL.' };
-                }
-
-                const { error: dbError } = await supabaseAdmin
-                    .from('drive_tokens')
-                    .upsert({ user_auth_id: authUser.id, refresh_token: refresh_token }, { onConflict: 'user_auth_id' });
-
-                if (dbError) throw dbError;
-
-                return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        if (!tokenResponse.ok) {
+            const errorBody = await tokenResponse.json();
+            if (errorBody.error === 'invalid_grant') {
+                const newMetadata = { ...userWithMetadata.user_metadata };
+                delete newMetadata.drive_refresh_token;
+                await supabaseAdmin.auth.admin.updateUserById(authUser.id, { user_metadata: newMetadata });
+                throw { status: 401, message: 'Access revoked. Please re-link your Google Drive account.' };
             }
-            case 'check-status': {
-                const { count, error } = await supabaseAdmin
-                    .from('drive_tokens')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('user_auth_id', authUser.id);
-                
-                if (error) throw error;
+            console.error("Google access token refresh failed:", errorBody);
+            throw { status: 500, message: 'Failed to refresh Google access token.' };
+        }
+        const { access_token } = await tokenResponse.json();
 
-                return new Response(JSON.stringify({ isLinked: (count ?? 0) > 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        switch(action) {
+            case 'check-status': {
+                return new Response(JSON.stringify({ isLinked: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
             }
             case 'unlink': {
-                const { error } = await supabaseAdmin
-                    .from('drive_tokens')
-                    .delete()
-                    .eq('user_auth_id', authUser.id);
-
-                if (error) throw error;
+                const newMetadata = { ...userWithMetadata.user_metadata };
+                delete newMetadata.drive_refresh_token;
+                const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, { user_metadata: newMetadata });
+                if (updateError) throw updateError;
                 return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
             }
             case 'list-files': {
-                // 1. Get refresh token from DB
-                const { data: tokenData, error: tokenError } = await supabaseAdmin
-                    .from('drive_tokens')
-                    .select('refresh_token')
-                    .eq('user_auth_id', authUser.id)
-                    .single();
-                
-                if (tokenError || !tokenData) {
-                    throw { status: 404, message: 'Google Drive token not found. Please link your account.' };
-                }
-                const { refresh_token } = tokenData;
-            
-                // 2. Exchange refresh token for access token
-                const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        client_id: Deno.env.get('GCP_CLIENT_ID'),
-                        client_secret: Deno.env.get('GCP_CLIENT_SECRET'),
-                        refresh_token: refresh_token,
-                        grant_type: 'refresh_token',
-                    })
-                });
-            
-                if (!tokenResponse.ok) {
-                    const errorBody = await tokenResponse.json();
-                    if (errorBody.error === 'invalid_grant') {
-                        // Token was revoked by user
-                        await supabaseAdmin.from('drive_tokens').delete().eq('user_auth_id', authUser.id);
-                        throw { status: 401, message: 'Access revoked. Please re-link your Google Drive account.' };
-                    }
-                    console.error("Google access token refresh failed:", errorBody);
-                    throw { status: 500, message: 'Failed to refresh Google access token.' };
-                }
-            
-                const { access_token } = await tokenResponse.json();
-                
-                // 3. Call Google Drive API
+                const { query } = payload || {};
                 const driveApiUrl = new URL('https://www.googleapis.com/drive/v3/files');
                 driveApiUrl.searchParams.set('fields', 'files(id, name, mimeType, modifiedTime, webViewLink, iconLink)');
-                driveApiUrl.searchParams.set('pageSize', '100'); // Limit to 100 files for now
-            
-                const driveResponse = await fetch(driveApiUrl.toString(), {
-                    headers: {
-                        'Authorization': `Bearer ${access_token}`
-                    }
-                });
-            
+                driveApiUrl.searchParams.set('pageSize', '100');
+                if (query) {
+                    driveApiUrl.searchParams.set('q', query);
+                }
+                const driveResponse = await fetch(driveApiUrl.toString(), { headers: { 'Authorization': `Bearer ${access_token}` } });
                 if (!driveResponse.ok) {
                     const errorBody = await driveResponse.json();
-                    console.error("Google Drive API error:", errorBody);
                     throw { status: 500, message: `Failed to fetch files from Google Drive: ${errorBody.error.message}` };
                 }
-            
                 const driveData = await driveResponse.json();
-                
                 return new Response(JSON.stringify({ files: driveData.files }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
+            case 'create-file': {
+                const { name } = payload;
+                if (!name) throw { status: 400, message: 'File name is required.' };
+                const driveResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, mimeType: 'text/plain' }),
+                });
+                if (!driveResponse.ok) {
+                    const errorBody = await driveResponse.json();
+                    throw { status: 500, message: `Failed to create file in Google Drive: ${errorBody.error.message}` };
+                }
+                const newFile = await driveResponse.json();
+                return new Response(JSON.stringify({ file: newFile }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
+            case 'get-file-details': {
+                const { fileId } = payload;
+                if (!fileId) throw { status: 400, message: 'File ID is required.' };
+                const metaResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name`, { headers: { 'Authorization': `Bearer ${access_token}` } });
+                if (!metaResponse.ok) {
+                    const errorBody = await metaResponse.json();
+                    throw { status: 500, message: `Failed to get file metadata: ${errorBody.error.message}` };
+                }
+                const metadata = await metaResponse.json();
+                const contentResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { 'Authorization': `Bearer ${access_token}` } });
+                let content = '';
+                if (contentResponse.ok && contentResponse.status !== 204) {
+                    content = await contentResponse.text();
+                }
+                return new Response(JSON.stringify({ file: { ...metadata, content } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
+            case 'update-file': {
+                const { fileId, name, content } = payload;
+                if (!fileId) throw { status: 400, message: 'File ID is required.' };
+                if (name) {
+                    const metaUpdateRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+                        method: 'PATCH',
+                        headers: { 'Authorization': `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name }),
+                    });
+                    if (!metaUpdateRes.ok) {
+                        const errorBody = await metaUpdateRes.json();
+                        throw { status: 500, message: `Failed to update file metadata: ${errorBody.error.message}` };
+                    }
+                }
+                if (typeof content === 'string') {
+                    const contentUpdateRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+                        method: 'PATCH',
+                        headers: { 'Authorization': `Bearer ${access_token}`, 'Content-Type': 'text/plain' },
+                        body: content,
+                    });
+                     if (!contentUpdateRes.ok) {
+                        const errorBody = await contentUpdateRes.json();
+                        throw { status: 500, message: `Failed to update file content: ${errorBody.error.message}` };
+                    }
+                }
+                return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
+            case 'delete-file': {
+                const { fileId } = payload;
+                if (!fileId) throw { status: 400, message: 'File ID is required.' };
+                const deleteResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${access_token}` },
+                });
+                if (deleteResponse.status !== 204) {
+                    try {
+                        const errorBody = await deleteResponse.json();
+                        throw { status: deleteResponse.status, message: `Failed to delete file: ${errorBody.error.message}` };
+                    } catch(e) {
+                         throw { status: deleteResponse.status, message: `Failed to delete file.` };
+                    }
+                }
+                return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
             }
         }
       }

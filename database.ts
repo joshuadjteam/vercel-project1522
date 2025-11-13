@@ -248,26 +248,9 @@ export const database = {
         return { success: true };
     },
 
-    exchangeGoogleDriveCode: async (code: string): Promise<{ success: boolean }> => {
+    getDriveFiles: async (query?: string): Promise<{ files?: DriveFile[], error?: string, reauth?: boolean }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: JSON.stringify({ resource: 'drive', action: 'exchange-code', payload: { code } })
-        });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
-            console.error('Error exchanging Google Drive code:', errorMessage, { error, data });
-            return { success: false };
-        }
-        if (data?.error) {
-            console.error('Error exchanging Google Drive code:', data.error, { error, data });
-            return { success: false };
-        }
-        return { success: data.success };
-    },
-
-    getDriveFiles: async (): Promise<{ files?: DriveFile[], error?: string, reauth?: boolean }> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: JSON.stringify({ resource: 'drive', action: 'list-files' })
+            body: JSON.stringify({ resource: 'drive', action: 'list-files', payload: { query } })
         });
         let errorMessage = data?.error;
         if (error) {
@@ -283,18 +266,60 @@ export const database = {
         return { files: data.files || [] };
     },
 
+    createDriveFile: async (name: string): Promise<{ file?: DriveFile, error?: string }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: JSON.stringify({ resource: 'drive', action: 'create-file', payload: { name } })
+        });
+        if (error || data?.error) {
+            const errorMessage = (error?.message || data?.error) as string;
+            console.error('Error creating drive file:', errorMessage);
+            return { error: errorMessage };
+        }
+        return { file: data.file };
+    },
+
+    getDriveFileDetails: async (fileId: string): Promise<{ file?: DriveFile & { content: string }, error?: string }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: JSON.stringify({ resource: 'drive', action: 'get-file-details', payload: { fileId } })
+        });
+        if (error || data?.error) {
+            const errorMessage = (error?.message || data?.error) as string;
+            console.error('Error getting drive file details:', errorMessage);
+            return { error: errorMessage };
+        }
+        return { file: data.file };
+    },
+
+    updateDriveFile: async (fileId: string, updates: { name?: string, content?: string }): Promise<{ success: boolean, error?: string }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: JSON.stringify({ resource: 'drive', action: 'update-file', payload: { fileId, ...updates } })
+        });
+        if (error || data?.error) {
+            const errorMessage = (error?.message || data?.error) as string;
+            console.error('Error updating drive file:', errorMessage);
+            return { success: false, error: errorMessage };
+        }
+        return { success: data.success };
+    },
+    
+    deleteDriveFile: async (fileId: string): Promise<{ success: boolean, error?: string }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: JSON.stringify({ resource: 'drive', action: 'delete-file', payload: { fileId } })
+        });
+        if (error || data?.error) {
+            const errorMessage = (error?.message || data?.error) as string;
+            console.error('Error deleting drive file:', errorMessage);
+            return { success: false, error: errorMessage };
+        }
+        return { success: true };
+    },
+
     isDriveLinked: async (): Promise<boolean> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'drive', action: 'check-status' })
         });
         if (error) {
-            let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
-            console.error('Error checking Drive link status:', errorMessage, { error, data });
-            return false;
-        }
-        if (data?.error) {
-            console.error('Error checking Drive link status:', data.error, { error, data });
+            // An error (like token not found) implies not linked.
             return false;
         }
         return data.isLinked;
@@ -529,77 +554,18 @@ export const database = {
         return true;
     },
 
-    // --- Notepad Service Functions ---
+    // --- Notepad Service Functions (DEPRECATED - Now uses Drive) ---
     getNotesForUser: async (username: string): Promise<Note[]> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: JSON.stringify({ resource: 'notes', action: 'get' })
-        });
-
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
-            console.error('Error fetching notes:', errorMessage, { error, data });
-            return [];
-        }
-        if (data?.error) {
-            console.error('Error fetching notes:', data.error, { error, data });
-            return [];
-        }
-        return (data.notes || []).map((n: any) => ({ ...n, createdAt: new Date(n.created_at), content: n.content || '' }));
+        // This function is no longer used by the NotepadApp but is kept for potential future use or other apps.
+        return [];
     },
-
     addNote: async (noteData: Omit<Note, 'id' | 'createdAt' | 'owner'>): Promise<Note | null> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: JSON.stringify({ resource: 'notes', action: 'add', payload: noteData })
-        });
-        
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
-            console.error('Error adding note:', errorMessage, { error, data });
-            return null;
-        }
-        if (data?.error) {
-            console.error('Error adding note:', data.error, { error, data });
-            return null;
-        }
-        const note = data.note;
-        return { ...note, createdAt: new Date(note.created_at), content: note.content || '' };
+       return null;
     },
-
     updateNote: async (noteData: Note): Promise<Note | null> => {
-       const { data, error } = await supabase.functions.invoke('app-service', {
-            body: JSON.stringify({ resource: 'notes', action: 'update', payload: noteData })
-        });
-
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
-            console.error('Error updating note:', errorMessage, { error, data });
-            return null;
-        }
-        if (data?.error) {
-            console.error('Error updating note:', data.error, { error, data });
-            return null;
-        }
-        const note = data.note;
-        return { ...note, createdAt: new Date(note.created_at), content: note.content || '' };
+       return null;
     },
-
     deleteNote: async (noteId: number): Promise<boolean> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: JSON.stringify({ resource: 'notes', action: 'delete', payload: { id: noteId } })
-        });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
-            console.error('Error deleting note:', errorMessage, { error, data });
-            return false;
-        }
-        if (data?.error) {
-            console.error('Error deleting note:', data.error, { error, data });
-            return false;
-        }
-        return true;
+        return false;
     },
 };
