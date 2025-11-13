@@ -144,10 +144,12 @@ const AppContent: React.FC = () => {
         }
     };
     
+    const isConsolePage = isLoggedIn && (currentPage === 'home' || currentPage === 'console');
+
     return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500 font-sans transition-colors duration-300">
+        <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isConsolePage ? '' : 'bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500'}`}>
             <Header navigate={navigate} isDark={isDark} setIsDark={setIsDark} />
-            <main className="flex-grow flex items-center justify-center p-4 overflow-hidden">
+            <main className={`flex-grow flex items-center justify-center overflow-hidden ${isConsolePage ? '' : 'p-4'}`}>
                 <div key={currentPage} className="w-full h-full flex items-center justify-center animate-fade-in">
                     {renderPage()}
                 </div>
