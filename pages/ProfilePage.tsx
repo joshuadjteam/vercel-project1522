@@ -158,7 +158,7 @@ const LynxAITabContent = () => {
         setIsLoading(true);
 
         try {
-            const response = await geminiService.getHelpResponse(input);
+            const response = await geminiService.getChatAIResponse(input);
             const aiMessage: Message = { sender: 'ai', text: response };
             setMessages(prev => [...prev, aiMessage]);
         } catch (error) {

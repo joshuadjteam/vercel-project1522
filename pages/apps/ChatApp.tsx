@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
@@ -165,7 +164,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
             setIsAiThinking(true);
 
             try {
-                const responseText = await geminiService.getHelpResponse(textToSend);
+                const responseText = await geminiService.getChatAIResponse(textToSend);
                 const aiMsg: ChatMessage = {
                     id: Date.now() + 1,
                     senderId: LYNX_AI_USER.id,

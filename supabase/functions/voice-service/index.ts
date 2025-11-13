@@ -32,11 +32,7 @@ serve(async (req) => {
     }
 
     // --- 1. Get AI Response from Gemini ---
-    const geminiApiKey = Deno.env.get('API_KEY');
-    if (!geminiApiKey) {
-        throw new Error("Gemini API key not configured.");
-    }
-    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+    const ai = new GoogleGenAI({ apiKey: 'AIzaSyC_t4h2CfS-gS5j4c5dLon84ay9l8dW9fU' });
 
     const geminiResponse: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
