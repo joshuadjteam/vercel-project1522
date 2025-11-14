@@ -39,6 +39,11 @@ serve(async (req) => {
     const payload = body;
     const { action } = payload;
     
+    const normalizeEmail = (email: any) => {
+        if (typeof email !== 'string') return null;
+        return email.trim().toLowerCase();
+    };
+
     // Handle public actions that don't need auth first
     if (action === 'getDirectory' || action === 'getUsers') {
         const { data, error } = await supabaseAdmin.from('users').select('*').order('username', { ascending: true });
@@ -88,9 +93,9 @@ serve(async (req) => {
         });
       }
       case 'getUserByEmail': {
-        const { email } = payload;
-        if (!email) throw { message: 'Email is required.', status: 400 };
-        // Use .ilike for case-insensitive matching on the email address.
+        const email = normalizeEmail(payload.email);
+        if (!email) throw { message: 'A valid email string is required.', status: 400 };
+
         const { data, error } = await supabaseAdmin.from('users').select('*').ilike('email', email).single();
         if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found, which is ok
         return new Response(JSON.stringify({ user: data }), {
@@ -109,7 +114,10 @@ serve(async (req) => {
       }
       case 'createUser': {
         await ensureAdmin();
-        const { email, password, username, role, sipVoice, features, plan_name } = payload;
+        const { password, username, role, sipVoice, features, plan_name } = payload;
+        const email = normalizeEmail(payload.email);
+        if (!email) throw { status: 400, message: 'A valid email is required.' };
+
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: email,
           password: password,
@@ -139,17 +147,23 @@ serve(async (req) => {
       }
       case 'updateUser': {
         await ensureAdmin();
-        const { id, auth_id, email, password, username, role, sipVoice, features, plan_name } = payload;
-        const { data: profileData, error: profileError } = await supabaseAdmin
-          .from('users')
-          .update({
+        const { id, auth_id, password, username, role, sipVoice, features, plan_name } = payload;
+        const email = normalizeEmail(payload.email);
+        
+        const updatePayload: Record<string, any> = {
             username: username,
-            email: email,
             role: role,
             plan_name: plan_name,
             sip_voice: sipVoice,
             features: features,
-          })
+        };
+        if (email) {
+            updatePayload.email = email;
+        }
+
+        const { data: profileData, error: profileError } = await supabaseAdmin
+          .from('users')
+          .update(updatePayload)
           .eq('id', id)
           .select()
           .single();

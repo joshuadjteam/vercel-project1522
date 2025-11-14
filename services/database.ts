@@ -196,18 +196,23 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: { action: 'getUserByEmail', email }
         });
+
         if (error) {
-            if (!error.message.includes('PGRST116')) {
-                let errorMessage = error.message;
-                 if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
-                console.error('Error from manage-users function (getUserByEmail):', errorMessage, { error, data });
-            }
-            return null;
+            let errorMessage = error.message;
+            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            console.error('Error invoking manage-users (getUserByEmail):', errorMessage);
+            throw new Error("Database connection error during user validation.");
         }
+
         if (data?.error) {
-            console.error('Error from manage-users function (getUserByEmail):', data.error, { error, data });
+            console.error('Error from manage-users function (getUserByEmail):', data.error);
+            throw new Error("Database query error during user validation.");
+        }
+
+        if (!data.user) {
             return null;
         }
+
         return mapDbUserToUser(data.user);
     },
     
