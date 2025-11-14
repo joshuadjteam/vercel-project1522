@@ -95,7 +95,6 @@ export type Page =
     | 'signin' 
     | 'profile' 
     | 'admin'
-    | 'console'
     | 'app-phone'
     | 'app-chat'
     | 'app-localmail'

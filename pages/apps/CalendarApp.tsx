@@ -1,6 +1,4 @@
-
 import React, { useState } from 'react';
-import AppContainer from '../../components/AppContainer';
 
 const ChevronLeft = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>;
 const ChevronRight = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>;
@@ -60,7 +58,7 @@ const CalendarApp: React.FC = () => {
     };
 
     return (
-        <AppContainer className="w-full max-w-4xl text-light-text dark:text-white flex flex-col">
+        <div className="w-full h-full text-light-text dark:text-white flex flex-col">
             <div className="p-6 flex justify-between items-center bg-blue-600 text-white">
                 <div>
                     <h2 className="text-3xl font-bold">{monthNames[month]} {year}</h2>
@@ -79,7 +77,7 @@ const CalendarApp: React.FC = () => {
             <div className="grid grid-cols-7 bg-white/50 dark:bg-teal-900/20 flex-grow">
                 {renderCalendarDays()}
             </div>
-        </AppContainer>
+        </div>
     );
 };
 

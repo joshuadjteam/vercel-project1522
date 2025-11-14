@@ -3,13 +3,14 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Page, UserRole, AppLaunchable } from '../types';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
-import { useDesktop } from '../App';
+import HelpModal from '../components/HelpModal';
 
 // Icons
 const GridIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>;
 const SearchIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
 const SettingsIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const ProfileIconSvg = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
+const HelpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
 
 const wallpapers: Record<string, { name: string, class: string }> = {
@@ -29,6 +30,7 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
     const [launcherOpen, setLauncherOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+    const [isHelpModalOpen, setHelpModalOpen] = useState(false);
 
     const SHELF_APPS = useMemo(() => appsList.filter(app => ['app-phone', 'app-chat', 'app-localmail', 'app-files', 'app-contacts', 'app-chat-ai'].includes(app.id)), [appsList]);
     const ALL_APPS = useMemo(() => appsList.filter(app => !app.isHidden), [appsList]);
@@ -133,6 +135,16 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
                     </div>
                 </div>
             </div>
+             <div className="fixed bottom-5 right-5 z-50">
+                <button 
+                    onClick={() => setHelpModalOpen(true)} 
+                    className="w-14 h-14 bg-indigo-600 dark:bg-purple-600 rounded-full flex items-center justify-center text-white hover:bg-indigo-700 dark:hover:bg-purple-700 transition-colors shadow-lg group"
+                    aria-label="Help and Support"
+                >
+                    <HelpIcon />
+                </button>
+            </div>
+            <HelpModal isOpen={isHelpModalOpen} onClose={() => setHelpModalOpen(false)} />
         </div>
     );
 };

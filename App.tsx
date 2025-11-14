@@ -213,23 +213,25 @@ const AppContent: React.FC = () => {
         }
 
         setPageParams(params || {});
+        
+        const targetPage = page;
 
-        if (page.startsWith('app-')) {
+        if (targetPage.startsWith('app-')) {
             if (isWindowedConsole) {
-                setCurrentPage('console');
-                const appDefinition = appsList.find(app => app.page === page);
+                setCurrentPage('home');
+                const appDefinition = appsList.find(app => app.page === targetPage);
                 const appInfo = {
-                    title: appDefinition?.label || page.replace('app-', ''),
+                    title: appDefinition?.label || targetPage.replace('app-', ''),
                     icon: appDefinition?.icon,
                     props: { navigate, ...params },
                 };
-                openApp(page, appInfo);
+                openApp(targetPage, appInfo);
             } else {
                 // Full-screen app mode
-                setCurrentPage(page);
+                setCurrentPage(targetPage);
             }
         } else {
-            setCurrentPage(page);
+            setCurrentPage(targetPage);
         }
     }, [openApp, isWindowedConsole]);
 
@@ -278,7 +280,7 @@ const AppContent: React.FC = () => {
         const AppToRender = APPS_MAP[currentPage]?.component;
         if (AppToRender && !isWindowedConsole) {
             return (
-                <div className="w-full h-full flex flex-col bg-light-bg dark:bg-dark-bg">
+                <div className="w-full h-full flex flex-col">
                     <FullScreenAppHeader navigate={navigate} />
                     <div className="flex-grow overflow-auto relative">
                         {React.createElement(AppToRender, { ...pageParams, navigate })}
@@ -289,7 +291,6 @@ const AppContent: React.FC = () => {
 
         switch (currentPage) {
             case 'home':
-            case 'console':
                  return renderConsole();
             case 'contact': return <ContactPage />;
             case 'profile': return <ProfilePage navigate={navigate}/>;
@@ -307,7 +308,7 @@ const AppContent: React.FC = () => {
     
     // --- UI State Logic ---
     // A "console page" is a full-screen dashboard UI.
-    const isConsolePage = isLoggedIn && (currentPage === 'home' || currentPage === 'console');
+    const isConsolePage = isLoggedIn && currentPage === 'home';
     // A "full-screen app" is an app that takes over the view, used by non-windowed consoles.
     const isFullScreenApp = isLoggedIn && currentPage.startsWith('app-') && !isWindowedConsole;
 

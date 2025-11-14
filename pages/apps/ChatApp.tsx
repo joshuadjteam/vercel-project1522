@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { chatService } from '../../services/chatService';
 import { geminiService } from '../../services/geminiService';
 import { User, ChatMessage, UserRole } from '../../types';
-import AppContainer from '../../components/AppContainer';
 
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
 
@@ -214,10 +212,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
     };
 
     return (
-        <AppContainer
-            className="w-full h-full flex text-white bg-gradient-to-br from-teal-700 to-green-800"
-            overrideBg={true}
-        >
+        <div className="w-full h-full flex text-white bg-gradient-to-br from-teal-700 to-green-800">
             {/* Sidebar with User List */}
             <aside className="w-1/3 bg-black/20 flex flex-col border-r border-white/10">
                 <header className="p-4 border-b border-white/10 flex-shrink-0">
@@ -352,7 +347,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
                     </div>
                 )}
             </main>
-        </AppContainer>
+        </div>
     );
 };
 

@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { DriveFile } from '../../types';
-import AppContainer from '../../components/AppContainer';
 
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>;
@@ -91,7 +89,7 @@ const NotepadApp: React.FC = () => {
     };
 
     return (
-        <AppContainer className="w-full h-full text-light-text dark:text-white flex">
+        <div className="w-full h-full text-light-text dark:text-white flex bg-dark-card">
             {/* Notes List Sidebar */}
             <div className="w-1/3 border-r border-current border-opacity-20 bg-black/10 flex flex-col">
                 <div className="p-4 border-b border-current border-opacity-20 flex justify-between items-center">
@@ -151,7 +149,7 @@ const NotepadApp: React.FC = () => {
                     </div>
                 )}
             </div>
-        </AppContainer>
+        </div>
     );
 };
 

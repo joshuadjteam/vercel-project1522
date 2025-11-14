@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Page, UserRole, AppLaunchable, NavAction } from '../types';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
+import HelpModal from '../components/HelpModal';
 
 // --- Icons (Imported or passed, no local definitions) ---
 const GridIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>;
@@ -13,6 +14,7 @@ const LightIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.o
 const DarkIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>;
 const SignOutIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
 const ContactIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
+const HelpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
 const wallpapers: Record<string, { name: string, class: string }> = {
     canyon: { name: 'Canyon', class: 'bg-gradient-to-br from-[#23304e] via-[#e97451] to-[#f4a261]' },
@@ -38,6 +40,7 @@ const ConsolePage: React.FC<ConsolePageProps> = ({ navigate, appsList }) => {
     const [webMenuOpen, setWebMenuOpen] = useState(false);
     const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
     const [time, setTime] = useState(new Date());
+    const [isHelpModalOpen, setHelpModalOpen] = useState(false);
 
     const ALL_APPS = useMemo(() => appsList.filter(app => !app.isHidden), [appsList]);
     const DESKTOP_APPS = useMemo(() => appsList.filter(app => ['app-files', 'app-localmail', 'app-chat', 'app-contacts', 'app-console-switch'].includes(app.id)), [appsList]);
@@ -184,6 +187,16 @@ const ConsolePage: React.FC<ConsolePageProps> = ({ navigate, appsList }) => {
                     </div>
                 </div>
             </div>
+            <div className="fixed bottom-5 right-5 z-50">
+                <button 
+                    onClick={() => setHelpModalOpen(true)} 
+                    className="w-14 h-14 bg-indigo-600 dark:bg-purple-600 rounded-full flex items-center justify-center text-white hover:bg-indigo-700 dark:hover:bg-purple-700 transition-colors shadow-lg group"
+                    aria-label="Help and Support"
+                >
+                    <HelpIcon />
+                </button>
+            </div>
+            <HelpModal isOpen={isHelpModalOpen} onClose={() => setHelpModalOpen(false)} />
         </div>
     );
 };

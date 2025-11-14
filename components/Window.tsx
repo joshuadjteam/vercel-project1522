@@ -1,4 +1,3 @@
-
 import React, { useRef, useCallback } from 'react';
 import { WindowInstance, APPS_MAP } from '../App';
 
@@ -79,7 +78,7 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
                     <button onClick={() => onClose(win.id)} className="w-5 h-5 rounded-full bg-red-500 hover:bg-red-600" />
                 </div>
             </div>
-            <div className="flex-grow w-full h-full overflow-auto">
+            <div className="flex-grow w-full h-full overflow-auto relative">
                 <WindowContent {...win.props} />
             </div>
         </div>

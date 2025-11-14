@@ -1,6 +1,4 @@
-
 import React, { useState, useEffect } from 'react';
-import AppContainer from '../../components/AppContainer';
 
 type UnitCategory = 'length' | 'weight' | 'temperature';
 
@@ -104,71 +102,73 @@ const UnitConverterApp: React.FC = () => {
     };
 
     return (
-        <AppContainer className="w-full max-w-md p-8 text-light-text dark:text-white">
-            <h1 className="text-3xl font-bold mb-6 text-center">Unit Converter</h1>
-            
-            <div className="flex justify-center space-x-2 mb-8 bg-black/5 dark:bg-black/20 p-1 rounded-lg">
-                {(['length', 'weight', 'temperature'] as UnitCategory[]).map(cat => (
-                    <button 
-                        key={cat}
-                        onClick={() => setCategory(cat)}
-                        className={`px-4 py-2 rounded-md capitalize font-medium transition-colors ${category === cat ? 'bg-white dark:bg-teal-600 shadow-sm' : 'hover:bg-white/50 dark:hover:bg-white/10'}`}
-                    >
-                        {cat}
-                    </button>
-                ))}
-            </div>
-
-            <div className="space-y-6">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium opacity-70">From</label>
-                    <div className="flex space-x-2">
-                        <input 
-                            type="number" 
-                            value={fromValue} 
-                            onChange={e => handleFromChange(e.target.value)}
-                            className="flex-grow bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Enter value"
-                        />
-                        <select 
-                            value={fromUnit} 
-                            onChange={e => { setFromUnit(e.target.value); if (typeof fromValue === 'number') handleFromChange(fromValue.toString()); }}
-                            className="w-1/3 bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-dark-bg text-light-text dark:text-white">
+            <div className="w-full max-w-3xl mx-auto">
+                <h1 className="text-5xl font-bold mb-12 text-center">Unit Converter</h1>
+                
+                <div className="flex justify-center space-x-2 mb-10 bg-black/5 dark:bg-black/20 p-1 rounded-lg">
+                    {(['length', 'weight', 'temperature'] as UnitCategory[]).map(cat => (
+                        <button 
+                            key={cat}
+                            onClick={() => setCategory(cat)}
+                            className={`px-8 py-4 rounded-md capitalize font-medium text-xl transition-colors ${category === cat ? 'bg-white dark:bg-teal-600 shadow-sm' : 'hover:bg-white/50 dark:hover:bg-white/10'}`}
                         >
-                            {units[category].map(u => <option key={u} value={u}>{u}</option>)}
-                        </select>
+                            {cat}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="space-y-8">
+                    <div className="space-y-2">
+                        <label className="text-xl font-medium opacity-70">From</label>
+                        <div className="flex space-x-4">
+                            <input 
+                                type="number" 
+                                value={fromValue} 
+                                onChange={e => handleFromChange(e.target.value)}
+                                className="flex-grow bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-4 py-4 text-4xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Enter value"
+                            />
+                            <select 
+                                value={fromUnit} 
+                                onChange={e => { setFromUnit(e.target.value); if (typeof fromValue === 'number') handleFromChange(fromValue.toString()); }}
+                                className="w-1/3 bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-4 py-4 text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                {units[category].map(u => <option key={u} value={u}>{u}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                        <button onClick={handleSwap} className="p-4 rounded-full bg-gray-200 dark:bg-slate-600 hover:bg-blue-500 hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xl font-medium opacity-70">To</label>
+                        <div className="flex space-x-4">
+                             <input 
+                                type="number" 
+                                value={toValue} 
+                                readOnly
+                                className="flex-grow bg-gray-200 dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 rounded-md px-4 py-4 text-4xl font-semibold focus:outline-none"
+                                placeholder="Result"
+                            />
+                            <select 
+                                value={toUnit} 
+                                onChange={e => { setToUnit(e.target.value); if (typeof fromValue === 'number') handleFromChange(fromValue.toString()); }}
+                                className="w-1/3 bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-4 py-4 text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                {units[category].map(u => <option key={u} value={u}>{u}</option>)}
+                            </select>
+                        </div>
                     </div>
                 </div>
-
-                <div className="flex justify-center">
-                    <button onClick={handleSwap} className="p-2 rounded-full bg-gray-200 dark:bg-slate-600 hover:bg-blue-500 hover:text-white transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                        </svg>
-                    </button>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium opacity-70">To</label>
-                    <div className="flex space-x-2">
-                         <input 
-                            type="number" 
-                            value={toValue} 
-                            readOnly
-                            className="flex-grow bg-gray-200 dark:bg-slate-800/50 border border-gray-300 dark:border-slate-700 rounded-md px-3 py-3 text-lg font-semibold focus:outline-none"
-                            placeholder="Result"
-                        />
-                        <select 
-                            value={toUnit} 
-                            onChange={e => { setToUnit(e.target.value); if (typeof fromValue === 'number') handleFromChange(fromValue.toString()); }}
-                            className="w-1/3 bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            {units[category].map(u => <option key={u} value={u}>{u}</option>)}
-                        </select>
-                    </div>
-                </div>
             </div>
-        </AppContainer>
+        </div>
     );
 };
 

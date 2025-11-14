@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Page } from '../../types';
 import { database } from '../../services/database';
-import AppContainer from '../../components/AppContainer';
 
 // Icons
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>;
@@ -98,7 +96,7 @@ const EditorApp: React.FC<EditorAppProps> = ({ navigate, initialFileId, title })
     }
 
     return (
-        <AppContainer className="w-full h-full flex flex-col">
+        <div className="w-full h-full flex flex-col">
             {/* Toolbar */}
             <div className="flex justify-between items-center p-3 bg-gray-100 dark:bg-slate-800 border-b border-gray-300 dark:border-slate-700">
                 <div className="flex items-center space-x-4">
@@ -137,7 +135,7 @@ const EditorApp: React.FC<EditorAppProps> = ({ navigate, initialFileId, title })
                 <div>Ln {content.substr(0, content.length).split('\n').length}, Col {content.length - content.lastIndexOf('\n') - 1}</div>
                 <div>UTF-8</div>
             </div>
-        </AppContainer>
+        </div>
     );
 };
 
