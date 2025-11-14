@@ -87,6 +87,16 @@ serve(async (req) => {
             status: 200,
         });
       }
+      case 'getUserByEmail': {
+        const { email } = payload;
+        if (!email) throw { message: 'Email is required.', status: 400 };
+        const { data, error } = await supabaseAdmin.from('users').select('*').eq('email', email).single();
+        if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found, which is ok
+        return new Response(JSON.stringify({ user: data }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+      }
       case 'updatePassword': {
         const { newPassword } = payload;
         const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, { password: newPassword });

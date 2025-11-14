@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabaseClient';
 // Add DriveFile to imports
 import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile } from '../types';
@@ -186,6 +187,25 @@ export const database = {
         }
         if (data?.error) {
             console.error('Error from manage-users function (getUserByUsername):', data.error, { error, data });
+            return null;
+        }
+        return mapDbUserToUser(data.user);
+    },
+
+    getUserByEmail: async (email: string): Promise<User | null> => {
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+            body: { action: 'getUserByEmail', email }
+        });
+        if (error) {
+            if (!error.message.includes('PGRST116')) {
+                let errorMessage = error.message;
+                 if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+                console.error('Error from manage-users function (getUserByEmail):', errorMessage, { error, data });
+            }
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error from manage-users function (getUserByEmail):', data.error, { error, data });
             return null;
         }
         return mapDbUserToUser(data.user);

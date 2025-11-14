@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
 import { CallProvider } from './hooks/useCall';
 import { ConsoleViewProvider, useConsoleView } from './hooks/useConsoleView';
+import useIsMobileDevice from './hooks/useIsMobileDevice';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CallWidget from './components/CallWidget';
@@ -17,6 +18,7 @@ import LegaLauncher from './pages/LegaLauncher';
 import ConConsole from './pages/ConConsole';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
+import MobileSignInPage from './pages/MobileSignInPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPortal from './pages/AdminPortal';
 import PhoneApp from './pages/apps/PhoneApp';
@@ -196,6 +198,7 @@ const AppContent: React.FC = () => {
     const { view, isInitialChoice } = useConsoleView();
     const { windows, activeWindowId, openApp, closeApp, focusApp, minimizeApp, updateAppPosition } = useDesktop();
     const initialAppOpened = useRef(false);
+    const isMobileDevice = useIsMobileDevice();
 
     const isWindowedConsole = view === 'syno' || view === 'fais';
 
@@ -268,6 +271,9 @@ const AppContent: React.FC = () => {
 
     const renderPage = () => {
         if (!isLoggedIn) {
+            if (isMobileDevice) {
+                 return <MobileSignInPage navigate={navigate} />;
+            }
             switch (currentPage) {
                 case 'home': return <HomePage />;
                 case 'contact': return <ContactPage />;
@@ -314,7 +320,7 @@ const AppContent: React.FC = () => {
 
     // The main header should show for logged-out users, or logged-in users on standard pages (not consoles or full-screen apps).
     const showMainHeaderFooter = 
-        (!isLoggedIn && currentPage !== 'auth-callback') ||
+        (!isLoggedIn && !isMobileDevice && currentPage !== 'auth-callback') ||
         (isLoggedIn && !isConsolePage && !isFullScreenApp && currentPage !== 'auth-callback');
     
     // The background gradient should only apply to non-console and non-full-screen-app views.
