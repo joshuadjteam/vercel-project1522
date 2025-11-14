@@ -1,4 +1,3 @@
-
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, linting, and type checking.
@@ -96,9 +95,12 @@ serve(async (req) => {
         const email = normalizeEmail(payload.email);
         if (!email) throw { message: 'A valid email string is required.', status: 400 };
 
-        const { data, error } = await supabaseAdmin.from('users').select('*').ilike('email', email).single();
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found, which is ok
-        return new Response(JSON.stringify({ user: data }), {
+        // Use .limit(1) to be safe against duplicate emails, which would cause .single() to fail.
+        const { data, error } = await supabaseAdmin.from('users').select('*').ilike('email', email).limit(1);
+        if (error) throw error; 
+
+        // data is now an array, so take the first element or null if empty.
+        return new Response(JSON.stringify({ user: data?.[0] || null }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
