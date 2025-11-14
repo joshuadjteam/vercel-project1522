@@ -91,7 +91,7 @@ const NotepadApp: React.FC = () => {
     };
 
     return (
-        <AppContainer className="w-full max-w-6xl h-[80vh] text-light-text dark:text-white flex">
+        <AppContainer className="w-full h-full text-light-text dark:text-white flex">
             {/* Notes List Sidebar */}
             <div className="w-1/3 border-r border-current border-opacity-20 bg-black/10 flex flex-col">
                 <div className="p-4 border-b border-current border-opacity-20 flex justify-between items-center">

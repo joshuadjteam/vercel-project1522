@@ -1,3 +1,4 @@
+
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, linting, and type checking.
@@ -17,36 +18,10 @@ serve(async (req) => {
   }
 
   try {
-    const userClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization') } } }
-    );
-    // Use safe destructuring to prevent crashes on unauthenticated requests
-    const { data: authData, error: authError } = await userClient.auth.getUser();
-    const authUser = authData?.user;
-
-    if (authError || !authUser) {
-      throw { message: 'Not authenticated', status: 401 };
-    }
-
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-
-    const ensureAdmin = async () => {
-      const { data: requestingUserProfile, error: profileError } = await supabaseAdmin
-        .from('users')
-        .select('role')
-        .eq('auth_id', authUser.id)
-        .single();
-      
-      if (profileError) throw { message: 'Could not verify user role.', status: 500 };
-      if (!requestingUserProfile || requestingUserProfile.role !== 'Admin') {
-        throw { message: 'Permission denied: Admin role required.', status: 403 };
-      }
-    };
     
     let body;
     try {
@@ -63,8 +38,64 @@ serve(async (req) => {
     }
     const payload = body;
     const { action } = payload;
+    
+    // Handle public actions that don't need auth first
+    if (action === 'getDirectory' || action === 'getUsers') {
+        const { data, error } = await supabaseAdmin.from('users').select('*').order('username', { ascending: true });
+        if (error) throw error;
+        
+        return new Response(JSON.stringify({ users: data }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+    }
 
+    // All actions below require authentication
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization') } } }
+    );
+    
+    const { data: authData, error: authError } = await userClient.auth.getUser();
+    const authUser = authData?.user;
+
+    if (authError || !authUser) {
+      throw { message: 'Not authenticated', status: 401 };
+    }
+    
+    const ensureAdmin = async () => {
+      const { data: requestingUserProfile, error: profileError } = await supabaseAdmin
+        .from('users')
+        .select('role')
+        .eq('auth_id', authUser.id)
+        .single();
+      
+      if (profileError) throw { message: 'Could not verify user role.', status: 500 };
+      if (!requestingUserProfile || requestingUserProfile.role !== 'Admin') {
+        throw { message: 'Permission denied: Admin role required.', status: 403 };
+      }
+    };
+    
     switch (action) {
+      case 'getUserByUsername': {
+        const { username } = payload;
+        const { data, error } = await supabaseAdmin.from('users').select('*').eq('username', username).single();
+        if (error) throw error;
+        return new Response(JSON.stringify({ user: data }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+      }
+      case 'updatePassword': {
+        const { newPassword } = payload;
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, { password: newPassword });
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+      }
       case 'createUser': {
         await ensureAdmin();
         const { email, password, username, role, sipVoice, features, plan_name } = payload;
@@ -133,7 +164,6 @@ serve(async (req) => {
         const { auth_id } = payload;
         if (!auth_id) throw { message: 'auth_id is required for deletion.', status: 400 };
 
-        // Step 1: Get the user's profile to get their username for cleanup.
         const { data: userToDelete, error: profileFindError } = await supabaseAdmin
             .from('users')
             .select('username')
@@ -141,101 +171,34 @@ serve(async (req) => {
             .single();
 
         if (profileFindError && profileFindError.code !== 'PGRST116') {
-            // An actual error occurred, not just 'not found'.
             throw profileFindError;
         }
 
         if (userToDelete) {
             const username = userToDelete.username;
-
-            // Step 2: Clean up all related data.
             await supabaseAdmin.from('contacts').delete().eq('owner', username);
             await supabaseAdmin.from('notes').delete().eq('owner', username);
-            // Use the auth_id (UUID) to delete mail accounts as per schema
             await supabaseAdmin.from('mail_accounts').delete().eq('user_id', auth_id);
-            
-            // Step 3: Delete the public user profile.
             await supabaseAdmin.from('users').delete().eq('auth_id', auth_id);
         }
 
-        // Step 4: Delete the user from the authentication system.
         const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(auth_id);
-        if (authDeleteError && authDeleteError.message !== 'User not found') {
-            // We throw the error only if it's not a "not found" error, as data might have been cleaned up anyway.
-            throw authDeleteError;
-        }
-
-        return new Response(JSON.stringify({ message: `User ${auth_id} and associated data deleted successfully.` }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      }
-      case 'getUsers': {
-        await ensureAdmin();
-        const { data, error } = await supabaseAdmin.from('users').select('*').order('id', { ascending: true });
-        if (error) throw error;
+        if (authDeleteError) throw authDeleteError;
         
-        return new Response(JSON.stringify({ users: data }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      }
-      case 'getDirectory': {
-        // Public directory for authenticated users, no admin check required.
-        const { data, error } = await supabaseAdmin.from('users').select('*').order('username', { ascending: true });
-        if (error) throw error;
-        
-        return new Response(JSON.stringify({ users: data }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      }
-      case 'getUserByUsername': {
-        const { username } = payload;
-        if (!username) throw { message: 'Username is required.', status: 400 };
-
-        const { data, error } = await supabaseAdmin.from('users').select('*').eq('username', username).single();
-        if (error) {
-          if (error.code === 'PGRST116') {
-            return new Response(JSON.stringify({ error: 'User not found' }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 404,
-            });
-          }
-          throw error;
-        }
-        return new Response(JSON.stringify({ user: data }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      }
-      case 'updatePassword': {
-        const { currentPassword, newPassword } = payload;
-        // 1. Verify the user's current password by trying to sign in with it.
-        const { error: signInError } = await userClient.auth.signInWithPassword({
-          email: authUser.email,
-          password: currentPassword,
-        });
-        if (signInError) {
-          throw { message: 'Incorrect current password.', status: 401 };
-        }
-        
-        // 2. If verification is successful, update the user's password.
-        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
-          password: newPassword,
-        });
-        if (updateError) throw updateError;
-        
-        return new Response(JSON.stringify({ message: 'Password updated successfully.' }), {
+        return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         });
       }
       default:
-        throw { message: 'Invalid action', status: 400 };
+        throw { message: 'Invalid action specified.', status: 400 };
     }
+
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred' }), {
+    console.error("Error in manage-users function:", error);
+    return new Response(JSON.stringify({
+      error: error.message || 'An unexpected error occurred in the edge function.'
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: error.status || 500,
     });

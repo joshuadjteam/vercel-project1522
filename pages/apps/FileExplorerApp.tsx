@@ -141,7 +141,7 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
                     const isEditable = EDITABLE_MIME_TYPES.includes(file.mimeType);
                     const FileItem = (
                         <div key={file.id} className="group relative bg-white/50 dark:bg-black/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-xl p-4 flex flex-col items-center text-center transition-colors cursor-pointer"
-                             onClick={isEditable ? () => navigate('app-editor', { fileId: file.id }) : () => window.open(file.webViewLink, '_blank')}>
+                             onClick={isEditable ? () => navigate('app-editor', { initialFileId: file.id, title: file.name }) : () => window.open(file.webViewLink, '_blank')}>
                             <button onClick={(e) => { e.stopPropagation(); handleDeleteFile(file.id); }} className="absolute top-2 right-2 p-1 rounded-full bg-gray-200 dark:bg-gray-700 opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white" title="Delete File"><TrashIcon /></button>
                             <img src={file.iconLink} alt="" className="h-12 w-12" />
                             <h3 className="mt-2 font-medium truncate w-full" title={file.name}>{file.name}</h3>
@@ -157,7 +157,7 @@ const FileExplorerApp: React.FC<FileExplorerAppProps> = ({ navigate }) => {
     };
 
     return (
-        <AppContainer className="w-full max-w-7xl h-[80vh] p-6 text-light-text dark:text-white flex flex-col">
+        <AppContainer className="w-full h-full p-6 text-light-text dark:text-white flex flex-col">
             <div className="flex justify-between items-center mb-4 flex-wrap gap-2 flex-shrink-0">
                  <h1 className="text-3xl font-bold">File Explorer</h1>
                  {driveLinkStatus === 'linked' && (

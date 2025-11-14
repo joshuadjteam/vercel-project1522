@@ -58,7 +58,7 @@ const ContactsApp: React.FC = () => {
     };
 
     return (
-        <AppContainer className="w-full max-w-5xl h-[80vh] p-8 text-light-text dark:text-white flex flex-col">
+        <AppContainer className="w-full h-full p-8 text-light-text dark:text-white flex flex-col">
             <div className="flex justify-between items-center mb-6 flex-shrink-0">
                 <h1 className="text-4xl font-bold">Contacts</h1>
                 <button onClick={handleAddContact} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center space-x-2">

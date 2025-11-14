@@ -68,7 +68,7 @@ const PaintApp: React.FC = () => {
     };
 
     return (
-        <AppContainer className="w-full max-w-5xl h-[80vh] p-4 text-light-text dark:text-white flex flex-col items-center">
+        <AppContainer className="w-full h-full p-4 text-light-text dark:text-white flex flex-col items-center">
             <h1 className="text-3xl font-bold mb-4 flex-shrink-0">Paint</h1>
             <div className="w-full flex-grow relative rounded-lg overflow-hidden border-2 border-gray-400 dark:border-teal-700">
                 <canvas

@@ -11,14 +11,14 @@ const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w
 
 interface EditorAppProps {
     navigate: (page: Page, params?: any) => void;
-    initialFile?: string | null; // This is now fileId
     initialFileId?: string | null;
+    title?: string;
 }
 
-const EditorApp: React.FC<EditorAppProps> = ({ navigate, initialFileId }) => {
+const EditorApp: React.FC<EditorAppProps> = ({ navigate, initialFileId, title }) => {
     const { user } = useAuth();
     const [fileId, setFileId] = useState(initialFileId || null);
-    const [fileName, setFileName] = useState('');
+    const [fileName, setFileName] = useState(title || '');
     const [content, setContent] = useState('');
     const [isDirty, setIsDirty] = useState(false);
     const [status, setStatus] = useState('');
@@ -90,7 +90,7 @@ const EditorApp: React.FC<EditorAppProps> = ({ navigate, initialFileId }) => {
     
     if (isLoading) {
         return (
-            <div className="w-full max-w-6xl h-[85vh] flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center">
                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                  <p className="ml-4">Loading Editor...</p>
             </div>
@@ -98,7 +98,7 @@ const EditorApp: React.FC<EditorAppProps> = ({ navigate, initialFileId }) => {
     }
 
     return (
-        <AppContainer className="w-full max-w-6xl h-[85vh] flex flex-col">
+        <AppContainer className="w-full h-full flex flex-col">
             {/* Toolbar */}
             <div className="flex justify-between items-center p-3 bg-gray-100 dark:bg-slate-800 border-b border-gray-300 dark:border-slate-700">
                 <div className="flex items-center space-x-4">

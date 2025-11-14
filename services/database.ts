@@ -505,7 +505,7 @@ export const database = {
     },
 
     addContact: async (contactData: Omit<Contact, 'id' | 'owner'>): Promise<Contact | null> => {
-         const { data, error } = await supabase.functions.invoke('app-service', {
+        const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'add', payload: contactData })
         });
         if (error) {
@@ -521,7 +521,7 @@ export const database = {
         return data.contact;
     },
 
-    updateContact: async (contactData: Omit<Contact, 'owner'>): Promise<Contact | null> => {
+    updateContact: async (contactData: Contact): Promise<Contact | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'update', payload: contactData })
         });
@@ -537,7 +537,7 @@ export const database = {
         }
         return data.contact;
     },
-
+    
     deleteContact: async (contactId: number): Promise<boolean> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'delete', payload: { id: contactId } })
@@ -552,21 +552,6 @@ export const database = {
             console.error('Error deleting contact:', data.error, { error, data });
             return false;
         }
-        return true;
-    },
-
-    // --- Notepad Service Functions (DEPRECATED - Now uses Drive) ---
-    getNotesForUser: async (username: string): Promise<Note[]> => {
-        // This function is no longer used by the NotepadApp but is kept for potential future use or other apps.
-        return [];
-    },
-    addNote: async (noteData: Omit<Note, 'id' | 'createdAt' | 'owner'>): Promise<Note | null> => {
-       return null;
-    },
-    updateNote: async (noteData: Note): Promise<Note | null> => {
-       return null;
-    },
-    deleteNote: async (noteId: number): Promise<boolean> => {
-        return false;
+        return data.success;
     },
 };

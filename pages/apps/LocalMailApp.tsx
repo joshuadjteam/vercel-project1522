@@ -252,7 +252,7 @@ const LocalMailApp: React.FC = () => {
 
     return (
         <AppContainer 
-            className={`w-full max-w-7xl h-[80vh] flex transition-colors duration-300 ${themes[theme].classes}`} 
+            className={`w-full h-full flex transition-colors duration-300 ${themes[theme].classes}`} 
             style={wallpapers[wallpaper].style}
         >
             <div className="w-1/4 border-r border-current border-opacity-20 bg-black/5 flex flex-col">

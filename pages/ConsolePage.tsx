@@ -1,34 +1,21 @@
 
-import React, { useState, useEffect } from 'react';
-import { Page } from '../types';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Page, UserRole, AppLaunchable, NavAction } from '../types';
 import { useTheme } from '../hooks/useTheme';
-import Clock from '../components/Clock';
+import { useAuth } from '../hooks/useAuth';
 
-// Icons
-const PhoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
-const ChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
-const ContactsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 21a6 6 0 006-6v-1a6 6 0 00-9-5.197M12 14.354a4 4 0 110-5.292" /></svg>;
-const MailIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
-const NotepadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
-const CodeEditorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>;
-const ProfileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-const CustomizeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>;
-
-
-// Small Icons for App Drawer
-const SmallPhoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
-const SmallChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
-const SmallContactsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 21a6 6 0 006-6v-1a6 6 0 00-9-5.197M12 14.354a4 4 0 110-5.292" /></svg>;
-const SmallMailIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
-const SmallNotepadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
-const SmallCodeEditorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>;
-const FileExplorerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" /></svg>;
-const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
-const PaintIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343a2 2 0 01-1.414-.586l-1.414-1.414A2 2 0 0011.343 9H9a2 2 0 00-2 2v4a2 2 0 002 2z" /></svg>;
-const CalculatorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h3m-3-10h.01M9 10h.01M12 10h.01M15 10h.01M9 13h.01M12 13h.01M15 13h.01M9 16h.01M12 16h.01M15 16h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const UnitConverterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>;
+// --- Icons (Imported or passed, no local definitions) ---
+const GridIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>;
+const SettingsIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const ProfileIconSvg = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
+const AdminIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>;
+const LightIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
+const DarkIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>;
+const SignOutIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
+const ContactIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
 
 const wallpapers: Record<string, { name: string, class: string }> = {
+    canyon: { name: 'Canyon', class: 'bg-gradient-to-br from-[#23304e] via-[#e97451] to-[#f4a261]' },
     sky: { name: 'Sky', class: 'bg-gradient-to-br from-sky-400 to-blue-600' },
     sunset: { name: 'Sunset', class: 'bg-gradient-to-br from-yellow-400 via-red-500 to-pink-600' },
     forest: { name: 'Forest', class: 'bg-gradient-to-br from-green-500 to-teal-700' },
@@ -37,150 +24,166 @@ const wallpapers: Record<string, { name: string, class: string }> = {
     ocean: { name: 'Ocean', class: 'bg-gradient-to-br from-blue-500 via-cyan-400 to-teal-300' },
 };
 
-
 interface ConsolePageProps {
     navigate: (page: Page, params?: any) => void;
+    appsList: AppLaunchable[];
 }
 
-const AppIcon: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; bgColor: string; }> = ({ icon, label, onClick, bgColor }) => (
-    <button onClick={onClick} className="flex flex-col items-center justify-center space-y-2 text-white transition-transform hover:scale-105 group">
-        <div className={`w-28 h-28 ${bgColor} rounded-3xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 group-hover:scale-110`}>
-            {icon}
-        </div>
-        <span className="font-semibold text-shadow">{label}</span>
-    </button>
-);
+const ConsolePage: React.FC<ConsolePageProps> = ({ navigate, appsList }) => {
+    const { user, logout } = useAuth();
+    const { isDark, setIsDark, glassBlur, setGlassBlur, glassTransparency, setGlassTransparency } = useTheme();
+    
+    const [wallpaper, setWallpaper] = useState('canyon');
+    const [launcherOpen, setLauncherOpen] = useState(false);
+    const [webMenuOpen, setWebMenuOpen] = useState(false);
+    const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+    const [time, setTime] = useState(new Date());
 
-const SmallAppIcon: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; bgColor: string; }> = ({ icon, label, onClick, bgColor }) => (
-    <button onClick={onClick} className="flex flex-col items-center justify-center space-y-1 text-white transition-transform hover:scale-105 group">
-        <div className={`w-20 h-20 ${bgColor} rounded-2xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow`}>
-            {icon}
-        </div>
-        <span className="font-semibold text-sm">{label}</span>
-    </button>
-);
+    const ALL_APPS = useMemo(() => appsList.filter(app => !app.isHidden), [appsList]);
+    const DESKTOP_APPS = useMemo(() => appsList.filter(app => ['app-files', 'app-localmail', 'app-chat', 'app-contacts', 'app-console-switch'].includes(app.id)), [appsList]);
 
-
-const ActionButton: React.FC<{ label: string; onClick?: () => void; href?: string; bgColor: string; }> = ({ label, onClick, href, bgColor }) => {
-    const commonProps = {
-        className: `w-full h-20 ${bgColor} rounded-full flex items-center justify-center text-white text-xl font-medium shadow-lg transition-all hover:scale-105 hover:shadow-xl`,
-    };
-    if (href) {
-        return <a href={href} target="_blank" rel="noopener noreferrer" {...commonProps}>{label}</a>;
-    }
-    return <button onClick={onClick} {...commonProps}>{label}</button>;
-};
-
-const ConsolePage: React.FC<ConsolePageProps> = ({ navigate }) => {
-    const { glassBlur, setGlassBlur, glassTransparency, setGlassTransparency } = useTheme();
-    const [wallpaper, setWallpaper] = useState('sky');
-    const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
-
+    const launcherRef = useRef<HTMLDivElement>(null);
+    const webMenuRef = useRef<HTMLDivElement>(null);
+    const settingsMenuRef = useRef<HTMLDivElement>(null);
+    
     useEffect(() => {
-        const savedWallpaper = localStorage.getItem('consoleWallpaper');
-        if (savedWallpaper && wallpapers[savedWallpaper]) {
-            setWallpaper(savedWallpaper);
-        }
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
     }, []);
 
-    useEffect(() => {
-        localStorage.setItem('consoleWallpaper', wallpaper);
-    }, [wallpaper]);
+    const useClickOutside = (ref: React.RefObject<HTMLDivElement>, callback: () => void) => {
+        useEffect(() => {
+            const handleClick = (e: MouseEvent) => {
+                if (ref.current && !ref.current.contains(e.target as Node)) {
+                    callback();
+                }
+            };
+            document.addEventListener('mousedown', handleClick);
+            return () => document.removeEventListener('mousedown', handleClick);
+        }, [ref, callback]);
+    };
+
+    useClickOutside(launcherRef, () => setLauncherOpen(false));
+    useClickOutside(webMenuRef, () => setWebMenuOpen(false));
+    useClickOutside(settingsMenuRef, () => setSettingsMenuOpen(false));
+    
+    const handleAppClick = (app: AppLaunchable | NavAction) => {
+      if ('action' in app) {
+          switch (app.action) {
+              case 'navigate':
+                  navigate(app.page, app.params);
+                  break;
+              case 'logout':
+                  logout();
+                  navigate('home');
+                  break;
+          }
+      } else {
+          navigate(app.page, { navigate, ...app.params });
+      }
+      setLauncherOpen(false);
+      setSettingsMenuOpen(false);
+      setWebMenuOpen(false);
+    };
+
+    const formattedTime = time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const formattedDate = time.toLocaleDateString([], { month: 'short', day: 'numeric' });
 
     return (
-        <div className={`w-full h-full flex flex-col font-sans p-6 text-white transition-all duration-500 ${wallpapers[wallpaper].class}`}>
+        <div className={`w-screen h-screen overflow-hidden ${wallpapers[wallpaper].class} text-white transition-all duration-500`}>
+            {/* Desktop Area for Icons */}
+            <div className="absolute inset-0 top-12 p-4">
+                <div className="grid grid-cols-10 gap-4">
+                    {DESKTOP_APPS.map(app => (
+                         <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 transition-colors space-y-2 text-center w-24 h-24">
+                            {React.cloneElement(app.icon as React.ReactElement, { className: "w-12 h-12" })}
+                            <span className="text-sm font-medium text-shadow" style={{textShadow: '1px 1px 3px rgba(0,0,0,0.7)'}}>{app.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+            
             {/* Top Bar */}
-            <header className="flex justify-between items-center pb-4 border-b-2 border-white/30">
-                <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl p-3 shadow-lg flex items-center space-x-4">
-                    <Clock />
-                    <button onClick={() => setIsCustomizeOpen(true)} className="p-2 rounded-full hover:bg-white/20 transition-colors" title="Customize">
-                        <CustomizeIcon />
-                    </button>
-                </div>
-                <button 
-                    onClick={() => navigate('profile')} 
-                    className="w-28 h-28 bg-white/20 backdrop-blur-md border border-white/30 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105"
-                    title="View Profile"
-                >
-                    <ProfileIcon />
-                </button>
-            </header>
-
-            {/* Main Content */}
-            <main className="flex-grow flex pt-8 gap-8">
-                {/* Left Column */}
-                <div className="w-1/2 flex flex-col gap-8">
-                    <div className="grid grid-cols-3 gap-6">
-                        <AppIcon icon={<PhoneIcon />} label="Phone" onClick={() => navigate('app-phone')} bgColor="bg-green-500/80 hover:bg-green-500" />
-                        <AppIcon icon={<ChatIcon />} label="Chat" onClick={() => navigate('app-chat')} bgColor="bg-blue-500/80 hover:bg-blue-500" />
-                        <AppIcon icon={<ContactsIcon />} label="Contacts" onClick={() => navigate('app-contacts')} bgColor="bg-orange-500/80 hover:bg-orange-500" />
-                        <AppIcon icon={<MailIcon />} label="LocalMail" onClick={() => navigate('app-localmail')} bgColor="bg-red-500/80 hover:bg-red-500" />
-                        <AppIcon icon={<NotepadIcon />} label="Notepad" onClick={() => navigate('app-notepad')} bgColor="bg-yellow-500/80 hover:bg-yellow-500" />
-                        <AppIcon icon={<CodeEditorIcon />} label="Code Editor" onClick={() => navigate('app-editor')} bgColor="bg-purple-500/80 hover:bg-purple-500" />
-                    </div>
-                    <div className="flex-grow bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl flex flex-col items-center justify-center text-white p-4 shadow-inner">
-                        <h3 className="text-lg font-bold mb-4">All Apps</h3>
-                        <div className="grid grid-cols-4 gap-x-4 gap-y-6">
-                           <SmallAppIcon icon={<SmallPhoneIcon />} label="Phone" onClick={() => navigate('app-phone')} bgColor="bg-green-500/50" />
-                           <SmallAppIcon icon={<SmallChatIcon />} label="Chat" onClick={() => navigate('app-chat')} bgColor="bg-blue-500/50" />
-                           <SmallAppIcon icon={<SmallContactsIcon />} label="Contacts" onClick={() => navigate('app-contacts')} bgColor="bg-orange-500/50" />
-                           <SmallAppIcon icon={<SmallMailIcon />} label="Mail" onClick={() => navigate('app-localmail')} bgColor="bg-red-500/50" />
-                           <SmallAppIcon icon={<SmallNotepadIcon />} label="Notepad" onClick={() => navigate('app-notepad')} bgColor="bg-yellow-500/50" />
-                           <SmallAppIcon icon={<SmallCodeEditorIcon />} label="Editor" onClick={() => navigate('app-editor')} bgColor="bg-purple-500/50" />
-                           <SmallAppIcon icon={<FileExplorerIcon />} label="Files" onClick={() => navigate('app-files')} bgColor="bg-indigo-500/50" />
-                           <SmallAppIcon icon={<CalendarIcon />} label="Calendar" onClick={() => navigate('app-calendar')} bgColor="bg-pink-500/50" />
-                           <SmallAppIcon icon={<PaintIcon />} label="Paint" onClick={() => navigate('app-paint')} bgColor="bg-teal-500/50" />
-                           <SmallAppIcon icon={<CalculatorIcon />} label="Calculator" onClick={() => navigate('app-calculator')} bgColor="bg-gray-500/50" />
-                           <SmallAppIcon icon={<UnitConverterIcon />} label="Converter" onClick={() => navigate('app-converter')} bgColor="bg-cyan-500/50" />
-                        </div>
-                    </div>
-                </div>
-                
-                {/* Right Column */}
-                <div className="w-1/2 flex flex-col space-y-8">
-                    <ActionButton label="Search with Google" onClick={() => window.open('https://google.com', '_blank')} bgColor="bg-blue-600/80 hover:bg-blue-600" />
-                    <ActionButton label="Chat with AI" onClick={() => navigate('app-chat', { targetUserId: -1 })} bgColor="bg-purple-600/80 hover:bg-purple-600" />
-                    <ActionButton label="Buy another product!" href="https://darshanjoshuakesavaruban.fwscheckout.com/" bgColor="bg-green-600/80 hover:bg-green-600" />
-                    <ActionButton label="MyPortal" href="https://sites.google.com/gcp.lynixity.x10.bz/myportal/home" bgColor="bg-orange-600/80 hover:bg-orange-600" />
-                </div>
-            </main>
-
-            {isCustomizeOpen && (
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" onClick={() => setIsCustomizeOpen(false)}>
-                    <div className="bg-slate-800/80 border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-2xl font-bold mb-6 text-center text-white">Customize Console</h2>
-                        
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="text-lg font-semibold mb-4 text-center text-white">Wallpaper</h3>
-                                <div className="grid grid-cols-3 gap-4">
-                                    {Object.entries(wallpapers).map(([key, { name, class: bgClass }]) => (
-                                        <button key={key} onClick={() => setWallpaper(key)} className="flex flex-col items-center space-y-2 group">
-                                            <div className={`w-24 h-16 rounded-lg ${bgClass} shadow-md group-hover:scale-105 transition-transform border-2 ${wallpaper === key ? 'border-white' : 'border-transparent'}`}></div>
-                                            <span className="text-sm font-medium text-gray-200">{name}</span>
+            <div 
+                className="fixed top-0 left-0 right-0 h-12 flex items-center justify-between px-3 border-b border-white/10"
+                style={{
+                    backgroundColor: isDark 
+                        ? `rgba(20, 25, 40, ${glassTransparency})` 
+                        : `rgba(255, 255, 255, ${glassTransparency})`,
+                    backdropFilter: `blur(${glassBlur}px)`
+                }}
+            >
+                {/* Left Controls */}
+                <div className="flex items-center space-x-2">
+                    <div className="relative">
+                        <button onClick={() => setLauncherOpen(p => !p)} className="p-2 rounded-md hover:bg-white/20 transition-colors">
+                            <GridIcon className="w-6 h-6"/>
+                        </button>
+                        {launcherOpen && (
+                            <div ref={launcherRef} className="absolute top-full mt-2 w-96 max-h-[70vh] overflow-y-auto bg-slate-800/80 backdrop-blur-md rounded-xl p-4 animate-fade-in-up">
+                                <h3 className="text-xl font-bold mb-4 px-2">All Applications</h3>
+                                <div className="grid grid-cols-4 gap-4">
+                                    {ALL_APPS.map(app => (
+                                        <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-white/10 transition-colors space-y-2 text-center">
+                                            {React.cloneElement(app.icon as React.ReactElement, { className: "w-10 h-10" })}
+                                            <span className="text-xs">{app.label}</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <div className="border-t border-white/20 pt-6">
-                                <h3 className="text-lg font-semibold mb-4 text-center text-white">Glass Effect</h3>
-                                <div className="space-y-4 text-gray-200">
-                                    <div>
-                                        <label htmlFor="blur-slider" className="text-sm font-medium">Blur ({glassBlur}px)</label>
-                                        <input id="blur-slider" type="range" min="0" max="24" value={glassBlur} onChange={e => setGlassBlur(Number(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="transparency-slider" className="text-sm font-medium">Transparency ({glassTransparency.toFixed(2)})</label>
-                                        <input id="transparency-slider" type="range" min="0.1" max="1.0" step="0.05" value={glassTransparency} onChange={e => setGlassTransparency(Number(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" />
-                                    </div>
-                                </div>
+                        )}
+                    </div>
+                     <div className="relative">
+                        <button onClick={() => setWebMenuOpen(p => !p)} className="px-3 py-2 text-sm font-semibold rounded-md hover:bg-white/20 transition-colors">Web</button>
+                        {webMenuOpen && (
+                            <div ref={webMenuRef} className="absolute top-full mt-2 w-48 bg-slate-800/80 backdrop-blur-md rounded-xl py-2 animate-fade-in-up">
+                               <a href="#" onClick={(e) => e.preventDefault()} className="w-full text-left flex items-center px-4 py-2 hover:bg-white/10">Buy A Product</a>
+                               <a href="#" onClick={(e) => e.preventDefault()} className="w-full text-left flex items-center px-4 py-2 hover:bg-white/10">MyPortal</a>
+                               <div className="border-t border-white/20 my-1"></div>
+                               <button onClick={() => navigate('contact')} className="w-full text-left flex items-center px-4 py-2 hover:bg-white/10 space-x-3"><ContactIcon className="w-5 h-5"/><span>Contact</span></button>
                             </div>
-                        </div>
-
-                        <button onClick={() => setIsCustomizeOpen(false)} className="mt-8 w-full bg-red-500/80 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+                        )}
                     </div>
                 </div>
-            )}
+
+                {/* Right Controls */}
+                <div className="flex items-center space-x-3">
+                    <div className="text-right text-xs leading-tight font-medium">
+                        <div>{formattedTime}</div>
+                        <div>{formattedDate}</div>
+                    </div>
+                    <div className="relative">
+                        <button onClick={() => setSettingsMenuOpen(p => !p)} className="p-2 rounded-full hover:bg-white/20 transition-colors">
+                            <SettingsIcon className="w-6 h-6"/>
+                        </button>
+                         {settingsMenuOpen && (
+                            <div ref={settingsMenuRef} className="absolute top-full right-0 mt-2 w-72 bg-slate-800/80 backdrop-blur-md rounded-xl p-4 animate-fade-in-up space-y-4">
+                                <h3 className="text-lg font-semibold">Settings</h3>
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">Wallpaper</label>
+                                  <select value={wallpaper} onChange={e => setWallpaper(e.target.value)} className="w-full p-2 rounded-md bg-slate-700 border border-slate-600 text-sm">
+                                      {Object.entries(wallpapers).map(([key, value]) => <option key={key} value={key}>{value.name}</option>)}
+                                  </select>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">Glass Blur: {glassBlur}px</label>
+                                  <input type="range" min="0" max="24" value={glassBlur} onChange={e => setGlassBlur(Number(e.target.value))} className="w-full" />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium">Glass Transparency: {Math.round(glassTransparency * 100)}%</label>
+                                  <input type="range" min="0.1" max="1" step="0.05" value={glassTransparency} onChange={e => setGlassTransparency(Number(e.target.value))} className="w-full" />
+                                </div>
+                                <div className="border-t border-white/20 my-1 pt-2">
+                                  <button onClick={() => handleAppClick({ page: 'profile', action: 'navigate' })} className="w-full text-left flex items-center px-2 py-2 hover:bg-white/10 rounded-md space-x-3 text-sm"><ProfileIconSvg className="w-5 h-5"/><span>Profile</span></button>
+                                  {user?.role === UserRole.Admin && <button onClick={() => handleAppClick({ page: 'admin', action: 'navigate' })} className="w-full text-left flex items-center px-2 py-2 hover:bg-white/10 rounded-md space-x-3 text-sm"><AdminIcon className="w-5 h-5"/><span>Admin Portal</span></button>}
+                                  <button onClick={() => setIsDark(!isDark)} className="w-full text-left flex items-center px-2 py-2 hover:bg-white/10 rounded-md space-x-3 text-sm">{isDark ? <LightIcon className="w-5 h-5"/> : <DarkIcon className="w-5 h-5"/>}<span>{isDark ? 'Light' : 'Dark'} Mode</span></button>
+                                  <button onClick={() => handleAppClick({ page: 'home', action: 'logout' })} className="w-full text-left flex items-center px-2 py-2 hover:bg-white/10 text-red-400 rounded-md space-x-3 text-sm"><SignOutIcon className="w-5 h-5"/><span>Sign Out</span></button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

@@ -215,7 +215,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
 
     return (
         <AppContainer
-            className="w-full max-w-6xl h-[80vh] flex text-white bg-gradient-to-br from-teal-700 to-green-800 animate-fade-in"
+            className="w-full h-full flex text-white bg-gradient-to-br from-teal-700 to-green-800"
             overrideBg={true}
         >
             {/* Sidebar with User List */}

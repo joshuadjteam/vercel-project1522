@@ -1,3 +1,6 @@
+
+import type { ReactNode } from 'react';
+
 export enum UserRole {
     Admin = 'Admin',
     Standard = 'Standard',
@@ -104,4 +107,22 @@ export type Page =
     | 'app-editor'
     | 'app-converter'
     | 'app-calendar'
+    | 'app-console-switch'
     | 'auth-callback';
+
+// --- Centralized Console Types ---
+
+export type AppLaunchable = {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  page: Page;
+  params?: any;
+  isHidden?: boolean;
+};
+
+export type NavAction = {
+  page: Page;
+  action: 'navigate' | 'logout';
+  params?: any;
+};
