@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Page, UserRole, AppLaunchable } from '../types';
 import { useTheme } from '../hooks/useTheme';
@@ -82,7 +83,8 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
                             <div className="grid grid-cols-4 gap-4">
                                 {ALL_APPS.map(app => (
                                     <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-white/10 transition-colors space-y-2 text-center">
-                                        {React.cloneElement(app.icon as React.ReactElement, { className: "w-12 h-12" })}
+                                        {/* FIX: Cast app.icon to React.ReactElement<any> to allow cloning with a className prop. */}
+                                        {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-12 h-12" })}
                                         <span className="text-xs">{app.label}</span>
                                     </button>
                                 ))}
@@ -95,7 +97,8 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
                 <div className="flex-grow flex items-center justify-center space-x-6">
                     {SHELF_APPS.map(app => (
                         <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center space-y-2 text-white/90 hover:text-white hover:scale-110 transition-transform">
-                            {React.cloneElement(app.icon as React.ReactElement, { className: "w-10 h-10" })}
+                            {/* FIX: Cast app.icon to React.ReactElement<any> to allow cloning with a className prop. */}
+                            {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10" })}
                             <span className="text-sm font-medium">{app.label}</span>
                         </button>
                     ))}

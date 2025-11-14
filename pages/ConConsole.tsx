@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { Page, AppLaunchable } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -59,7 +60,8 @@ const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
                             </AppContainer>
                             {featuredApps.map((app, i) => (
                                 <button key={app.id} onClick={() => navigate(app.page, app.params)} className={`col-span-2 h-32 rounded-2xl flex flex-col items-center justify-center space-y-2 text-white font-semibold text-lg transition-transform hover:scale-105 ${APP_COLORS[i % APP_COLORS.length]}`}>
-                                    {React.cloneElement(app.icon as React.ReactElement, { className: 'w-10 h-10' })}
+                                    {/* FIX: Cast app.icon to React.ReactElement<any> to allow cloning with a className prop. */}
+                                    {React.cloneElement(app.icon as React.ReactElement<any>, { className: 'w-10 h-10' })}
                                     <span>{app.label}</span>
                                 </button>
                             ))}
@@ -69,7 +71,8 @@ const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
                             <div className="grid grid-cols-6 gap-4">
                                {allApps.map(app => (
                                    <button key={app.id} onClick={() => navigate(app.page, app.params)} className="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-white/10 transition-colors space-y-2 text-center">
-                                       {React.cloneElement(app.icon as React.ReactElement, { className: "w-10 h-10" })}
+                                       {/* FIX: Cast app.icon to React.ReactElement<any> to allow cloning with a className prop. */}
+                                       {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10" })}
                                        <span className="text-xs text-white/90">{app.label}</span>
                                    </button>
                                ))}

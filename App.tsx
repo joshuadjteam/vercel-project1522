@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -11,10 +12,13 @@ import CallWidget from './components/CallWidget';
 import IncomingCallWidget from './components/IncomingCallWidget';
 import WindowComponent from './components/Window';
 import FullScreenAppHeader from './components/FullScreenAppHeader';
+import MobileTopBar from './components/MobileTopBar';
+import MobileNavBar from './components/MobileNavBar';
 import HomePage from './pages/HomePage';
 import ConsolePage from './pages/ConsolePage';
 import FaisConsole from './pages/FaisConsole';
 import LegaLauncher from './pages/LegaLauncher';
+import MobiLauncher from './pages/MobiLauncher';
 import ConConsole from './pages/ConConsole';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
@@ -200,7 +204,14 @@ const AppContent: React.FC = () => {
     const initialAppOpened = useRef(false);
     const isMobileDevice = useIsMobileDevice();
 
-    const isWindowedConsole = view === 'syno' || view === 'fais';
+    const effectiveAppsList = useMemo(() => appsList.map(app => {
+        if (app.id === 'app-console-switch') {
+            return { ...app, isHidden: app.isHidden || isMobileDevice };
+        }
+        return app;
+    }), [isMobileDevice]);
+
+    const isWindowedConsole = (view === 'syno' || view === 'fais') && !isMobileDevice;
 
     useEffect(() => {
         if (isDark) {
@@ -222,7 +233,7 @@ const AppContent: React.FC = () => {
         if (targetPage.startsWith('app-')) {
             if (isWindowedConsole) {
                 setCurrentPage('home');
-                const appDefinition = appsList.find(app => app.page === targetPage);
+                const appDefinition = effectiveAppsList.find(app => app.page === targetPage);
                 const appInfo = {
                     title: appDefinition?.label || targetPage.replace('app-', ''),
                     icon: appDefinition?.icon,
@@ -236,14 +247,14 @@ const AppContent: React.FC = () => {
         } else {
             setCurrentPage(targetPage);
         }
-    }, [openApp, isWindowedConsole]);
+    }, [openApp, isWindowedConsole, effectiveAppsList]);
 
     useEffect(() => {
-        if (isInitialChoice && isLoggedIn && !initialAppOpened.current) {
+        if (isInitialChoice && isLoggedIn && !initialAppOpened.current && !isMobileDevice) {
             navigate('app-console-switch');
             initialAppOpened.current = true;
         }
-    }, [isInitialChoice, isLoggedIn, navigate]);
+    }, [isInitialChoice, isLoggedIn, navigate, isMobileDevice]);
 
 
     if (isLoading) {
@@ -255,17 +266,20 @@ const AppContent: React.FC = () => {
     }
     
     const renderConsole = () => {
+        if (isMobileDevice) {
+            return <MobiLauncher navigate={navigate} appsList={effectiveAppsList} />;
+        }
         switch (view) {
             case 'syno':
-                return <ConsolePage navigate={navigate} appsList={appsList} />;
+                return <ConsolePage navigate={navigate} appsList={effectiveAppsList} />;
             case 'fais':
-                return <FaisConsole navigate={navigate} appsList={appsList} />;
+                return <FaisConsole navigate={navigate} appsList={effectiveAppsList} />;
             case 'lega':
-                return <LegaLauncher navigate={navigate} appsList={appsList} />;
+                return <LegaLauncher navigate={navigate} appsList={effectiveAppsList} />;
             case 'con':
-                return <ConConsole navigate={navigate} appsList={appsList} />;
+                return <ConConsole navigate={navigate} appsList={effectiveAppsList} />;
             default:
-                return <ConsolePage navigate={navigate} appsList={appsList} />;
+                return <ConsolePage navigate={navigate} appsList={effectiveAppsList} />;
         }
     };
 
@@ -313,23 +327,20 @@ const AppContent: React.FC = () => {
     };
     
     // --- UI State Logic ---
-    // A "console page" is a full-screen dashboard UI.
+    const showMobileLayout = isLoggedIn && isMobileDevice;
     const isConsolePage = isLoggedIn && currentPage === 'home';
-    // A "full-screen app" is an app that takes over the view, used by non-windowed consoles.
     const isFullScreenApp = isLoggedIn && currentPage.startsWith('app-') && !isWindowedConsole;
-
-    // The main header should show for logged-out users, or logged-in users on standard pages (not consoles or full-screen apps).
     const showMainHeaderFooter = 
         (!isLoggedIn && !isMobileDevice && currentPage !== 'auth-callback') ||
-        (isLoggedIn && !isConsolePage && !isFullScreenApp && currentPage !== 'auth-callback');
-    
-    // The background gradient should only apply to non-console and non-full-screen-app views.
-    const showStandardBackground = !isConsolePage && !isFullScreenApp;
+        (isLoggedIn && !isConsolePage && !isFullScreenApp && !showMobileLayout && currentPage !== 'auth-callback');
+    const showStandardBackground = !isConsolePage && !isFullScreenApp && !showMobileLayout;
     const shouldCenterContent = showStandardBackground;
 
     return (
-        <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${showStandardBackground ? 'bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500' : ''}`}>
+        <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${showStandardBackground ? 'bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500' : ''} ${showMobileLayout ? 'bg-gray-700' : ''}`}>
             {showMainHeaderFooter && <Header navigate={navigate} />}
+            {showMobileLayout && <MobileTopBar />}
+
             <main className={`flex-grow flex overflow-hidden relative ${shouldCenterContent ? 'items-center justify-center' : ''}`}>
                 <div key={currentPage} className={`animate-fade-in ${shouldCenterContent ? '' : 'w-full h-full'}`}>
                     {renderPage()}
@@ -350,7 +361,9 @@ const AppContent: React.FC = () => {
                     </div>
                 )}
             </main>
+
             {showMainHeaderFooter && <Footer />}
+            {showMobileLayout && <MobileNavBar navigate={navigate} />}
             <CallWidget />
             <IncomingCallWidget />
         </div>

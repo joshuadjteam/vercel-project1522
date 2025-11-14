@@ -27,7 +27,7 @@ const MobileSignInPage: React.FC<MobileSignInPageProps> = ({ navigate }) => {
     const handleEmailSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        if (!email.trim() || !email.includes('@')) {
+        if (!email || !email.includes('@')) {
             setError('Please enter a valid email address.');
             return;
         }
@@ -83,7 +83,7 @@ const MobileSignInPage: React.FC<MobileSignInPageProps> = ({ navigate }) => {
                             type="email" 
                             placeholder="Email address" 
                             value={email} 
-                            onChange={e => setEmail(e.target.value)} 
+                            onChange={e => setEmail(e.target.value.trim())} 
                             className="w-full bg-gray-100 dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             disabled={isLoading}
                             required
