@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import { Mail, MailAccount } from '../../types';
-import useIsMobileDevice from '../../hooks/useIsMobileDevice';
 
 // Icons
 const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
@@ -10,7 +9,6 @@ const ComposeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
-const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m7 7H3" /></svg>;
 
 type MailView = 'inbox' | 'sent' | 'spam' | 'compose';
 
@@ -186,7 +184,6 @@ const LocalMailApp: React.FC = () => {
     const [selectedMail, setSelectedMail] = useState<Mail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const isMobile = useIsMobileDevice();
     
     const [theme, setTheme] = useState('system');
     const [wallpaper, setWallpaper] = useState('none');
@@ -250,90 +247,81 @@ const LocalMailApp: React.FC = () => {
         // Only show local mail (where account_id is null/undefined)
         return list.filter(m => !m.account_id);
     })();
-    
-    const mailListView = (
-        <>
-            <div className={`border-r border-current border-opacity-20 flex flex-col ${isMobile ? 'w-1/3' : 'md:w-1/4'}`}>
-                <div className="p-4 border-b border-current border-opacity-20 flex justify-between items-center">
-                    <h2 className="text-xl font-bold">LocalMail</h2>
-                    <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full hover:bg-white/20"><SettingsIcon /></button>
-                </div>
-                <div className="p-2">
-                    <button onClick={() => { setView('compose'); setSelectedMail(null); }} className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                        <ComposeIcon />
-                        <span>Compose</span>
-                    </button>
-                </div>
-                <nav className="flex-grow overflow-y-auto">
-                    {accounts.map(account => (
-                        <div key={account.email}>
-                            <div className="w-full text-left p-3 font-semibold">
-                                <span>{account.name}</span>
-                            </div>
-                            <div className="pl-6">
-                                {account.folders.map(folder => (
-                                    <button key={folder} onClick={() => {
-                                        setSelectedAccount(account);
-                                        const folderView = folder.toLowerCase() as MailView;
-                                        if (['inbox', 'sent', 'spam'].includes(folderView)) {
-                                            setView(folderView);
-                                            setSelectedMail(null);
-                                        }
-                                    }} className={`w-full text-left p-2 rounded-md transition-colors ${isMobile ? 'text-base' : 'text-lg'} ${view === folder.toLowerCase() ? 'font-bold' : 'hover:bg-white/10'}`}>
-                                        {folder}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </nav>
-            </div>
-            <div className={`border-r border-current border-opacity-20 flex flex-col ${isMobile ? 'w-2/3' : 'md:w-1/3'}`}>
-                 <div className="p-4 border-b border-current border-opacity-20">
-                    <h3 className="text-lg font-bold capitalize">{view === 'compose' ? 'New Message' : `${selectedAccount?.name} ${view}`}</h3>
-                    <p className="text-sm opacity-60">{isLoading ? 'Loading...' : `${currentMailList.length} message(s)`}</p>
-                </div>
-                <div className="flex-grow overflow-y-auto">
-                    {isLoading ? (<p className="p-4 text-center">Fetching mail...</p>) : 
-                    currentMailList.length > 0 ? (
-                        <ul>
-                            {currentMailList.map(mail => (
-                                <li key={mail.id} className={`border-b border-current border-opacity-10 ${selectedMail?.id === mail.id ? 'bg-black/10' : ''}`}>
-                                    <button onClick={() => handleSelectMail(mail)} className="w-full text-left p-3 hover:bg-black/5">
-                                        <div className="flex justify-between items-start">
-                                            <p className={`font-semibold truncate ${!mail.read && view === 'inbox' ? 'text-blue-400' : ''}`}>{view === 'inbox' ? mail.sender : mail.recipient}</p>
-                                            <p className="text-xs opacity-60 flex-shrink-0 ml-2">{new Date(mail.timestamp).toLocaleDateString()}</p>
-                                        </div>
-                                        <p className={`truncate ${!mail.read && view === 'inbox' ? 'font-semibold' : 'font-normal opacity-80'}`}>{mail.subject || '(no subject)'}</p>
-                                        <p className="text-sm opacity-60 truncate">{mail.body}</p>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : ( <p className="p-4 text-center">This folder is empty.</p> )}
-                </div>
-            </div>
-        </>
-    );
 
     return (
         <div 
             className={`w-full h-full flex transition-colors duration-300 ${themes[theme].classes}`} 
             style={wallpapers[wallpaper].style}
         >
-            <div className={`w-full md:w-7/12 flex-shrink-0 flex ${isMobile && selectedMail ? 'hidden' : ''}`}>
-                 {mailListView}
+            <div className="w-7/12 flex-shrink-0 flex">
+                 <div className="w-1/3 border-r border-current border-opacity-20 flex flex-col">
+                    <div className="p-4 border-b border-current border-opacity-20 flex justify-between items-center">
+                        <h2 className="text-xl font-bold">LocalMail</h2>
+                        <button onClick={() => setIsSettingsOpen(true)} className="p-2 rounded-full hover:bg-white/20"><SettingsIcon /></button>
+                    </div>
+                    <div className="p-2">
+                        <button onClick={() => { setView('compose'); setSelectedMail(null); }} className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            <ComposeIcon />
+                            <span>Compose</span>
+                        </button>
+                    </div>
+                    <nav className="flex-grow overflow-y-auto">
+                        {accounts.map(account => (
+                            <div key={account.email}>
+                                <div className="w-full text-left p-3 font-semibold">
+                                    <span>{account.name}</span>
+                                </div>
+                                <div className="pl-6">
+                                    {account.folders.map(folder => (
+                                        <button key={folder} onClick={() => {
+                                            setSelectedAccount(account);
+                                            const folderView = folder.toLowerCase() as MailView;
+                                            if (['inbox', 'sent', 'spam'].includes(folderView)) {
+                                                setView(folderView);
+                                                setSelectedMail(null);
+                                            }
+                                        }} className={`w-full text-left p-2 rounded-md transition-colors text-lg ${view === folder.toLowerCase() ? 'font-bold' : 'hover:bg-white/10'}`}>
+                                            {folder}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </nav>
+                </div>
+                <div className="w-2/3 border-r border-current border-opacity-20 flex flex-col">
+                     <div className="p-4 border-b border-current border-opacity-20">
+                        <h3 className="text-lg font-bold capitalize">{view === 'compose' ? 'New Message' : `${selectedAccount?.name} ${view}`}</h3>
+                        <p className="text-sm opacity-60">{isLoading ? 'Loading...' : `${currentMailList.length} message(s)`}</p>
+                    </div>
+                    <div className="flex-grow overflow-y-auto">
+                        {isLoading ? (<p className="p-4 text-center">Fetching mail...</p>) : 
+                        currentMailList.length > 0 ? (
+                            <ul>
+                                {currentMailList.map(mail => (
+                                    <li key={mail.id} className={`border-b border-current border-opacity-10 ${selectedMail?.id === mail.id ? 'bg-black/10' : ''}`}>
+                                        <button onClick={() => handleSelectMail(mail)} className="w-full text-left p-3 hover:bg-black/5">
+                                            <div className="flex justify-between items-start">
+                                                <p className={`font-semibold truncate ${!mail.read && view === 'inbox' ? 'text-blue-400' : ''}`}>{view === 'inbox' ? mail.sender : mail.recipient}</p>
+                                                <p className="text-xs opacity-60 flex-shrink-0 ml-2">{new Date(mail.timestamp).toLocaleDateString()}</p>
+                                            </div>
+                                            <p className={`truncate ${!mail.read && view === 'inbox' ? 'font-semibold' : 'font-normal opacity-80'}`}>{mail.subject || '(no subject)'}</p>
+                                            <p className="text-sm opacity-60 truncate">{mail.body}</p>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : ( <p className="p-4 text-center">This folder is empty.</p> )}
+                    </div>
+                </div>
             </div>
 
-            <div className={`w-full md:w-5/12 flex-shrink-0 flex flex-col ${!selectedMail && view !== 'compose' && isMobile ? 'hidden' : ''}`}>
+            <div className="w-5/12 flex-shrink-0 flex flex-col">
                 {view === 'compose' ? ( <ComposeView onMailSent={handleMailSent} availableSenders={accounts} /> ) : 
                 selectedMail ? (
                     <div className="flex-grow flex flex-col p-6 overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
-                             <div className="flex items-center">
-                                {isMobile && <button onClick={() => setSelectedMail(null)} className="mr-3 p-2 rounded-full hover:bg-white/10"><BackIcon/></button>}
-                                <h2 className="text-2xl font-bold">{selectedMail.subject}</h2>
-                             </div>
+                             <h2 className="text-2xl font-bold">{selectedMail.subject}</h2>
                             <button onClick={() => handleDeleteMail(selectedMail.id)} className="px-3 py-1 text-sm rounded-md bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2">
                                 <TrashIcon />
                                 <span>Delete</span>

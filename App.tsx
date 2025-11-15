@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -41,6 +36,21 @@ import UnitConverterApp from './pages/apps/UnitConverterApp';
 import CalendarApp from './pages/apps/CalendarApp';
 import ConsoleSwitchApp from './pages/apps/ConsoleSwitchApp';
 import AuthCallbackPage from './pages/AuthCallbackPage';
+
+// Mobile App Imports
+import MobiProfilePage from './pages/mobile-apps/MobiProfilePage';
+import MobiPhoneApp from './pages/mobile-apps/MobiPhoneApp';
+import MobiChatApp from './pages/mobile-apps/MobiChatApp';
+import MobiLocalMailApp from './pages/mobile-apps/MobiLocalMailApp';
+import MobiContactsApp from './pages/mobile-apps/MobiContactsApp';
+import MobiNotepadApp from './pages/mobile-apps/MobiNotepadApp';
+import MobiCalculatorApp from './pages/mobile-apps/MobiCalculatorApp';
+import MobiPaintApp from './pages/mobile-apps/MobiPaintApp';
+import MobiFileExplorerApp from './pages/mobile-apps/MobiFileExplorerApp';
+import MobiEditorApp from './pages/mobile-apps/MobiEditorApp';
+import MobiUnitConverterApp from './pages/mobile-apps/MobiUnitConverterApp';
+import MobiCalendarApp from './pages/mobile-apps/MobiCalendarApp';
+
 import { Page, UserRole, AppLaunchable } from './types';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -93,6 +103,22 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
     'app-calendar': { component: CalendarApp, defaultSize: { width: 900, height: 700 } },
     'app-console-switch': { component: ConsoleSwitchApp, defaultSize: { width: 900, height: 500 } },
 };
+
+export const MOBI_APPS_MAP: Record<string, { component: React.FC<any> }> = {
+    'profile': { component: MobiProfilePage },
+    'app-phone': { component: MobiPhoneApp },
+    'app-chat': { component: MobiChatApp },
+    'app-localmail': { component: MobiLocalMailApp },
+    'app-contacts': { component: MobiContactsApp },
+    'app-notepad': { component: MobiNotepadApp },
+    'app-calculator': { component: MobiCalculatorApp },
+    'app-paint': { component: MobiPaintApp },
+    'app-files': { component: MobiFileExplorerApp },
+    'app-editor': { component: MobiEditorApp },
+    'app-converter': { component: MobiUnitConverterApp },
+    'app-calendar': { component: MobiCalendarApp },
+};
+
 
 export type WindowState = 'normal' | 'minimized' | 'maximized';
 
@@ -327,9 +353,6 @@ const AppContent: React.FC = () => {
     }
     
     const renderConsole = () => {
-        if (isMobileDevice) {
-            return <MobiLauncher navigate={navigate} appsList={effectiveAppsList} />;
-        }
         switch (view) {
             case 'syno':
                 return <ConsolePage navigate={navigate} appsList={effectiveAppsList} />;
@@ -355,6 +378,29 @@ const AppContent: React.FC = () => {
             }
         }
 
+        // --- MOBILE APP ROUTING ---
+        if (isMobileDevice) {
+            if (currentPage === 'home') {
+                // Explicitly filter out the console switch app for mobile, as it has no function.
+                const mobileLauncherApps = effectiveAppsList.filter(app => app.id !== 'app-console-switch');
+                return <MobiLauncher navigate={navigate} appsList={mobileLauncherApps} />;
+            }
+            const MobiAppToRender = MOBI_APPS_MAP[currentPage]?.component;
+            if (MobiAppToRender) {
+                return React.createElement(MobiAppToRender, { ...pageParams, navigate });
+            }
+            // Fallback for non-app pages on mobile
+            switch (currentPage) {
+                case 'profile': return <MobiProfilePage navigate={navigate}/>;
+                case 'admin': return user?.role === UserRole.Admin ? <AdminPortal /> : <MobiProfilePage navigate={navigate}/>;
+                case 'auth-callback': return <AuthCallbackPage navigate={navigate} />;
+                default:
+                    // Fallback to launcher if an unknown page is hit on mobile
+                    return <MobiLauncher navigate={navigate} appsList={effectiveAppsList} />;
+            }
+        }
+
+        // --- DESKTOP APP ROUTING ---
         const AppToRender = APPS_MAP[currentPage]?.component;
         if (AppToRender && !isWindowedConsole) {
             return (
@@ -386,8 +432,8 @@ const AppContent: React.FC = () => {
     
     // --- UI State Logic ---
     const showMobileLayout = isLoggedIn && isMobileDevice;
-    const isConsolePage = isLoggedIn && currentPage === 'home';
-    const isFullScreenApp = isLoggedIn && currentPage.startsWith('app-') && !isWindowedConsole;
+    const isConsolePage = isLoggedIn && currentPage === 'home' && !isMobileDevice;
+    const isFullScreenApp = isLoggedIn && currentPage.startsWith('app-') && !isWindowedConsole && !isMobileDevice;
     const showMainHeaderFooter = 
         (!isLoggedIn && currentPage !== 'auth-callback') ||
         (isLoggedIn && !isConsolePage && !isFullScreenApp && !showMobileLayout && currentPage !== 'auth-callback');

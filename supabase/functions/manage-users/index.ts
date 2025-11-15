@@ -54,6 +54,21 @@ serve(async (req) => {
         });
     }
 
+    if (action === 'getUserByEmail') {
+        const email = normalizeEmail(payload.email);
+        if (!email) throw { message: 'A valid email string is required.', status: 400 };
+
+        // Use .limit(1) to be safe against duplicate emails, which would cause .single() to fail.
+        const { data, error } = await supabaseAdmin.from('users').select('*').ilike('email', email).limit(1);
+        if (error) throw error; 
+
+        // data is now an array, so take the first element or null if empty.
+        return new Response(JSON.stringify({ user: data?.[0] || null }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+    }
+
     // All actions below require authentication
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -87,20 +102,6 @@ serve(async (req) => {
         const { data, error } = await supabaseAdmin.from('users').select('*').eq('username', username).single();
         if (error) throw error;
         return new Response(JSON.stringify({ user: data }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        });
-      }
-      case 'getUserByEmail': {
-        const email = normalizeEmail(payload.email);
-        if (!email) throw { message: 'A valid email string is required.', status: 400 };
-
-        // Use .limit(1) to be safe against duplicate emails, which would cause .single() to fail.
-        const { data, error } = await supabaseAdmin.from('users').select('*').ilike('email', email).limit(1);
-        if (error) throw error; 
-
-        // data is now an array, so take the first element or null if empty.
-        return new Response(JSON.stringify({ user: data?.[0] || null }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
