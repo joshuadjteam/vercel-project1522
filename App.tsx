@@ -285,6 +285,7 @@ const AppContent: React.FC = () => {
     const { windows, activeWindowId, openApp, closeApp, focusApp, minimizeApp, updateAppPosition, updateAppSize } = useDesktop();
     const initialAppOpened = useRef(false);
     const isMobileDevice = useIsMobileDevice();
+    const isMobileAppOpen = isMobileDevice && !!MOBI_APPS_MAP[currentPage];
 
     const effectiveAppsList = useMemo(() => appsList.map(app => {
         if (app.id === 'app-console-switch') {
@@ -439,11 +440,13 @@ const AppContent: React.FC = () => {
         (isLoggedIn && !isConsolePage && !isFullScreenApp && !showMobileLayout && currentPage !== 'auth-callback');
     const showStandardBackground = !isConsolePage && !isFullScreenApp && !showMobileLayout;
     const shouldCenterContent = showStandardBackground;
+    const showMobileTopBar = showMobileLayout && !isMobileAppOpen;
+    const showMobileBottomBar = showMobileLayout;
 
     return (
         <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${showStandardBackground ? 'bg-gradient-to-br from-sky-100 to-green-100 dark:from-cyan-600 dark:to-green-500' : ''} ${showMobileLayout ? 'bg-gray-700' : ''}`}>
             {showMainHeaderFooter && <Header navigate={navigate} />}
-            {showMobileLayout && <MobileTopBar />}
+            {showMobileTopBar && <MobileTopBar />}
 
             <main className={`flex-grow flex overflow-hidden relative ${shouldCenterContent ? 'items-center justify-center' : ''}`}>
                 <div key={currentPage} className={`animate-fade-in ${shouldCenterContent ? '' : 'w-full h-full'}`}>
@@ -468,7 +471,7 @@ const AppContent: React.FC = () => {
             </main>
 
             {showMainHeaderFooter && <Footer />}
-            {showMobileLayout && <MobileNavBar navigate={navigate} />}
+            {showMobileBottomBar && <MobileNavBar navigate={navigate} />}
             <CallWidget />
             <IncomingCallWidget />
         </div>
