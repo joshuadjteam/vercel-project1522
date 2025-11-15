@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useCall } from '../hooks/useCall';
 
@@ -20,7 +19,6 @@ const CallWidget: React.FC = () => {
     
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
-    const remoteAudioRef = useRef<HTMLAudioElement>(null);
     const pipRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [pipPosition, setPipPosition] = useState({ x: 10, y: 10 }); // Initial position from bottom right
@@ -33,12 +31,13 @@ const CallWidget: React.FC = () => {
     }, [localStream]);
     
     useEffect(() => {
-        if (remoteStream) {
-            if (remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = remoteStream;
-            }
-            if (remoteAudioRef.current) {
-                remoteAudioRef.current.srcObject = remoteStream;
+        if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+            if (remoteStream) {
+                // Explicitly call play() to work around autoplay restrictions on mobile browsers like Safari.
+                remoteVideoRef.current.play().catch(error => {
+                    console.error("Error attempting to play remote stream:", error);
+                });
             }
         }
     }, [remoteStream]);
@@ -114,10 +113,9 @@ const CallWidget: React.FC = () => {
             <div className="bg-gray-800/80 border border-gray-700 rounded-2xl shadow-2xl text-white w-full max-w-md md:max-w-lg lg:max-w-2xl h-[90vh] max-h-[700px] flex flex-col p-4">
                 {/* Remote Video */}
                 <div className="relative flex-grow bg-black rounded-lg w-full h-full overflow-hidden flex items-center justify-center">
-                    {remoteStream ? (
-                        <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="flex flex-col items-center">
+                    <video ref={remoteVideoRef} autoPlay playsInline className={`w-full h-full object-cover ${!remoteStream ? 'hidden' : ''}`} />
+                    {!remoteStream && (
+                         <div className="absolute flex flex-col items-center pointer-events-none">
                             <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center font-bold text-4xl text-white mb-4">
                                 {callee.charAt(0).toUpperCase()}
                             </div>
@@ -170,8 +168,6 @@ const CallWidget: React.FC = () => {
                     </div>
                 </div>
             </div>
-             {/* Hidden audio element for audio-only calls or when video element isn't rendered */}
-            <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
         </div>
     );
 };
