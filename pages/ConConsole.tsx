@@ -14,6 +14,8 @@ const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-
 const YoutubeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" /></svg>;
 const HelpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const CalendarIconSmall = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
+const SearchIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
+
 
 const FEATURED_APPS = ['app-phone', 'app-chat', 'app-contacts', 'app-localmail', 'app-notepad', 'app-editor'];
 const APP_COLORS = ['bg-green-500', 'bg-blue-500', 'bg-orange-500', 'bg-red-500', 'bg-yellow-500', 'bg-purple-500'];
@@ -26,12 +28,50 @@ interface ConConsoleProps {
 const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
     const { user } = useAuth();
     const [isHelpModalOpen, setHelpModalOpen] = useState(false);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const featuredApps = useMemo(() => FEATURED_APPS.map(id => appsList.find(app => app.id === id)).filter(Boolean) as AppLaunchable[], [appsList]);
     const allApps = useMemo(() => appsList.filter(app => !app.isHidden), [appsList]);
 
+    const handleSearch = () => {
+        if (searchQuery.trim() !== '') {
+            const url = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+            window.open(url, '_blank');
+            setSearchQuery('');
+            setShowSearch(false);
+        }
+    };
+    
+    const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
+
     return (
         <div className="w-screen h-screen overflow-hidden flex flex-col bg-gradient-to-br from-blue-400 to-indigo-600 text-white">
+            {showSearch && (
+                 <div 
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 flex items-center justify-center"
+                    onClick={() => setShowSearch(false)}
+                >
+                    <div className="relative w-full max-w-xl" onClick={e => e.stopPropagation()}>
+                        <input
+                            type="text"
+                            placeholder="Search with Google..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyPress={handleSearchKeyPress}
+                            className="w-full bg-slate-800/80 border border-slate-600 text-white rounded-full py-4 pl-6 pr-16 text-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            autoFocus
+                        />
+                        <button onClick={handleSearch} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-blue-600 hover:bg-blue-700">
+                             <SearchIcon className="w-6 h-6" />
+                        </button>
+                    </div>
+                </div>
+            )}
              {/* Header */}
             <header className="w-full bg-slate-900/50 text-white shadow-lg z-10 flex-shrink-0">
                 <div className="container mx-auto px-4 py-2 flex justify-between items-center">
@@ -82,7 +122,7 @@ const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
 
                     {/* Right Column */}
                     <div className="col-span-4 space-y-4">
-                        <button className="w-full h-20 rounded-2xl text-lg font-semibold bg-blue-600 hover:bg-blue-700 transition-colors">Search with Google</button>
+                        <button onClick={() => setShowSearch(true)} className="w-full h-20 rounded-2xl text-lg font-semibold bg-blue-600 hover:bg-blue-700 transition-colors">Search with Google</button>
                         <button onClick={() => navigate('app-chat', { initialTargetId: -1, title: 'LynxAI' })} className="w-full h-20 rounded-2xl text-lg font-semibold bg-purple-600 hover:bg-purple-700 transition-colors">Chat with AI</button>
                         <button className="w-full h-20 rounded-2xl text-lg font-semibold bg-green-600 hover:bg-green-700 transition-colors">Buy another product!</button>
                         <button className="w-full h-20 rounded-2xl text-lg font-semibold bg-orange-600 hover:bg-orange-700 transition-colors">MyPortal</button>

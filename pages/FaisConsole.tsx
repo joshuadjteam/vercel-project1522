@@ -32,6 +32,8 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
     const [isHelpModalOpen, setHelpModalOpen] = useState(false);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const SHELF_APPS = useMemo(() => appsList.filter(app => ['app-phone', 'app-chat', 'app-localmail', 'app-files', 'app-contacts', 'app-chat-ai'].includes(app.id)), [appsList]);
     const ALL_APPS = useMemo(() => appsList.filter(app => !app.isHidden), [appsList]);
@@ -61,8 +63,44 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
         setLauncherOpen(false);
     };
 
+    const handleSearch = () => {
+        if (searchQuery.trim() !== '') {
+            const url = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+            window.open(url, '_blank');
+            setSearchQuery('');
+            setShowSearch(false);
+        }
+    };
+    
+    const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
+
     return (
         <div className={`w-screen h-screen overflow-hidden ${wallpapers[wallpaper].class} text-white transition-all duration-500`}>
+             {showSearch && (
+                <div 
+                    className="absolute inset-0 bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center"
+                    onClick={() => setShowSearch(false)}
+                >
+                    <div className="relative w-full max-w-xl" onClick={e => e.stopPropagation()}>
+                        <input
+                            type="text"
+                            placeholder="Search with Google..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyPress={handleSearchKeyPress}
+                            className="w-full bg-slate-800/80 border border-slate-600 text-white rounded-full py-4 pl-6 pr-16 text-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            autoFocus
+                        />
+                        <button onClick={handleSearch} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-blue-600 hover:bg-blue-700">
+                             <SearchIcon className="w-6 h-6" />
+                        </button>
+                    </div>
+                </div>
+            )}
             {/* Bottom Shelf */}
             <div
                 className="fixed bottom-4 left-1/2 -translate-x-1/2 w-auto h-24 px-8 rounded-2xl flex items-center justify-center space-x-6 border border-white/20"
@@ -106,7 +144,7 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
 
                 {/* Right controls */}
                  <div className="flex items-center space-x-3">
-                    <button className="p-3 rounded-full hover:bg-white/20 transition-colors"><SearchIcon className="w-6 h-6"/></button>
+                    <button onClick={() => setShowSearch(true)} className="p-3 rounded-full hover:bg-white/20 transition-colors"><SearchIcon className="w-6 h-6"/></button>
                     <div className="relative">
                         <button onClick={() => setSettingsMenuOpen(p => !p)} className="p-3 rounded-full hover:bg-white/20 transition-colors">
                             <SettingsIcon className="w-6 h-6"/>

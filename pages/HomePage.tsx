@@ -1,11 +1,26 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Clock from '../components/Clock';
 import AppContainer from '../components/AppContainer';
 
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
 
 const HomePage: React.FC = () => {
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const handleSearch = () => {
+        if (searchQuery.trim() !== '') {
+            const url = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+            window.open(url, '_blank');
+        }
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
+
     return (
         <div className="w-full max-w-4xl flex flex-col items-center justify-center space-y-8">
             <div className="relative w-full max-w-xl">
@@ -13,9 +28,15 @@ const HomePage: React.FC = () => {
                 <input
                     type="text"
                     placeholder="Search with Google..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={handleKeyPress}
                     className="w-full bg-white/70 dark:bg-gray-900/70 border border-gray-300 dark:border-gray-700 text-light-text dark:text-white rounded-full py-3 pl-10 pr-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                <button 
+                    onClick={handleSearch}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                >
                     <SearchIcon />
                     <span>Search</span>
                 </button>

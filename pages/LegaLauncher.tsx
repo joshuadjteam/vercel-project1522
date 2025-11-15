@@ -52,6 +52,7 @@ const LegaLauncher: React.FC<LegaLauncherProps> = ({ navigate, appsList }) => {
     const [appsMenuOpen, setAppsMenuOpen] = useState(false);
     const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
     const [isHelpModalOpen, setHelpModalOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const webMenuRef = useRef<HTMLDivElement>(null);
     const appsMenuRef = useRef<HTMLDivElement>(null);
@@ -77,6 +78,19 @@ const LegaLauncher: React.FC<LegaLauncherProps> = ({ navigate, appsList }) => {
         logout();
         setSettingsMenuOpen(false);
         navigate('home');
+    };
+
+    const handleSearch = () => {
+        if (searchQuery.trim() !== '') {
+            const url = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+            window.open(url, '_blank');
+        }
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
     };
 
     const NavButton: React.FC<{ onClick?: () => void, text: string, icon: React.ReactNode }> = ({ onClick, text, icon }) => (
@@ -147,8 +161,18 @@ const LegaLauncher: React.FC<LegaLauncherProps> = ({ navigate, appsList }) => {
             <main className="flex-grow flex flex-col items-center justify-center p-4">
                  <div className="relative w-full max-w-xl mb-8">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 font-bold">G</span>
-                    <input type="text" placeholder="Search with Google..." className="w-full bg-slate-800/80 border border-slate-600 text-white rounded-full py-3 pl-10 pr-32 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                    <input 
+                        type="text" 
+                        placeholder="Search with Google..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        className="w-full bg-slate-800/80 border border-slate-600 text-white rounded-full py-3 pl-10 pr-32 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    />
+                    <button 
+                        onClick={handleSearch}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                    >
                         <SearchIcon />
                         <span>Search</span>
                     </button>
