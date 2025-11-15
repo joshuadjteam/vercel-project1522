@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -343,23 +344,6 @@ const AppContent: React.FC = () => {
 
     const renderPage = () => {
         if (!isLoggedIn) {
-            // Mobile-specific routing for unauthenticated users
-            if (isMobileDevice) {
-                switch (currentPage) {
-                    case 'home':
-                    case 'signin':
-                        return <MobileSignInPage navigate={navigate} />;
-                    case 'contact':
-                        return <ContactPage />;
-                    case 'auth-callback':
-                        return <AuthCallbackPage navigate={navigate} />;
-                    default:
-                        // Any other path redirects to the mobile sign-in page
-                        return <MobileSignInPage navigate={navigate} />;
-                }
-            }
-
-            // Desktop routing for unauthenticated users
             switch (currentPage) {
                 case 'home': return <HomePage />;
                 case 'contact': return <ContactPage />;
@@ -403,7 +387,7 @@ const AppContent: React.FC = () => {
     const isConsolePage = isLoggedIn && currentPage === 'home';
     const isFullScreenApp = isLoggedIn && currentPage.startsWith('app-') && !isWindowedConsole;
     const showMainHeaderFooter = 
-        (!isLoggedIn && !isMobileDevice && currentPage !== 'auth-callback') ||
+        (!isLoggedIn && currentPage !== 'auth-callback') ||
         (isLoggedIn && !isConsolePage && !isFullScreenApp && !showMobileLayout && currentPage !== 'auth-callback');
     const showStandardBackground = !isConsolePage && !isFullScreenApp && !showMobileLayout;
     const shouldCenterContent = showStandardBackground;
