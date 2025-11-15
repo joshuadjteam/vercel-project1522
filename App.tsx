@@ -3,6 +3,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -25,7 +26,6 @@ import MobiLauncher from './pages/MobiLauncher';
 import ConConsole from './pages/ConConsole';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
-import MobileSignInPage from './pages/MobileSignInPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPortal from './pages/AdminPortal';
 import PhoneApp from './pages/apps/PhoneApp';
@@ -59,6 +59,7 @@ const CalculatorIcon = (props: { className?: string }) => <svg xmlns="http://www
 const UnitConverterIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>;
 const AIIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>;
 const SwitcherIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>;
+const ProfileIconSvg = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 
 const appsList: AppLaunchable[] = ([
   { id: 'app-phone', label: 'Phone', icon: <PhoneIcon />, page: 'app-phone' },
@@ -67,6 +68,7 @@ const appsList: AppLaunchable[] = ([
   { id: 'app-files', label: 'Files', icon: <FileExplorerIcon />, page: 'app-files' },
   { id: 'app-editor', label: 'Editor', icon: <CodeEditorIcon />, page: 'app-editor', isHidden: true },
   { id: 'app-contacts', label: 'Contacts', icon: <ContactsIcon />, page: 'app-contacts' },
+  { id: 'page-profile', label: 'My Profile', icon: <ProfileIconSvg />, page: 'profile' },
   { id: 'app-chat-ai', label: 'LynxAI', icon: <AIIcon />, page: 'app-chat', params: { initialTargetId: -1, title: 'LynxAI' } },
   { id: 'app-notepad', label: 'Notepad', icon: <NotepadIcon />, page: 'app-notepad' },
   { id: 'app-calendar', label: 'Calendar', icon: <CalendarIcon />, page: 'app-calendar' },

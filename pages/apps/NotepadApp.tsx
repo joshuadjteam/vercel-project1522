@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { database } from '../../services/database';
 import { DriveFile } from '../../types';
+import { database } from '../../services/database';
+import useIsMobileDevice from '../../hooks/useIsMobileDevice';
 
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m7 7H3" /></svg>;
 
 const NotepadApp: React.FC = () => {
     const { user } = useAuth();
@@ -15,6 +17,7 @@ const NotepadApp: React.FC = () => {
     const [currentTitle, setCurrentTitle] = useState('');
     const [currentContent, setCurrentContent] = useState('');
     const [saveStatus, setSaveStatus] = useState('');
+    const isMobile = useIsMobileDevice();
 
     const fetchNotes = useCallback(async () => {
         if (!user) return;
@@ -89,9 +92,9 @@ const NotepadApp: React.FC = () => {
     };
 
     return (
-        <div className="w-full h-full text-light-text dark:text-white flex bg-dark-card">
+        <div className="w-full h-full text-light-text dark:text-white flex flex-col md:flex-row bg-dark-card">
             {/* Notes List Sidebar */}
-            <div className="w-1/3 border-r border-current border-opacity-20 bg-black/10 flex flex-col">
+            <div className={`border-r border-current border-opacity-20 bg-black/10 flex flex-col ${isMobile && selectedNote ? 'hidden' : 'w-full md:w-1/3'}`}>
                 <div className="p-4 border-b border-current border-opacity-20 flex justify-between items-center">
                     <h2 className="text-xl font-bold">My Notes (Drive)</h2>
                     <button onClick={handleNewNote} className="px-3 py-1 text-sm rounded-md bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2">
@@ -110,19 +113,26 @@ const NotepadApp: React.FC = () => {
             </div>
             
             {/* Editor View */}
-            <div className="w-2/3 flex flex-col">
+            <div className={`flex flex-col ${!selectedNote && isMobile ? 'hidden' : 'w-full md:w-2/3'}`}>
                 {selectedNote ? (
                     <>
-                        <div className="p-3 border-b border-current border-opacity-20 flex justify-end items-center space-x-2 bg-black/10">
-                            {saveStatus && <span className="text-sm text-green-600 dark:text-green-400">{saveStatus}</span>}
-                             <button onClick={handleSaveNote} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm flex items-center space-x-2">
-                                <SaveIcon />
-                                <span>Save</span>
-                             </button>
-                            <button onClick={handleDeleteNote} className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm flex items-center space-x-2">
-                                <TrashIcon />
-                                <span>Delete</span>
-                            </button>
+                        <div className="p-3 border-b border-current border-opacity-20 flex justify-between items-center space-x-2 bg-black/10">
+                            {isMobile && (
+                                <button onClick={() => setSelectedNote(null)} className="p-2 rounded-full hover:bg-white/10">
+                                    <BackIcon />
+                                </button>
+                            )}
+                            <div className="flex-grow flex justify-end items-center space-x-2">
+                                {saveStatus && <span className="text-sm text-green-600 dark:text-green-400">{saveStatus}</span>}
+                                <button onClick={handleSaveNote} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm flex items-center space-x-2">
+                                    <SaveIcon />
+                                    <span>Save</span>
+                                </button>
+                                <button onClick={handleDeleteNote} className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm flex items-center space-x-2">
+                                    <TrashIcon />
+                                    <span>Delete</span>
+                                </button>
+                            </div>
                         </div>
                         <div className="flex-grow flex flex-col p-4">
                             <input

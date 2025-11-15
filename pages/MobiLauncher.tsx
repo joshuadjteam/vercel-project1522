@@ -1,6 +1,9 @@
 
 
 
+
+
+
 import React, { useState, useMemo } from 'react';
 import { Page, AppLaunchable } from '../types';
 
@@ -24,7 +27,7 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
     }, [ALL_APPS, currentPage]);
 
     const handleAppClick = (app: AppLaunchable) => {
-        navigate(app.page, { navigate, ...app.params });
+        navigate(app.page, app.params);
     };
 
     return (
