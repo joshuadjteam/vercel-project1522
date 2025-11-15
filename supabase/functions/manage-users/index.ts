@@ -152,7 +152,7 @@ serve(async (req) => {
         const { id, auth_id, password, username, role, sipVoice, features, plan_name } = payload;
         const email = normalizeEmail(payload.email);
         
-        const updatePayload: Record<string, any> = {
+        let updatePayload: Record<string, any> = {
             username: username,
             role: role,
             plan_name: plan_name,

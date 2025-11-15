@@ -22,7 +22,6 @@ import MobiLauncher from './pages/MobiLauncher';
 import ConConsole from './pages/ConConsole';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
-import MobileSignInPage from './pages/MobileSignInPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPortal from './pages/AdminPortal';
 import PhoneApp from './pages/apps/PhoneApp';
@@ -285,9 +284,6 @@ const AppContent: React.FC = () => {
 
     const renderPage = () => {
         if (!isLoggedIn) {
-            if (isMobileDevice) {
-                 return <MobileSignInPage navigate={navigate} />;
-            }
             switch (currentPage) {
                 case 'home': return <HomePage />;
                 case 'contact': return <ContactPage />;
