@@ -1,8 +1,6 @@
-
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Page, UserRole, AppLaunchable } from '../types';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme, wallpapers } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import HelpModal from '../components/HelpModal';
 
@@ -13,12 +11,6 @@ const SettingsIcon = (props: { className?: string }) => <svg xmlns="http://www.w
 const ProfileIconSvg = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const HelpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
-
-const wallpapers: Record<string, { name: string, class: string }> = {
-    canyon: { name: 'Canyon', class: 'bg-gradient-to-br from-[#23304e] via-[#e97451] to-[#f4a261]' },
-    sky: { name: 'Sky', class: 'bg-gradient-to-br from-sky-400 to-blue-600' },
-};
-
 interface FaisConsoleProps {
     navigate: (page: Page, params?: any) => void;
     appsList: AppLaunchable[];
@@ -26,8 +18,7 @@ interface FaisConsoleProps {
 
 const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
     const { user, logout } = useAuth();
-    const { isDark, glassBlur, glassTransparency } = useTheme();
-    const [wallpaper, setWallpaper] = useState('canyon');
+    const { isDark, glassBlur, glassTransparency, wallpaper, setWallpaper } = useTheme();
     const [launcherOpen, setLauncherOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
@@ -79,7 +70,7 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
     };
 
     return (
-        <div className={`w-screen h-screen overflow-hidden ${wallpapers[wallpaper].class} text-white transition-all duration-500`}>
+        <div className={`w-screen h-screen overflow-hidden ${(wallpapers[wallpaper] || wallpapers.canyon).class} text-white transition-all duration-500`}>
              {showSearch && (
                 <div 
                     className="absolute inset-0 bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center"

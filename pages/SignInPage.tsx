@@ -26,10 +26,14 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        const { error: loginError } = await login(email, password);
-        if (loginError) {
-            // Display the specific error message from the server
-            setError(loginError);
+        try {
+            const { error: loginError } = await login(email, password);
+            if (loginError) {
+                // Display the specific error message from the server
+                setError(loginError);
+            }
+        } catch (err: any) {
+            setError(err.message || 'An unexpected error occurred during sign in.');
         }
     };
     

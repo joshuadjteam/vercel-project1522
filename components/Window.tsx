@@ -7,10 +7,11 @@ interface WindowComponentProps {
     onFocus: (id: string) => void;
     onMinimize: (id: string) => void;
     onPositionChange: (id: string, newPosition: { x: number, y: number }) => void;
+    onSizeChange: (id: string, newSize: { width: number, height: number }) => void;
     isActive: boolean;
 }
 
-const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus, onMinimize, onPositionChange, isActive }) => {
+const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus, onMinimize, onPositionChange, onSizeChange, isActive }) => {
     const headerRef = useRef<HTMLDivElement>(null);
     const windowRef = useRef<HTMLDivElement>(null);
 
@@ -32,10 +33,8 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
             let newY = initialPos.y + dy;
             
             if(parentRect && windowRef.current) {
-                // Prevent dragging out of view from top/left
                 newX = Math.max(0, newX);
                 newY = Math.max(0, newY);
-                // Prevent dragging out of view from bottom/right (approximate)
                 newX = Math.min(newX, parentRect.width - windowRef.current.offsetWidth);
                 newY = Math.min(newY, parentRect.height - windowRef.current.offsetHeight);
             }
@@ -51,6 +50,33 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
 
     }, [win.id, win.position, onFocus, onPositionChange]);
     
+     const onResizeMouseDown = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        onFocus(win.id);
+
+        const startSize = { width: win.size.width, height: win.size.height };
+        const startPos = { x: e.clientX, y: e.clientY };
+
+        const onMouseMove = (moveEvent: MouseEvent) => {
+            const dx = moveEvent.clientX - startPos.x;
+            const dy = moveEvent.clientY - startPos.y;
+
+            const newWidth = Math.max(350, startSize.width + dx);
+            const newHeight = Math.max(250, startSize.height + dy);
+            
+            onSizeChange(win.id, { width: newWidth, height: newHeight });
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+
+    }, [win.id, win.size, onFocus, onSizeChange]);
+
     const WindowContent = APPS_MAP[win.appId]?.component;
     if (!WindowContent) return null;
 
@@ -63,7 +89,9 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
                 height: win.size.height,
                 transform: `translate(${win.position.x}px, ${win.position.y}px)`,
                 zIndex: win.zIndex,
-                display: win.state === 'minimized' ? 'none' : 'flex'
+                display: win.state === 'minimized' ? 'none' : 'flex',
+                minWidth: '350px',
+                minHeight: '250px'
             }}
             onMouseDown={() => onFocus(win.id)}
         >
@@ -81,6 +109,10 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
             <div className="flex-grow w-full h-full overflow-auto relative">
                 <WindowContent {...win.props} />
             </div>
+            <div 
+                className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-10"
+                onMouseDown={onResizeMouseDown}
+            />
         </div>
     );
 };

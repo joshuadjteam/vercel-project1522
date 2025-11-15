@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 // Add DriveFile to imports
 import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile } from '../types';
@@ -37,7 +36,14 @@ export const database = {
 
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) {
+                    // Parsing error, stick with original message
+                }
+            }
             console.error('Error from get-user-profile function:', errorMessage, { error, data });
             return { profile: null, error: errorMessage };
         }
@@ -57,7 +63,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error from manage-users function (getUsers):', errorMessage, { error, data });
             return [];
         }
@@ -74,7 +85,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error from manage-users function (getDirectory):', errorMessage, { error, data });
             return [];
         }
@@ -101,7 +117,12 @@ export const database = {
         
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error from manage-users function (addUser):', errorMessage, { error, data });
             return { user: null, error: errorMessage };
         }
@@ -122,7 +143,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error from manage-users function (updateUser):', errorMessage, { error, data });
             return null;
         }
@@ -144,7 +170,12 @@ export const database = {
 
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error from manage-users function (updatePassword):', errorMessage, { error, data });
             return { error: errorMessage };
         }
@@ -166,7 +197,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error from manage-users function (deleteUser):', errorMessage, { error, data });
             return { error: errorMessage };
         }
@@ -199,7 +235,12 @@ export const database = {
 
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error invoking manage-users (getUserByEmail):', errorMessage);
             throw new Error("Database connection error during user validation.");
         }
@@ -223,7 +264,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error fetching admin stats:', errorMessage, { error, data });
             return fallbackStats;
         }
@@ -241,7 +287,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error fetching Google Drive OAuth config:', errorMessage, { error, data });
             return null;
         }
@@ -263,7 +314,12 @@ export const database = {
 
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error from loginAndLinkDrive function:', errorMessage, { error, data });
             return { success: false, error: errorMessage };
         }
@@ -281,7 +337,12 @@ export const database = {
         let errorMessage = data?.error;
         if (error) {
             errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
         }
         if(errorMessage) {
             console.error('Error from drive/list-files function:', errorMessage, { error, data });
@@ -357,7 +418,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error unlinking Drive:', errorMessage, { error, data });
             return { success: false };
         }
@@ -377,7 +443,12 @@ export const database = {
 
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error invoking voice-service:', errorMessage, { error, data });
             throw new Error(errorMessage);
         }
@@ -395,7 +466,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error("Error fetching mails:", errorMessage, { error, data });
             return { inbox: [], sent: [] };
         }
@@ -415,7 +491,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error sending mail:', errorMessage, { error, data });
             return null;
         }
@@ -432,7 +513,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error marking mail as read:', errorMessage, { error, data });
             return false;
         }
@@ -449,7 +535,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error deleting mail:', errorMessage, { error, data });
             return false;
         }
@@ -466,7 +557,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error("Error fetching mail accounts:", errorMessage, { error, data });
             return [];
         }
@@ -483,7 +579,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error adding mail account:', errorMessage, { error, data });
             return null;
         }
@@ -500,7 +601,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error syncing mail account:', errorMessage, { error, data });
             return { success: false, message: errorMessage };
         }
@@ -518,7 +624,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error fetching contacts:', errorMessage, { error, data });
             return [];
         }
@@ -535,7 +646,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error adding contact:', errorMessage, { error, data });
             return null;
         }
@@ -552,7 +668,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error updating contact:', errorMessage, { error, data });
             return null;
         }
@@ -569,7 +690,12 @@ export const database = {
         });
         if (error) {
             let errorMessage = error.message;
-            if (error.context?.json) { try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch {} }
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
             console.error('Error deleting contact:', errorMessage, { error, data });
             return false;
         }

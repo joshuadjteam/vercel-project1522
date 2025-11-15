@@ -1,8 +1,6 @@
-
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Page, UserRole, AppLaunchable, NavAction } from '../types';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme, wallpapers } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import HelpModal from '../components/HelpModal';
 
@@ -17,16 +15,6 @@ const SignOutIcon = (props: { className?: string }) => <svg xmlns="http://www.w3
 const ContactIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
 const HelpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
-const wallpapers: Record<string, { name: string, class: string }> = {
-    canyon: { name: 'Canyon', class: 'bg-gradient-to-br from-[#23304e] via-[#e97451] to-[#f4a261]' },
-    sky: { name: 'Sky', class: 'bg-gradient-to-br from-sky-400 to-blue-600' },
-    sunset: { name: 'Sunset', class: 'bg-gradient-to-br from-yellow-400 via-red-500 to-pink-600' },
-    forest: { name: 'Forest', class: 'bg-gradient-to-br from-green-500 to-teal-700' },
-    night: { name: 'Night', class: 'bg-gradient-to-br from-gray-800 to-slate-900' },
-    cosmic: { name: 'Cosmic', class: 'bg-gradient-to-br from-purple-700 via-pink-700 to-indigo-700' },
-    ocean: { name: 'Ocean', class: 'bg-gradient-to-br from-blue-500 via-cyan-400 to-teal-300' },
-};
-
 interface ConsolePageProps {
     navigate: (page: Page, params?: any) => void;
     appsList: AppLaunchable[];
@@ -34,9 +22,8 @@ interface ConsolePageProps {
 
 const ConsolePage: React.FC<ConsolePageProps> = ({ navigate, appsList }) => {
     const { user, logout } = useAuth();
-    const { isDark, setIsDark, glassBlur, setGlassBlur, glassTransparency, setGlassTransparency } = useTheme();
+    const { isDark, setIsDark, glassBlur, setGlassBlur, glassTransparency, setGlassTransparency, wallpaper, setWallpaper } = useTheme();
     
-    const [wallpaper, setWallpaper] = useState('canyon');
     const [launcherOpen, setLauncherOpen] = useState(false);
     const [webMenuOpen, setWebMenuOpen] = useState(false);
     const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
@@ -94,7 +81,7 @@ const ConsolePage: React.FC<ConsolePageProps> = ({ navigate, appsList }) => {
     const formattedDate = time.toLocaleDateString([], { month: 'short', day: 'numeric' });
 
     return (
-        <div className={`w-screen h-screen overflow-hidden ${wallpapers[wallpaper].class} text-white transition-all duration-500`}>
+        <div className={`w-screen h-screen overflow-hidden ${(wallpapers[wallpaper] || wallpapers.canyon).class} text-white transition-all duration-500`}>
             {/* Desktop Area for Icons */}
             <div className="absolute inset-0 top-12 p-4">
                 <div className="grid grid-cols-10 gap-4">

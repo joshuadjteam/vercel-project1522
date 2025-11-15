@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -110,6 +111,7 @@ interface DesktopContextType {
     focusApp: (id: string) => void;
     minimizeApp: (id: string) => void;
     updateAppPosition: (id: string, position: { x: number, y: number }) => void;
+    updateAppSize: (id: string, size: { width: number, height: number }) => void;
 }
 
 const DesktopContext = createContext<DesktopContextType | undefined>(undefined);
@@ -181,25 +183,75 @@ const DesktopProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         setWindows(prev => prev.map(w => w.id === id ? { ...w, position } : w));
     };
 
-    const value = { windows, activeWindowId, openApp, closeApp, focusApp, minimizeApp, updateAppPosition };
+    const updateAppSize = (id: string, size: { width: number, height: number }) => {
+        setWindows(prev => prev.map(w => w.id === id ? { ...w, size } : w));
+    };
+
+    const value = { windows, activeWindowId, openApp, closeApp, focusApp, minimizeApp, updateAppPosition, updateAppSize };
 
     return <DesktopContext.Provider value={value}>{children}</DesktopContext.Provider>;
 }
 
-const getInitialPage = (): Page => {
-    if (window.location.pathname === '/auth/callback') {
-        return 'auth-callback';
+// --- Routing Helpers ---
+const pageToPath = (page: Page, view: string, isLoggedIn: boolean): string => {
+    if (page === 'home') {
+        return isLoggedIn ? `/launcher/${view}` : '/';
     }
-    return 'home';
+    if (page === 'contact') {
+        return '/pages/contact-us';
+    }
+    if (page.startsWith('app-')) {
+        return `/apps/${page.replace('app-', '')}`;
+    }
+    if (page === 'auth-callback') {
+        return '/auth/callback';
+    }
+    return `/${page}`;
+};
+
+const pathToPage = (path: string): { page: Page, params: any } => {
+    const parts = path.split('/').filter(p => p);
+
+    if (parts.length === 0) return { page: 'home', params: {} };
+
+    const [p1, p2] = parts;
+
+    if (p1 === 'launcher') {
+        return { page: 'home', params: {} };
+    }
+    if (p1 === 'pages' && p2 === 'contact-us') {
+        return { page: 'contact', params: {} };
+    }
+    if (p1 === 'apps') {
+        const appName = `app-${p2}`;
+        if (Object.keys(APPS_MAP).includes(appName)) {
+            return { page: appName as Page, params: {} };
+        }
+    }
+    
+    const simplePages: Page[] = ['signin', 'profile', 'admin', 'contact'];
+    if (simplePages.includes(p1 as Page)) {
+        return { page: p1 as Page, params: {} };
+    }
+    
+    if(p1 === 'auth' && p2 === 'callback') {
+        return { page: 'auth-callback', params: {} };
+    }
+
+    return { page: 'home', params: {} };
+};
+
+const getInitialState = (): { page: Page; params: any } => {
+    return pathToPage(window.location.pathname);
 };
 
 const AppContent: React.FC = () => {
-    const [currentPage, setCurrentPage] = useState<Page>(getInitialPage());
-    const [pageParams, setPageParams] = useState<any>(null);
+    const [pageState, setPageState] = useState(getInitialState);
+    const { page: currentPage, params: pageParams } = pageState;
     const { user, isLoggedIn, isLoading } = useAuth();
     const { isDark } = useTheme();
     const { view, isInitialChoice } = useConsoleView();
-    const { windows, activeWindowId, openApp, closeApp, focusApp, minimizeApp, updateAppPosition } = useDesktop();
+    const { windows, activeWindowId, openApp, closeApp, focusApp, minimizeApp, updateAppPosition, updateAppSize } = useDesktop();
     const initialAppOpened = useRef(false);
     const isMobileDevice = useIsMobileDevice();
 
@@ -221,32 +273,37 @@ const AppContent: React.FC = () => {
     }, [isDark]);
 
     const navigate = useCallback((page: Page, params?: any) => {
-        if (window.location.pathname === '/auth/callback' && page !== 'auth-callback') {
-             window.history.replaceState({}, document.title, '/');
-        }
-
-        setPageParams(params || {});
-        
         const targetPage = page;
 
-        if (targetPage.startsWith('app-')) {
-            if (isWindowedConsole) {
-                setCurrentPage('home');
-                const appDefinition = effectiveAppsList.find(app => app.page === targetPage);
-                const appInfo = {
-                    title: appDefinition?.label || targetPage.replace('app-', ''),
-                    icon: appDefinition?.icon,
-                    props: { navigate, ...params },
-                };
-                openApp(targetPage, appInfo);
-            } else {
-                // Full-screen app mode
-                setCurrentPage(targetPage);
-            }
+        if (targetPage.startsWith('app-') && isWindowedConsole) {
+            const appDefinition = effectiveAppsList.find(app => app.page === targetPage);
+            const appInfo = {
+                title: appDefinition?.label || targetPage.replace('app-', ''),
+                icon: appDefinition?.icon,
+                props: { navigate, ...params },
+            };
+            openApp(targetPage, appInfo);
         } else {
-            setCurrentPage(targetPage);
+            const newPath = pageToPath(targetPage, view, isLoggedIn);
+            if (newPath !== window.location.pathname) {
+                 if (currentPage === 'auth-callback') {
+                    window.history.replaceState({ page: targetPage, params }, '', newPath);
+                } else {
+                    window.history.pushState({ page: targetPage, params }, '', newPath);
+                }
+            }
+            setPageState({ page: targetPage, params: params || {} });
         }
-    }, [openApp, isWindowedConsole, effectiveAppsList]);
+    }, [view, isLoggedIn, isWindowedConsole, openApp, effectiveAppsList, currentPage]);
+
+    useEffect(() => {
+        const handlePopState = () => {
+            setPageState(getInitialState());
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
 
     useEffect(() => {
         if (isInitialChoice && isLoggedIn && !initialAppOpened.current && !isMobileDevice) {
@@ -351,6 +408,7 @@ const AppContent: React.FC = () => {
                                 onFocus={focusApp}
                                 onMinimize={minimizeApp}
                                 onPositionChange={updateAppPosition}
+                                onSizeChange={updateAppSize}
                                 isActive={win.id === activeWindowId}
                             />
                         ))}
