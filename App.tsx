@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -23,6 +24,7 @@ import MobiLauncher from './pages/MobiLauncher';
 import ConConsole from './pages/ConConsole';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
+import MobileSignInPage from './pages/MobileSignInPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPortal from './pages/AdminPortal';
 import PhoneApp from './pages/apps/PhoneApp';
@@ -341,6 +343,23 @@ const AppContent: React.FC = () => {
 
     const renderPage = () => {
         if (!isLoggedIn) {
+            // Mobile-specific routing for unauthenticated users
+            if (isMobileDevice) {
+                switch (currentPage) {
+                    case 'home':
+                    case 'signin':
+                        return <MobileSignInPage navigate={navigate} />;
+                    case 'contact':
+                        return <ContactPage />;
+                    case 'auth-callback':
+                        return <AuthCallbackPage navigate={navigate} />;
+                    default:
+                        // Any other path redirects to the mobile sign-in page
+                        return <MobileSignInPage navigate={navigate} />;
+                }
+            }
+
+            // Desktop routing for unauthenticated users
             switch (currentPage) {
                 case 'home': return <HomePage />;
                 case 'contact': return <ContactPage />;
