@@ -130,8 +130,8 @@ const ConsolePage: React.FC<ConsolePageProps> = ({ navigate, appsList }) => {
                         <button onClick={() => setWebMenuOpen(p => !p)} className="px-3 py-2 text-sm font-semibold rounded-md hover:bg-white/20 transition-colors">Web</button>
                         {webMenuOpen && (
                             <div ref={webMenuRef} className="absolute top-full mt-2 w-48 bg-slate-800/80 backdrop-blur-md rounded-xl py-2 animate-fade-in-up">
-                               <a href="#" onClick={(e) => e.preventDefault()} className="w-full text-left flex items-center px-4 py-2 hover:bg-white/10">Buy A Product</a>
-                               <a href="#" onClick={(e) => e.preventDefault()} className="w-full text-left flex items-center px-4 py-2 hover:bg-white/10">MyPortal</a>
+                               <a href="https://darshanjoshuakesavaruban.fwscheckout.com/" target="_blank" rel="noopener noreferrer" className="w-full text-left flex items-center px-4 py-2 hover:bg-white/10">Buy A Product</a>
+                               <a href="https://sites.google.com/gcp.lynixity.x10.bz/myportal/home" target="_blank" rel="noopener noreferrer" className="w-full text-left flex items-center px-4 py-2 hover:bg-white/10">MyPortal</a>
                                <div className="border-t border-white/20 my-1"></div>
                                <button onClick={() => navigate('contact')} className="w-full text-left flex items-center px-4 py-2 hover:bg-white/10 space-x-3"><ContactIcon className="w-5 h-5"/><span>Contact</span></button>
                             </div>

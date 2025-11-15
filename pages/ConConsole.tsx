@@ -124,8 +124,8 @@ const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
                     <div className="col-span-4 space-y-4">
                         <button onClick={() => setShowSearch(true)} className="w-full h-20 rounded-2xl text-lg font-semibold bg-blue-600 hover:bg-blue-700 transition-colors">Search with Google</button>
                         <button onClick={() => navigate('app-chat', { initialTargetId: -1, title: 'LynxAI' })} className="w-full h-20 rounded-2xl text-lg font-semibold bg-purple-600 hover:bg-purple-700 transition-colors">Chat with AI</button>
-                        <button className="w-full h-20 rounded-2xl text-lg font-semibold bg-green-600 hover:bg-green-700 transition-colors">Buy another product!</button>
-                        <button className="w-full h-20 rounded-2xl text-lg font-semibold bg-orange-600 hover:bg-orange-700 transition-colors">MyPortal</button>
+                        <button onClick={() => window.open('https://darshanjoshuakesavaruban.fwscheckout.com/', '_blank')} className="w-full h-20 rounded-2xl text-lg font-semibold bg-green-600 hover:bg-green-700 transition-colors">Buy another product!</button>
+                        <button onClick={() => window.open('https://sites.google.com/gcp.lynixity.x10.bz/myportal/home', '_blank')} className="w-full h-20 rounded-2xl text-lg font-semibold bg-orange-600 hover:bg-orange-700 transition-colors">MyPortal</button>
                     </div>
                 </div>
             </main>

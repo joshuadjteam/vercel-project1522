@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Page, UserRole, AppLaunchable } from '../types';
 import { useTheme } from '../hooks/useTheme';
@@ -121,8 +120,8 @@ const LegaLauncher: React.FC<LegaLauncherProps> = ({ navigate, appsList }) => {
                             <NavButton onClick={() => setWebMenuOpen(p => !p)} text="Web" icon={<WebIcon />} />
                             {webMenuOpen && (
                                 <div className="absolute top-full right-0 mt-2 w-48 bg-slate-800/90 backdrop-blur-md rounded-lg shadow-xl py-2 z-20 animate-fade-in-up">
-                                    <DropdownButton onClick={() => {}} text="Buy a Product" />
-                                    <DropdownButton onClick={() => {}} text="MyPortal" />
+                                    <DropdownButton onClick={() => window.open('https://darshanjoshuakesavaruban.fwscheckout.com/', '_blank')} text="Buy a Product" />
+                                    <DropdownButton onClick={() => window.open('https://sites.google.com/gcp.lynixity.x10.bz/myportal/home', '_blank')} text="MyPortal" />
                                 </div>
                             )}
                         </div>
