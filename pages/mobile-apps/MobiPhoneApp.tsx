@@ -18,12 +18,25 @@ const KeypadView: React.FC<{ onLaunchAssistant: () => void; dialerInput: string;
         if (!dialerInput.trim()) { setErrorStatus('Please enter a username to call.'); return; }
         if (dialerInput.trim().toLowerCase() === currentUser?.username.toLowerCase()) { setErrorStatus("You cannot call yourself."); return; }
         setErrorStatus('Checking user...');
-        const userToCall = await database.getUserByUsername(dialerInput.trim());
-        if (userToCall) {
-            setErrorStatus('');
-            startP2PCall(userToCall.username, withVideo);
-        } else {
-            setErrorStatus(`User "${dialerInput.trim()}" not found.`);
+        
+        try {
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("User check timed out")), 8000)
+            );
+
+            const userToCall = await Promise.race([
+                database.getUserByUsername(dialerInput.trim()),
+                timeoutPromise
+            ]) as Awaited<ReturnType<typeof database.getUserByUsername>>;
+
+            if (userToCall) {
+                setErrorStatus('');
+                startP2PCall(userToCall.username, withVideo);
+            } else {
+                setErrorStatus(`User "${dialerInput.trim()}" not found.`);
+            }
+        } catch (e: any) {
+            setErrorStatus(e.message || "An error occurred while checking the user.");
         }
     };
     
