@@ -132,7 +132,11 @@ const App: React.FC = () => {
     // Handle initial routing from URL path for OAuth callbacks
     useEffect(() => {
         const path = window.location.pathname;
-        if (path === '/auth-callback' || path.startsWith('/auth-callback/')) {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const state = params.get('state');
+
+        if ((path === '/auth/callback' || path.startsWith('/auth/callback/')) && code && state) {
             setPage('auth-callback');
         }
     }, []);
