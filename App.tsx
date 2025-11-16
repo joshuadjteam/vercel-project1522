@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -129,16 +131,9 @@ const App: React.FC = () => {
     
     const navigate = useCallback((newPage: Page, params: any = {}) => {
         // For windowed consoles, opening an app creates a window
-        if (isLoggedIn && !isMobileDevice && (consoleView === 'syno' || consoleView === 'fais') && newPage.startsWith('app-')) {
+        if (isLoggedIn && !isMobileDevice && (consoleView === 'syno' || consoleView === 'fais' || consoleView === 'lega' || consoleView === 'con') && newPage.startsWith('app-')) {
             const appConfig = APPS_MAP[newPage];
             if (!appConfig) return;
-
-            // If app is full-screen, just navigate to it
-            if (appConfig.isFullScreen) {
-                setPage(newPage);
-                setPageParams(params);
-                return;
-            }
 
             // Check if window already exists
             const existingWindow = windows.find(w => w.appId === newPage);
