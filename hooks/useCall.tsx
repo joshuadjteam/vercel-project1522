@@ -54,11 +54,38 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const isCallingRef = useRef(isCalling);
     const audioContextRef = useRef<AudioContext | null>(null);
 
+    // Audio Cue Refs
+    const dialBeepRef = useRef<HTMLAudioElement | null>(null);
+    const disconnectedToneRef = useRef<HTMLAudioElement | null>(null);
+    const dialIntervalRef = useRef<number | null>(null);
+    const unavailableTimeoutRef = useRef<number | null>(null);
+
     useEffect(() => {
         isCallingRef.current = isCalling;
     }, [isCalling]);
+
+    const stopAllSoundsAndTimers = useCallback(() => {
+        if (dialIntervalRef.current) {
+            clearInterval(dialIntervalRef.current);
+            dialIntervalRef.current = null;
+        }
+        if (unavailableTimeoutRef.current) {
+            clearTimeout(unavailableTimeoutRef.current);
+            unavailableTimeoutRef.current = null;
+        }
+
+        if (dialBeepRef.current) {
+            dialBeepRef.current.pause();
+            dialBeepRef.current.currentTime = 0;
+        }
+        if (disconnectedToneRef.current) {
+            disconnectedToneRef.current.pause();
+            disconnectedToneRef.current.currentTime = 0;
+        }
+    }, []);
     
     const resetState = useCallback(() => {
+        stopAllSoundsAndTimers();
         setIsCalling(false);
         setCallee('');
         setCallStatus('');
@@ -71,7 +98,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (callTimerRef.current) clearInterval(callTimerRef.current);
         callTimerRef.current = null;
         pendingCandidatesRef.current = [];
-    }, []);
+    }, [stopAllSoundsAndTimers]);
 
     const cleanupP2P = useCallback(() => {
         localStreamRef.current?.getTracks().forEach(track => track.stop());
@@ -102,6 +129,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setIncomingCall({ from: payload.from, offer: payload.offer, isVideoCall: payload.isVideoCall });
                 break;
             case 'answer':
+                stopAllSoundsAndTimers();
                 if (peerConnectionRef.current && peerConnectionRef.current.signalingState === 'have-local-offer') {
                     await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer));
                     pendingCandidatesRef.current.forEach(candidate => {
@@ -129,15 +157,31 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 break;
             case 'decline':
                 if (callee === payload.from) {
+                    stopAllSoundsAndTimers();
                     setCallStatus('Call Declined');
-                    setTimeout(() => endCall(), 2000);
+                    if (!dialBeepRef.current) {
+                        dialBeepRef.current = new Audio('https://cdn.freesound.org/previews/27/27534_379656-lq.mp3');
+                    }
+                    const beep = dialBeepRef.current;
+                    let count = 0;
+                    const playBeep = () => {
+                        if (count < 3) {
+                            beep.currentTime = 0;
+                            beep.play().catch(e => console.error("Decline beep failed to play", e));
+                            count++;
+                            setTimeout(playBeep, 2000);
+                        } else {
+                            setTimeout(() => endCall(), 1000);
+                        }
+                    };
+                    playBeep();
                 }
                 break;
             case 'end-call':
                 endCall();
                 break;
         }
-    }, [user, callee, endCall]);
+    }, [user, callee, endCall, stopAllSoundsAndTimers]);
     
     useEffect(() => {
         if (!user || user.role === 'Trial') return;
@@ -186,6 +230,27 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsCalling(true);
         setCallee(calleeUsername);
         setCallStatus(`Ringing ${calleeUsername}...`);
+
+        // Play dial tone
+        if (!dialBeepRef.current) {
+            dialBeepRef.current = new Audio('https://cdn.freesound.org/previews/27/27534_379656-lq.mp3');
+        }
+        dialBeepRef.current.play().catch(e => console.error("Dial tone failed to play", e));
+        dialIntervalRef.current = window.setInterval(() => {
+            dialBeepRef.current?.play().catch(e => console.error("Dial tone repeat failed", e));
+        }, 5000);
+
+        // Set unavailable timeout
+        unavailableTimeoutRef.current = window.setTimeout(() => {
+            stopAllSoundsAndTimers();
+            setCallStatus('User Unavailable');
+            if (!disconnectedToneRef.current) {
+                disconnectedToneRef.current = new Audio('https://cdn.freesound.org/previews/41/41136_379656-lq.mp3');
+            }
+            disconnectedToneRef.current.play().catch(e => console.error("Disconnected tone failed to play", e));
+            setTimeout(() => endCall(), 4000); // End call after tone has played for a bit
+        }, 30000);
+
         setIsVideoEnabled(withVideo);
         
         try {

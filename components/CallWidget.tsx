@@ -34,23 +34,21 @@ const CallWidget: React.FC = () => {
         const video = remoteVideoRef.current;
         if (video && remoteStream) {
             video.srcObject = remoteStream;
-            video.muted = false; // Explicitly unmute to help with autoplay policies
             
-            const playVideo = () => {
-                video.play().catch(e => console.error("Remote video play failed", e));
-            };
-
-            // If metadata is already loaded (common in some browsers after srcObject is set), play immediately.
-            if (video.readyState >= video.HAVE_METADATA) {
-                playVideo();
-            } else {
-                // Otherwise, wait for the event. This is the most reliable way.
-                video.addEventListener('loadedmetadata', playVideo);
+            // This logic is critical for cross-browser audio playback.
+            // 1. The <video> element is `muted` and `autoPlay` by default.
+            // 2. We explicitly call `play()`. The browser allows this because it's muted.
+            // 3. Once the play promise resolves, we know the video is playing, so we can safely unmute.
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // Success! Video is playing (silently). Now we can unmute.
+                    video.muted = false;
+                }).catch(error => {
+                    console.error("Remote video auto-play failed. User may need to interact.", error);
+                    // You might want to show an "unmute" button to the user here as a fallback.
+                });
             }
-            
-            return () => {
-                video.removeEventListener('loadedmetadata', playVideo);
-            };
         }
     }, [remoteStream]);
     

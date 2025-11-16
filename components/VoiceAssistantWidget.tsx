@@ -88,8 +88,17 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
         setUserTranscript(transcript);
         setAiTranscript('');
         setError(null);
+        
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Request timed out. The AI is taking too long.")), 15000) // 15 seconds
+        );
+
         try {
-            const response = await database.getVoiceResponse(transcript);
+             const response = await Promise.race([
+                database.getVoiceResponse(transcript),
+                timeoutPromise
+            ]) as { audioDataUrl: string, transcription: string };
+
             setAiTranscript(response.transcription);
             setStatus('speaking');
             await playAudio(response.audioDataUrl);
@@ -100,7 +109,7 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     };
 
     const startListening = () => {
-        // Initialize/Resume AudioContext here to unlock it with a user gesture.
+        // Initialize/Resume AudioContext on first user gesture to unlock it.
         try {
              if (!audioContextRef.current) {
                 const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -110,6 +119,15 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
                     const gain = context.createGain();
                     gainNodeRef.current = gain;
                     gain.connect(context.destination);
+                    
+                    // Play a silent sound on first interaction. This is a robust way to unlock
+                    // audio playback on all browsers, especially iOS.
+                    const buffer = context.createBuffer(1, 1, 22050);
+                    const source = context.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(context.destination);
+                    source.start(0);
+
                 } else {
                      throw new Error("AudioContext not supported");
                 }
