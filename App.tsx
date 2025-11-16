@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
@@ -195,10 +193,14 @@ const App: React.FC = () => {
     const navigate = useCallback((newPage: Page, params: any = {}) => {
         const isWindowedConsole = isLoggedIn && !isMobileDevice && ['syno', 'fais'].includes(consoleView);
         const isApp = !!APPS_MAP[newPage as keyof typeof APPS_MAP];
+        
+        // Make 'profile' and 'admin' always windowed on desktop consoles
         const isWindowablePage = ['contact', 'profile', 'admin'].includes(newPage);
         
-        // Rule: Open in a window ONLY if it's a windowed console AND it's an app/windowable page.
-        if (isWindowedConsole && (isApp || isWindowablePage)) {
+        // Make 'console-switch' always full screen
+        const isFullScreenOverride = newPage === 'app-console-switch';
+        
+        if (isWindowedConsole && !isFullScreenOverride && (isApp || isWindowablePage)) {
             const existingWindow = windows.find(w => w.appId === newPage);
             if (existingWindow) {
                 if (existingWindow.state === 'minimized') {
@@ -224,7 +226,7 @@ const App: React.FC = () => {
             setWindows([...windows, newWindow]);
             setActiveWindowId(newWindow.id);
         } else {
-            // Otherwise, navigate full screen.
+            // Otherwise, navigate full screen. This applies to mobile and non-windowed consoles.
             setPage(newPage);
             setPageParams(params);
         }
@@ -328,7 +330,7 @@ const App: React.FC = () => {
                                 if (!WindowContent) return null;
                                 return (
                                     <WindowComponent key={win.id} win={win} onClose={closeWindow} onFocus={focusWindow} onMinimize={minimizeWindow} onPositionChange={updateWindowPosition} onSizeChange={updateWindowSize} isActive={activeWindowId === win.id}>
-                                       <WindowContent {...win.props} closeWindow={() => closeWindow(win.id)} />
+                                       <WindowContent {...win.props} navigate={navigate} closeWindow={() => closeWindow(win.id)} />
                                     </WindowComponent>
                                 );
                             })}
@@ -369,7 +371,7 @@ const App: React.FC = () => {
         );
     };
     
-    const wallpaperClass = !isMobileDevice
+    const wallpaperClass = (isLoggedIn || !isMobileDevice)
         ? (wallpapers[wallpaper] || wallpapers.forest).class
         : 'bg-light-bg dark:bg-dark-bg';
 

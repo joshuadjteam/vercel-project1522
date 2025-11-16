@@ -99,7 +99,6 @@ const AdminPortal: React.FC = () => {
                             <tr>
                                 <th className="p-2">Username</th>
                                 <th className="p-2">Email</th>
-                                <th className="p-2">Plan Name</th>
                                 <th className="p-2">Role</th>
                                 <th className="p-2 text-center">Chat</th>
                                 <th className="p-2 text-center">Mail</th>
@@ -111,7 +110,6 @@ const AdminPortal: React.FC = () => {
                                 <tr key={user.id} className="border-b border-gray-200 dark:border-slate-700 hover:bg-gray-100/50 dark:hover:bg-slate-800/50">
                                     <td className="p-2 font-medium">{user.username}</td>
                                     <td className="p-2">{user.email}</td>
-                                    <td className="p-2">{user.plan_name || 'N/A'}</td>
                                     <td className="p-2">{user.role}</td>
                                     <td className="p-2 text-center"><FeatureIndicator enabled={user.features.chat} /></td>
                                     <td className="p-2 text-center"><FeatureIndicator enabled={user.features.mail} /></td>

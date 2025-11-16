@@ -95,8 +95,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     console.log("WebSocket disconnected", `Code: ${event.code}`, `Reason: ${event.reason}`); 
                     ws.current = null; 
                 };
-                socket.onerror = (errorEvent) => {
-                    console.error("A WebSocket error occurred:", errorEvent);
+                socket.onerror = (event) => {
+                    console.error("A WebSocket error occurred:", event);
                 };
 
                 socket.onmessage = async (event) => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useConsoleView } from '../../hooks/useConsoleView';
+import { Page } from '../../types';
 
 const SynoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>;
 const FaisIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" /></svg>;
@@ -9,9 +10,10 @@ const ConIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-
 
 interface ConsoleSwitchAppProps {
     closeWindow?: () => void;
+    navigate?: (page: Page) => void;
 }
 
-const ConsoleSwitchApp: React.FC<ConsoleSwitchAppProps> = ({ closeWindow }) => {
+const ConsoleSwitchApp: React.FC<ConsoleSwitchAppProps> = ({ closeWindow, navigate }) => {
     const { view, setConsoleView } = useConsoleView();
 
     const consoles = [
@@ -25,6 +27,9 @@ const ConsoleSwitchApp: React.FC<ConsoleSwitchAppProps> = ({ closeWindow }) => {
         setConsoleView(newView);
         if (closeWindow) {
             closeWindow();
+        }
+        if (navigate) {
+            navigate('home');
         }
     };
 

@@ -39,6 +39,8 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const activeSession = useRef<Inviter | Invitation | null>(null);
     const registerer = useRef<Registerer | null>(null);
     const callDurationIntervalRef = useRef<number | null>(null);
+    const alertSentRef = useRef(false);
+    const keepAliveIntervalRef = useRef<number | null>(null);
 
     const cleanupSession = useCallback(() => {
         if (activeSession.current) {
@@ -56,6 +58,10 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, []);
 
     const disconnect = useCallback(async () => {
+        if (keepAliveIntervalRef.current) {
+            clearInterval(keepAliveIntervalRef.current);
+            keepAliveIntervalRef.current = null;
+        }
         if (userAgent.current) {
             if (registerer.current?.state === 'Registered') {
                 await registerer.current.unregister();
@@ -75,15 +81,41 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             if (connectionState !== 'Disconnected') {
                 disconnect();
             }
+            alertSentRef.current = false; // Reset alert status on logout
             return;
         }
 
         const connect = async () => {
-            const credentials = await database.getSipCredentials();
+            const isDriveLinked = await database.isDriveLinked();
+            if (!isDriveLinked) {
+                console.log("Google Drive not linked, skipping SIP connection.");
+                return;
+            }
+
+            const credFile = await database.findSipCredFile();
+            if (!credFile) {
+                if (!alertSentRef.current) {
+                    console.log("No .sipcred file found, sending alert.");
+                    await database.sendSystemAlertMail(user.username);
+                    alertSentRef.current = true;
+                }
+                return;
+            }
+
+            const credentials = await database.readSipCredFile(credFile.id);
             if (!credentials || !credentials.username || !credentials.password) {
-                console.log("No SIP credentials found for user.");
-                setError("No SIP credentials configured.");
-                setConnectionState('Disconnected');
+                 if (!alertSentRef.current) {
+                    console.log("Invalid .sipcred file content, sending alert.");
+                    await database.sendSystemAlertMail(user.username);
+                    alertSentRef.current = true;
+                }
+                return;
+            }
+
+            // Special case to disable alerts without connecting
+            if (credentials.username.toLowerCase() === 'nosip') {
+                console.log("SIP connection disabled by user setting.");
+                disconnect(); // Ensure we are disconnected
                 return;
             }
 
@@ -123,7 +155,17 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 
                 registerer.current = new Registerer(ua);
                 registerer.current.stateChange.addListener(state => {
-                     if (state === 'Registered') setConnectionState('Connected');
+                     if (state === 'Registered') {
+                         setConnectionState('Connected');
+                         // Start keep-alive once registered
+                         if (keepAliveIntervalRef.current) clearInterval(keepAliveIntervalRef.current);
+                         keepAliveIntervalRef.current = window.setInterval(() => {
+                            if (userAgent.current?.isConnected()) {
+                                const request = userAgent.current.request(UserAgent.makeURI(`sip:${SIP_DOMAIN}`), { method: 'OPTIONS' });
+                                console.log("SIP Keep-alive sent");
+                            }
+                         }, 30000); // 30 seconds
+                     }
                 });
                 
                 await ua.start();

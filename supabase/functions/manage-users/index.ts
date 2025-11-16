@@ -22,8 +22,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
-    const body = await req.text();
-    const payload = body ? JSON.parse(body) : {};
+    const payload = await req.json();
     const { action } = payload;
     
     const normalizeEmail = (email: any) => {
@@ -33,14 +32,14 @@ serve(async (req) => {
 
     // Public actions
     if (action === 'getDirectory' || action === 'getUsers') {
-        const { data, error } = await supabaseAdmin.from('users').select('id, auth_id, username, email, role, plan_name, features').order('username', { ascending: true });
+        const { data, error } = await supabaseAdmin.from('users').select('id, auth_id, username, email, role, features').order('username', { ascending: true });
         if (error) throw error;
         return new Response(JSON.stringify({ users: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
     if (action === 'getUserByUsername') {
         const { username } = payload;
-        const { data, error } = await supabaseAdmin.from('users').select('id, auth_id, username, email, role, plan_name, features').eq('username', username).single();
+        const { data, error } = await supabaseAdmin.from('users').select('id, auth_id, username, email, role, features').eq('username', username).single();
         if (error && error.code !== 'PGRST116') throw error;
         return new Response(JSON.stringify({ user: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
@@ -48,7 +47,7 @@ serve(async (req) => {
     if (action === 'getUserByEmail') {
         const email = normalizeEmail(payload.email);
         if (!email) throw { message: 'A valid email string is required.', status: 400 };
-        const { data, error } = await supabaseAdmin.from('users').select('id, auth_id, username, email, role, plan_name, features').ilike('email', email).limit(1);
+        const { data, error } = await supabaseAdmin.from('users').select('id, auth_id, username, email, role, features').ilike('email', email).limit(1);
         if (error) throw error; 
         return new Response(JSON.stringify({ user: data?.[0] || null }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
@@ -78,33 +77,17 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
       case 'updateSipCredentials': {
-          const { sip_username, sip_password } = payload;
-          const updateData: { sip_username?: string, sip_password?: string } = {};
-
-          if (typeof sip_username === 'string') {
-              updateData.sip_username = sip_username;
-          }
-          // Only update password if it's explicitly provided. An empty string is valid to clear it.
-          if (typeof sip_password === 'string' && sip_password) {
-              updateData.sip_password = sip_password;
-          }
-          
-          if (Object.keys(updateData).length === 0) {
-              throw { message: 'No SIP credentials provided to update.', status: 400 };
-          }
-
-          const { error: updateError } = await supabaseAdmin
-              .from('users')
-              .update(updateData)
-              .eq('auth_id', authUser.id);
-          
-          if (updateError) throw updateError;
-          
-          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        const { sip_username, sip_password } = payload;
+        const { error } = await supabaseAdmin
+            .from('users')
+            .update({ sip_username, sip_password })
+            .eq('auth_id', authUser.id);
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
       case 'createUser': {
         await ensureAdmin();
-        const { password, username, role, features, plan_name, sip_username, sip_password } = payload;
+        const { password, username, role, features } = payload;
         const email = normalizeEmail(payload.email);
         if (!email) throw { status: 400, message: 'A valid email is required.' };
 
@@ -118,10 +101,7 @@ serve(async (req) => {
             email,
             username,
             role,
-            plan_name,
-            features,
-            sip_username,
-            sip_password
+            features
           })
           .select()
           .single();
@@ -131,10 +111,10 @@ serve(async (req) => {
       }
       case 'updateUser': {
         await ensureAdmin();
-        const { id, auth_id, password, username, role, features, plan_name, sip_username, sip_password } = payload;
+        const { id, auth_id, password, username, role, features } = payload;
         const email = normalizeEmail(payload.email);
         
-        let updatePayload: Record<string, any> = { username, role, plan_name, features, sip_username, sip_password };
+        let updatePayload: Record<string, any> = { username, role, features };
         if (email) updatePayload.email = email;
 
         const { data: profileData, error: profileError } = await supabaseAdmin.from('users').update(updatePayload).eq('id', id).select().single();

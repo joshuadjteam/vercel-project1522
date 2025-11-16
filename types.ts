@@ -13,14 +13,16 @@ export interface User {
     username: string;
     email: string;
     role: UserRole;
-    plan_name: string | null;
-    sip_username: string | null;
-    sip_password: string | null;
+    // FIX: Add missing 'plan_name' property. This was causing type errors where User objects were created. Made optional to avoid breaking other parts of the code that may not provide this property.
+    plan_name?: string;
     features: {
         chat: boolean;
         ai: boolean;
         mail: boolean;
     };
+    // FIX: Add missing sip_username and sip_password properties to match usage in chat service and components.
+    sip_username?: string | null;
+    sip_password?: string | null;
 }
 
 export interface ChatMessage {

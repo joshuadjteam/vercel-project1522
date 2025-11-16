@@ -1,7 +1,6 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme, wallpapers } from '../../hooks/useTheme';
 import { Page } from '../../types';
 import { database } from '../../services/database';
 
@@ -40,7 +39,7 @@ const SecurityTabContent: React.FC = () => {
 
     return (
         <div className="animate-fade-in">
-            <h3 className="text-lg font-semibold mb-3">Change Password</h3>
+            <h3 className="font-semibold mb-2">Change Password</h3>
             <form onSubmit={handleSubmit} className="space-y-3">
                 <input type="password" placeholder="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2" required />
                 <input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2" required />
@@ -61,6 +60,7 @@ interface MobiProfilePageProps {
 
 const MobiProfilePage: React.FC<MobiProfilePageProps> = ({ navigate }) => {
     const { user, logout, updateUserProfile } = useAuth();
+    const { wallpaper, setWallpaper } = useTheme();
     
     const [sipUsername, setSipUsername] = useState(user?.sip_username || '');
     const [sipPassword, setSipPassword] = useState('');
@@ -78,13 +78,14 @@ const MobiProfilePage: React.FC<MobiProfilePageProps> = ({ navigate }) => {
 
     const handleSaveSip = async () => {
         setStatusMessage('Saving...');
-        const result = await database.updateUserSipCredentials(sipUsername, sipPassword);
-        if (result.success) {
-            setStatusMessage('SIP credentials saved!');
-            updateUserProfile({ sip_username: sipUsername });
-            setSipPassword(''); 
+        const { success, error } = await database.updateUserSipCredentials(sipUsername, sipPassword);
+
+        if (success) {
+            setStatusMessage('SIP credentials saved successfully!');
+            setSipPassword(''); // Clear password field for security
+            updateUserProfile({ sip_username: sipUsername, sip_password: '' }); // Update local state
         } else {
-            setStatusMessage(`Error: ${result.error}`);
+            setStatusMessage(`Error: ${error || 'Failed to save.'}`);
         }
         setTimeout(() => setStatusMessage(''), 3000);
     };
@@ -150,6 +151,19 @@ const MobiProfilePage: React.FC<MobiProfilePageProps> = ({ navigate }) => {
                             )
                          }
                          {driveStatus && <p className="text-xs text-center text-gray-500 mt-1">{driveStatus}</p>}
+                    </div>
+                </section>
+                
+                 <section className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow">
+                    <h2 className="text-lg font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">Appearance</h2>
+                    <h3 className="font-semibold mb-2">Mobile Wallpaper</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                        {Object.entries(wallpapers).map(([key, value]) => (
+                            <button key={key} onClick={() => setWallpaper(key)} className={`p-1 border-2 rounded-lg ${wallpaper === key ? 'border-blue-500' : 'border-transparent'}`}>
+                                <div className={`w-full h-16 rounded ${value.class}`}></div>
+                                <span className="text-xs mt-1">{value.name}</span>
+                            </button>
+                        ))}
                     </div>
                 </section>
                 

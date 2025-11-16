@@ -25,8 +25,7 @@ serve(async (req) => {
   }
 
   try {
-    const bodyText = await req.text();
-    const body = bodyText ? JSON.parse(bodyText) : {};
+    const body = await req.json();
     const { text: userText } = body;
 
     if (!userText) {
