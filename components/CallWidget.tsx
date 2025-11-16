@@ -34,20 +34,21 @@ const CallWidget: React.FC = () => {
         const video = remoteVideoRef.current;
         if (video && remoteStream) {
             video.srcObject = remoteStream;
-
-            const handleMetadataLoaded = () => {
-                video.play().catch(error => {
-                    console.error("Error playing remote stream after metadata loaded:", error);
-                });
+            
+            const playVideo = () => {
+                video.play().catch(e => console.error("Remote video play failed", e));
             };
 
-            video.addEventListener('loadedmetadata', handleMetadataLoaded);
-
-            // Fallback play attempt for browsers that might not fire loadedmetadata consistently with streams
-            video.play().catch(() => {});
-
+            // If metadata is already loaded (common in some browsers after srcObject is set), play immediately.
+            if (video.readyState >= video.HAVE_METADATA) {
+                playVideo();
+            } else {
+                // Otherwise, wait for the event. This is the most reliable way.
+                video.addEventListener('loadedmetadata', playVideo);
+            }
+            
             return () => {
-                video.removeEventListener('loadedmetadata', handleMetadataLoaded);
+                video.removeEventListener('loadedmetadata', playVideo);
             };
         }
     }, [remoteStream]);

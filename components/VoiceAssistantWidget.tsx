@@ -53,27 +53,15 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     
     const playAudio = async (audioDataUrl: string) => {
         try {
-            // 1. Initialize AudioContext on demand, inside a user gesture chain.
-            if (!audioContextRef.current) {
-                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                if (!AudioContext) throw new Error("AudioContext is not supported.");
-                
-                const context = new AudioContext();
-                audioContextRef.current = context;
-                const gain = context.createGain();
-                gainNodeRef.current = gain;
-                gain.connect(context.destination);
+            if (!audioContextRef.current || !gainNodeRef.current) {
+                throw new Error("Audio system not initialized. This should not happen.");
             }
-
-            // 2. Ensure context is running.
+            
             if (audioContextRef.current.state === 'suspended') {
                 await audioContextRef.current.resume();
             }
-            if (gainNodeRef.current) {
-                gainNodeRef.current.gain.value = isMuted ? 0 : 1;
-            }
+            gainNodeRef.current.gain.value = isMuted ? 0 : 1;
 
-            // 3. Fetch, decode, and play audio.
             const audioData = await fetch(audioDataUrl).then(res => res.arrayBuffer());
             const audioBuffer = await audioContextRef.current.decodeAudioData(audioData);
 
@@ -112,6 +100,29 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     };
 
     const startListening = () => {
+        // Initialize/Resume AudioContext here to unlock it with a user gesture.
+        try {
+             if (!audioContextRef.current) {
+                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                if (AudioContext) {
+                    const context = new AudioContext();
+                    audioContextRef.current = context;
+                    const gain = context.createGain();
+                    gainNodeRef.current = gain;
+                    gain.connect(context.destination);
+                } else {
+                     throw new Error("AudioContext not supported");
+                }
+            }
+            if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+                audioContextRef.current.resume();
+            }
+        } catch (e: any) {
+            console.error("Failed to initialize audio context", e);
+            handleError('browser', 'Could not initialize audio system.');
+            return;
+        }
+
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) {
             handleError('browser', "Sorry, your browser doesn't support voice recognition.");

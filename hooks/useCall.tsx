@@ -167,6 +167,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (context.state === 'suspended') {
                 await context.resume();
             }
+
+            // Create a silent buffer. This is a common and highly effective technique to 'unlock' audio on iOS and other browsers.
+            const buffer = context.createBuffer(1, 1, 22050);
+            const source = context.createBufferSource();
+            source.buffer = buffer;
+            source.connect(context.destination);
+            source.start(0);
+
         } catch (e) {
             console.error("Failed to initialize or resume AudioContext:", e);
         }
