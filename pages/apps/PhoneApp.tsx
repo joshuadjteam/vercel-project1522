@@ -61,42 +61,37 @@ const P2PKeypadView: React.FC<{ onLaunchAssistant: () => void }> = ({ onLaunchAs
 }
 
 const SipKeypadView: React.FC = () => {
-    const { connect, disconnect, makeCall, connectionState, error } = useSip();
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+    const { makeCall, connectionState, error } = useSip();
     const [dialUri, setDialUri] = useState('');
 
     const isConnected = connectionState === 'Connected';
-    const isConnecting = connectionState === 'Connecting...' || connectionState === 'Registering...';
+    
+    const ConnectionStatus = () => {
+        let colorClass = 'text-gray-500 dark:text-gray-400';
+        if (isConnected) colorClass = 'text-green-500 dark:text-green-400';
+        else if (connectionState === 'Registration Failed' || error) colorClass = 'text-red-500 dark:text-red-400';
 
-    const handleConnect = () => {
-        if (username && password) {
-            connect(username, password);
-        }
+        return <p className={`text-center text-sm font-semibold ${colorClass}`}>{error || connectionState}</p>;
     };
 
     return (
         <div className="space-y-4 animate-fade-in">
-            {!isConnected ? (
-                <>
-                    <p className="text-center text-sm text-gray-500 dark:text-gray-400">Connect to your SIP account to make calls.</p>
-                    <input type="text" placeholder="SIP Username" value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700/50 rounded-md px-3 py-2"/>
-                    <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700/50 rounded-md px-3 py-2"/>
-                    <button onClick={handleConnect} disabled={isConnecting || !username || !password} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-500">
-                        {isConnecting ? connectionState : 'Connect'}
-                    </button>
-                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-                </>
-            ) : (
-                <>
-                    <p className="text-center text-sm text-green-500 dark:text-green-400">Connected as {username}</p>
-                    <input type="text" placeholder="Enter SIP URI to call" value={dialUri} onChange={e => setDialUri(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700/50 rounded-md px-3 py-2 text-xl"/>
-                    <button onClick={() => makeCall(dialUri)} disabled={!dialUri} className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-500 flex items-center justify-center space-x-2">
-                        <CallIcon /> <span>Call</span>
-                    </button>
-                    <button onClick={disconnect} className="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 text-sm">Disconnect</button>
-                </>
-            )}
+            <ConnectionStatus />
+            <input 
+                type="text" 
+                placeholder="Enter username or URI" 
+                value={dialUri} 
+                onChange={e => setDialUri(e.target.value)} 
+                className="w-full bg-gray-100 dark:bg-slate-700/50 rounded-md px-3 py-2 text-xl text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={!isConnected}
+            />
+            <button 
+                onClick={() => makeCall(dialUri)} 
+                disabled={!dialUri || !isConnected} 
+                className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-500 flex items-center justify-center space-x-2"
+            >
+                <CallIcon /> <span>Call</span>
+            </button>
         </div>
     );
 };

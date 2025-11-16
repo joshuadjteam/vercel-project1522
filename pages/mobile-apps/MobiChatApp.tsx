@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
@@ -17,7 +18,7 @@ const LynixLogo = () => (
     </svg>
 );
 
-const LYNX_AI_USER: User = { id: -1, username: 'Lynx AI', email: 'ai@lynix.local', role: UserRole.Standard, plan_name: 'System', sipVoice: null, features: { chat: true, ai: true, mail: false }};
+const LYNX_AI_USER: User = { id: -1, username: 'Lynx AI', email: 'ai@lynix.local', role: UserRole.Standard, plan_name: 'System', sip_username: null, sip_password: null, features: { chat: true, ai: true, mail: false }};
 
 interface MobiChatAppProps {
     initialTargetId?: number | null;
@@ -91,7 +92,7 @@ const MobiChatApp: React.FC<MobiChatAppProps> = ({ initialTargetId }) => {
         };
         chatService.subscribe(chatId, handleNewMessage);
         return () => { isMounted = false; chatService.unsubscribe(chatId); };
-    }, [currentUser, selectedUser]);
+    }, [currentUser, selectedUser, aiHistory]);
     
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();

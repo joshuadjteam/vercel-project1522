@@ -14,7 +14,8 @@ const mapDbUserToUser = (dbUser: any): User => {
         email: dbUser.email,
         role: dbUser.role,
         plan_name: dbUser.plan_name,
-        sipVoice: dbUser.sip_voice,
+        sip_username: dbUser.sip_username,
+        sip_password: dbUser.sip_password,
         features: dbUser.features,
     };
 };
@@ -115,7 +116,6 @@ export const chatService = {
         if (channel) {
             supabase.removeChannel(channel);
             activeChannels.delete(chatId);
-            console.log(`Unsubscribed from channel ${chatId}`);
         }
-    }
+    },
 };

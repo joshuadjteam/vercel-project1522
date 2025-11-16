@@ -1,5 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { UserAgent, Inviter, Invitation, Registerer, SessionState } from 'sip.js';
+import { useAuth } from './useAuth';
+import { database } from '../services/database';
 
 type CallState = 'Idle' | 'Outgoing' | 'Incoming' | 'Active';
 type ConnectionState = 'Disconnected' | 'Connecting...' | 'Connected' | 'Registering...' | 'Registration Failed';
@@ -12,8 +14,6 @@ interface SipContextType {
     error: string | null;
     remoteStream: MediaStream | null;
     callDuration: number;
-    connect: (user: string, pass: string) => void;
-    disconnect: () => void;
     makeCall: (target: string) => void;
     answerCall: () => void;
     hangupCall: () => void;
@@ -22,7 +22,11 @@ interface SipContextType {
 
 const SipContext = createContext<SipContextType | undefined>(undefined);
 
+const SIP_DOMAIN = 'lynixity.x10.bz';
+const SIP_PROXY = 'wss://sip.iptel.org:8081';
+
 export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const { user, isLoggedIn } = useAuth();
     const [connectionState, setConnectionState] = useState<ConnectionState>('Disconnected');
     const [callState, setCallState] = useState<CallState>('Idle');
     const [remoteIdentity, setRemoteIdentity] = useState<string | null>(null);
@@ -36,15 +40,7 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const registerer = useRef<Registerer | null>(null);
     const callDurationIntervalRef = useRef<number | null>(null);
 
-    const setupRemoteMedia = (session: Inviter | Invitation) => {
-        const stream = new MediaStream();
-        session.sessionDescriptionHandler?.peerConnection?.getReceivers().forEach(receiver => {
-            if (receiver.track) stream.addTrack(receiver.track);
-        });
-        setRemoteStream(stream);
-    };
-
-    const cleanupSession = () => {
+    const cleanupSession = useCallback(() => {
         if (activeSession.current) {
             activeSession.current = null;
         }
@@ -57,75 +53,101 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             callDurationIntervalRef.current = null;
         }
         setCallDuration(0);
-    };
-
-    const connect = useCallback(async (user: string, pass: string) => {
-        if (userAgent.current) await disconnect();
-
-        setError(null);
-        setConnectionState('Connecting...');
-        
-        try {
-            const ua = new UserAgent({
-                uri: UserAgent.makeURI(`sip:${user}@lynixity.x10.bz`),
-                authorizationPassword: pass,
-                authorizationUsername: user,
-                transportOptions: {
-                    server: 'wss://sip.iptel.org:8081'
-                },
-            });
-            userAgent.current = ua;
-
-            ua.delegate = {
-                onConnect: () => {
-                    setConnectionState('Connected');
-                    setConnectionState('Registering...');
-                    registerer.current?.register().catch((e) => {
-                        console.error("Registration failed:", e);
-                        setError("Registration failed.");
-                        setConnectionState('Registration Failed');
-                    });
-                },
-                onDisconnect: (err) => {
-                    setConnectionState('Disconnected');
-                    if (err) {
-                        const errorMessage = (err as Error).message || "WebSocket closed";
-                        setError(`Disconnected: ${errorMessage}`);
-                    }
-                    cleanupSession();
-                },
-                onInvite: (invitation) => {
-                    activeSession.current = invitation;
-                    setCallState('Incoming');
-                    setRemoteIdentity(invitation.remoteIdentity.uri.toString());
-                },
-            };
-            
-            registerer.current = new Registerer(ua);
-            registerer.current.stateChange.addListener(state => {
-                 if (state === 'Registered') setConnectionState('Connected');
-                 else if (state === 'Unregistered') setConnectionState('Disconnected');
-                 else if (state === 'Terminated') setConnectionState('Registration Failed');
-            });
-            
-            await ua.start();
-
-        } catch (e: any) {
-            console.error("SIP Connection error:", e);
-            setError(`Connection Failed: ${e.message}`);
-            setConnectionState('Disconnected');
-        }
     }, []);
 
     const disconnect = useCallback(async () => {
         if (userAgent.current) {
-            if(registerer.current) await registerer.current.unregister();
-            await userAgent.current.stop();
+            if (registerer.current?.state === 'Registered') {
+                await registerer.current.unregister();
+            }
+            if (userAgent.current.isConnected()) {
+                await userAgent.current.stop();
+            }
             userAgent.current = null;
             registerer.current = null;
         }
         setConnectionState('Disconnected');
         cleanupSession();
+    }, [cleanupSession]);
+
+    useEffect(() => {
+        if (!isLoggedIn || !user) {
+            if (connectionState !== 'Disconnected') {
+                disconnect();
+            }
+            return;
+        }
+
+        const connect = async () => {
+            const credentials = await database.getSipCredentials();
+            if (!credentials || !credentials.username || !credentials.password) {
+                console.log("No SIP credentials found for user.");
+                setError("No SIP credentials configured.");
+                setConnectionState('Disconnected');
+                return;
+            }
+
+            setError(null);
+            setConnectionState('Connecting...');
+            
+            try {
+                const ua = new UserAgent({
+                    uri: UserAgent.makeURI(`sip:${credentials.username}@${SIP_DOMAIN}`),
+                    authorizationPassword: credentials.password,
+                    authorizationUsername: credentials.username,
+                    transportOptions: { server: SIP_PROXY },
+                });
+                userAgent.current = ua;
+
+                ua.delegate = {
+                    onConnect: () => {
+                        setConnectionState('Connected');
+                        setConnectionState('Registering...');
+                        registerer.current?.register().catch((e) => {
+                            console.error("Registration failed:", e);
+                            setError("Registration failed.");
+                            setConnectionState('Registration Failed');
+                        });
+                    },
+                    onDisconnect: (err) => {
+                        setConnectionState('Disconnected');
+                        if (err) setError(`Disconnected: ${(err as Error).message || "WebSocket closed"}`);
+                        cleanupSession();
+                    },
+                    onInvite: (invitation) => {
+                        activeSession.current = invitation;
+                        setCallState('Incoming');
+                        setRemoteIdentity(invitation.remoteIdentity.uri.user || invitation.remoteIdentity.uri.toString());
+                    },
+                };
+                
+                registerer.current = new Registerer(ua);
+                registerer.current.stateChange.addListener(state => {
+                     if (state === 'Registered') setConnectionState('Connected');
+                });
+                
+                await ua.start();
+
+            } catch (e: any) {
+                console.error("SIP Connection error:", e);
+                setError(`Connection Failed: ${e.message}`);
+                setConnectionState('Disconnected');
+            }
+        };
+
+        connect();
+
+        return () => {
+            disconnect();
+        };
+    }, [isLoggedIn, user, disconnect]);
+
+    const setupRemoteMedia = useCallback((session: Inviter | Invitation) => {
+        const stream = new MediaStream();
+        session.sessionDescriptionHandler?.peerConnection?.getReceivers().forEach(receiver => {
+            if (receiver.track) stream.addTrack(receiver.track);
+        });
+        setRemoteStream(stream);
     }, []);
 
     const makeCall = useCallback(async (target: string) => {
@@ -133,31 +155,40 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setError('Not connected to SIP server.');
             return;
         }
-        const targetUri = UserAgent.makeURI(target);
+        
+        const formattedTarget = target.includes('@') ? `sip:${target}` : `sip:${target}@${SIP_DOMAIN}`;
+        const targetUri = UserAgent.makeURI(formattedTarget);
         if (!targetUri) { setError('Invalid SIP URI'); return; }
 
+        setCallState('Outgoing');
+        setRemoteIdentity(target);
+
         const inviter = new Inviter(userAgent.current, targetUri, {
-             sessionDescriptionHandlerOptions: { constraints: { audio: true, video: true } }
+             sessionDescriptionHandlerOptions: { 
+                constraints: { audio: true, video: true },
+                sdpSemantics: 'unified-plan'
+             }
         });
         activeSession.current = inviter;
         
         inviter.stateChange.addListener(state => {
             switch (state) {
-                case SessionState.Initial: break;
                 case SessionState.Establishing: setCallState('Outgoing'); break;
                 case SessionState.Established:
                     setCallState('Active');
                     setupRemoteMedia(inviter);
                     callDurationIntervalRef.current = window.setInterval(() => setCallDuration(d => d + 1), 1000);
                     break;
-                case SessionState.Terminating:
                 case SessionState.Terminated: cleanupSession(); break;
             }
         });
 
-        setRemoteIdentity(target);
-        inviter.invite().catch(e => { console.error("Call failed", e); setError("Call failed"); cleanupSession(); });
-    }, [connectionState]);
+        inviter.invite().catch(e => { 
+            console.error("Call failed", e); 
+            setError("Call failed or was rejected."); 
+            cleanupSession(); 
+        });
+    }, [connectionState, cleanupSession, setupRemoteMedia]);
     
     const answerCall = useCallback(() => {
         if (callState !== 'Incoming' || !activeSession.current || !(activeSession.current instanceof Invitation)) return;
@@ -174,15 +205,26 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }
         });
         
-        invitation.accept({ sessionDescriptionHandlerOptions: { constraints: { audio: true, video: true } } })
-            .catch(e => { console.error("Answer failed", e); setError("Failed to answer call"); cleanupSession(); });
+        invitation.accept({ 
+            sessionDescriptionHandlerOptions: { 
+                constraints: { audio: true, video: true },
+                sdpSemantics: 'unified-plan'
+            } 
+        })
+        .catch(e => { console.error("Answer failed", e); setError("Failed to answer call"); cleanupSession(); });
 
-    }, [callState]);
+    }, [callState, cleanupSession, setupRemoteMedia]);
 
     const hangupCall = useCallback(() => {
         if (!activeSession.current) return;
+        if (activeSession.current.state === SessionState.Terminated) { cleanupSession(); return; }
+
         if (activeSession.current instanceof Inviter) {
-            activeSession.current.bye();
+            if (activeSession.current.state === SessionState.Initial || activeSession.current.state === SessionState.Establishing) {
+                activeSession.current.cancel();
+            } else {
+                activeSession.current.bye();
+            }
         } else if (activeSession.current instanceof Invitation) {
             if (activeSession.current.state === SessionState.Initial || activeSession.current.state === SessionState.Establishing) {
                  activeSession.current.reject();
@@ -191,7 +233,7 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }
         }
         cleanupSession();
-    }, []);
+    }, [cleanupSession]);
 
     const toggleMute = useCallback(() => {
         if (callState !== 'Active' || !activeSession.current) return;
@@ -206,7 +248,7 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [callState, isMuted]);
 
-    const value = { connectionState, callState, remoteIdentity, isMuted, error, remoteStream, callDuration, connect, disconnect, makeCall, answerCall, hangupCall, toggleMute };
+    const value = { connectionState, callState, remoteIdentity, isMuted, error, remoteStream, callDuration, makeCall, answerCall, hangupCall, toggleMute };
     return <SipContext.Provider value={value}>{children}</SipContext.Provider>;
 };
 

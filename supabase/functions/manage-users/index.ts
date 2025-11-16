@@ -25,13 +25,10 @@ serve(async (req) => {
     let body;
     try {
       const bodyText = await req.text();
-      // Safely parse the body, defaulting to an empty object if the body is empty.
       body = JSON.parse(bodyText || '{}');
     } catch (e) {
-      // If parsing fails, it's a bad request.
       throw { status: 400, message: `Invalid JSON in request body: ${e.message}` };
     }
-    // Ensure the parsed body is a non-null object before proceeding.
     if (typeof body !== 'object' || body === null) {
       throw { status: 400, message: 'Request body must be a JSON object.' };
     }
@@ -43,46 +40,29 @@ serve(async (req) => {
         return email.trim().toLowerCase();
     };
 
-    // Handle public actions that don't need auth first
+    // Public actions
     if (action === 'getDirectory' || action === 'getUsers') {
-        const { data, error } = await supabaseAdmin.from('users').select('*').order('username', { ascending: true });
+        const { data, error } = await supabaseAdmin.from('users').select('id, auth_id, username, email, role, plan_name, features').order('username', { ascending: true });
         if (error) throw error;
-        
-        return new Response(JSON.stringify({ users: data }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
+        return new Response(JSON.stringify({ users: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
     if (action === 'getUserByUsername') {
         const { username } = payload;
-        const { data, error } = await supabaseAdmin.from('users').select('*').eq('username', username).single();
-        // PGRST116 means not found, which is a valid result (user doesn't exist), not an error.
-        if (error && error.code !== 'PGRST116') {
-            throw error;
-        }
-        return new Response(JSON.stringify({ user: data }), { // data will be null if not found
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        });
+        const { data, error } = await supabaseAdmin.from('users').select('id, auth_id, username, email, role, plan_name, features').eq('username', username).single();
+        if (error && error.code !== 'PGRST116') throw error;
+        return new Response(JSON.stringify({ user: data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
     if (action === 'getUserByEmail') {
         const email = normalizeEmail(payload.email);
         if (!email) throw { message: 'A valid email string is required.', status: 400 };
-
-        // Use .limit(1) to be safe against duplicate emails, which would cause .single() to fail.
-        const { data, error } = await supabaseAdmin.from('users').select('*').ilike('email', email).limit(1);
+        const { data, error } = await supabaseAdmin.from('users').select('id, auth_id, username, email, role, plan_name, features').ilike('email', email).limit(1);
         if (error) throw error; 
-
-        // data is now an array, so take the first element or null if empty.
-        return new Response(JSON.stringify({ user: data?.[0] || null }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        });
+        return new Response(JSON.stringify({ user: data?.[0] || null }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 
-    // All actions below require authentication
+    // Authenticated actions
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -91,22 +71,12 @@ serve(async (req) => {
     
     const { data: authData, error: authError } = await userClient.auth.getUser();
     const authUser = authData?.user;
-
-    if (authError || !authUser) {
-      throw { message: 'Not authenticated', status: 401 };
-    }
+    if (authError || !authUser) throw { message: 'Not authenticated', status: 401 };
     
     const ensureAdmin = async () => {
-      const { data: requestingUserProfile, error: profileError } = await supabaseAdmin
-        .from('users')
-        .select('role')
-        .eq('auth_id', authUser.id)
-        .single();
-      
+      const { data: requestingUserProfile, error: profileError } = await supabaseAdmin.from('users').select('role').eq('auth_id', authUser.id).single();
       if (profileError) throw { message: 'Could not verify user role.', status: 500 };
-      if (!requestingUserProfile || requestingUserProfile.role !== 'Admin') {
-        throw { message: 'Permission denied: Admin role required.', status: 403 };
-      }
+      if (!requestingUserProfile || requestingUserProfile.role !== 'Admin') throw { message: 'Permission denied: Admin role required.', status: 403 };
     };
     
     switch (action) {
@@ -114,66 +84,44 @@ serve(async (req) => {
         const { newPassword } = payload;
         const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, { password: newPassword });
         if (error) throw error;
-        return new Response(JSON.stringify({ success: true }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        });
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
       case 'createUser': {
         await ensureAdmin();
-        const { password, username, role, sipVoice, features, plan_name } = payload;
+        const { password, username, role, features, plan_name, sip_username, sip_password } = payload;
         const email = normalizeEmail(payload.email);
         if (!email) throw { status: 400, message: 'A valid email is required.' };
 
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-          email: email,
-          password: password,
-          email_confirm: true,
-        });
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true });
         if (authError) throw authError;
 
         const { data: profileData, error: profileError } = await supabaseAdmin
           .from('users')
           .insert({
             auth_id: authData.user.id,
-            email: email,
-            username: username,
-            role: role,
-            plan_name: plan_name,
-            sip_voice: sipVoice,
-            features: features,
+            email,
+            username,
+            role,
+            plan_name,
+            features,
+            sip_username,
+            sip_password
           })
           .select()
           .single();
         if (profileError) throw profileError;
 
-        return new Response(JSON.stringify({ user: profileData }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
+        return new Response(JSON.stringify({ user: profileData }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
       case 'updateUser': {
         await ensureAdmin();
-        const { id, auth_id, password, username, role, sipVoice, features, plan_name } = payload;
+        const { id, auth_id, password, username, role, features, plan_name, sip_username, sip_password } = payload;
         const email = normalizeEmail(payload.email);
         
-        let updatePayload: Record<string, any> = {
-            username: username,
-            role: role,
-            plan_name: plan_name,
-            sip_voice: sipVoice,
-            features: features,
-        };
-        if (email) {
-            updatePayload.email = email;
-        }
+        let updatePayload: Record<string, any> = { username, role, plan_name, features, sip_username, sip_password };
+        if (email) updatePayload.email = email;
 
-        const { data: profileData, error: profileError } = await supabaseAdmin
-          .from('users')
-          .update(updatePayload)
-          .eq('id', id)
-          .select()
-          .single();
+        const { data: profileData, error: profileError } = await supabaseAdmin.from('users').update(updatePayload).eq('id', id).select().single();
         if (profileError) throw profileError;
 
         if (auth_id && email) {
@@ -186,25 +134,15 @@ serve(async (req) => {
           if (authError) throw authError;
         }
         
-        return new Response(JSON.stringify({ user: profileData }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
+        return new Response(JSON.stringify({ user: profileData }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
       case 'deleteUser': {
         await ensureAdmin();
         const { auth_id } = payload;
         if (!auth_id) throw { message: 'auth_id is required for deletion.', status: 400 };
 
-        const { data: userToDelete, error: profileFindError } = await supabaseAdmin
-            .from('users')
-            .select('username')
-            .eq('auth_id', auth_id)
-            .single();
-
-        if (profileFindError && profileFindError.code !== 'PGRST116') {
-            throw profileFindError;
-        }
+        const { data: userToDelete, error: profileFindError } = await supabaseAdmin.from('users').select('username').eq('auth_id', auth_id).single();
+        if (profileFindError && profileFindError.code !== 'PGRST116') throw profileFindError;
 
         if (userToDelete) {
             const username = userToDelete.username;
@@ -217,10 +155,7 @@ serve(async (req) => {
         const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(auth_id);
         if (authDeleteError) throw authDeleteError;
         
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
       default:
         throw { message: 'Invalid action specified.', status: 400 };
@@ -228,11 +163,6 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error in manage-users function:", error);
-    return new Response(JSON.stringify({
-      error: error.message || 'An unexpected error occurred in the edge function.'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: error.status || 500,
-    });
+    return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the edge function.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: error.status || 500 });
   }
 });

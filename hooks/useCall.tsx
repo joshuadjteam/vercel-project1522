@@ -161,7 +161,12 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [endCall]);
 
     const createPeerConnection = useCallback(async (targetUsername: string, stream: MediaStream) => {
-        const peerConnection = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS });
+        // Explicitly setting sdpSemantics to 'unified-plan' improves cross-browser compatibility, especially with Safari on iOS.
+        const config = { 
+            iceServers: DEFAULT_ICE_SERVERS,
+            sdpSemantics: 'unified-plan'
+        };
+        const peerConnection = new RTCPeerConnection(config as any);
         pc.current = peerConnection;
 
         stream.getTracks().forEach(track => pc.current?.addTrack(track, stream));

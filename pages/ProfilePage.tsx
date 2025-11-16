@@ -26,8 +26,8 @@ const InfoTabContent = () => {
                     <span className="col-span-2">{user?.email}</span>
                 </div>
                 <div className="grid grid-cols-3">
-                    <span className="font-semibold text-gray-800 dark:text-gray-100">SIP Voice:</span>
-                    <span className="col-span-2">{user?.sipVoice || 'N/A'}</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-100">SIP Username:</span>
+                    <span className="col-span-2">{user?.sip_username || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3">
                     <span className="font-semibold text-gray-800 dark:text-gray-100">Role:</span>

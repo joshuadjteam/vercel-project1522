@@ -12,7 +12,8 @@ const mapDbUserToUser = (dbUser: any): User => {
         email: dbUser.email,
         role: dbUser.role,
         plan_name: dbUser.plan_name,
-        sipVoice: dbUser.sip_voice,
+        sip_username: dbUser.sip_username,
+        sip_password: dbUser.sip_password,
         features: dbUser.features,
     };
 };
@@ -26,7 +27,8 @@ export const database = {
             email: 'guest@lynixity.x10.bz',
             role: UserRole.Trial,
             plan_name: 'Trial',
-            sipVoice: 'N/A',
+            sip_username: null,
+            sip_password: null,
             features: { chat: false, ai: true, mail: false }
         });
     },
@@ -105,13 +107,7 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: JSON.stringify({
                 action: 'createUser',
-                email: userData.email,
-                password: userData.password,
-                username: userData.username,
-                role: userData.role,
-                plan_name: userData.plan_name,
-                sipVoice: userData.sipVoice,
-                features: userData.features,
+                ...userData
             })
         });
         
@@ -137,8 +133,7 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: JSON.stringify({ 
                 action: 'updateUser',
-                ...userData,
-                sipVoice: userData.sipVoice 
+                ...userData
             })
         });
         if (error) {
@@ -280,6 +275,26 @@ export const database = {
         return data.stats || fallbackStats;
     },
     
+    getSipCredentials: async (): Promise<{ username: string; password: string; } | null> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: JSON.stringify({ resource: 'sip-credentials' })
+        });
+
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context && typeof error.context.json === 'function') {
+                try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch (e) {}
+            }
+            console.error('Error fetching SIP credentials:', errorMessage);
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error fetching SIP credentials:', data.error);
+            return null;
+        }
+        return data;
+    },
+
     // --- Google Drive Service ---
     getDriveOAuthConfig: async (): Promise<{ clientId: string; redirectUri: string } | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
@@ -406,7 +421,6 @@ export const database = {
             body: JSON.stringify({ resource: 'drive', action: 'check-status' })
         });
         if (error) {
-            // An error (like token not found) implies not linked.
             return false;
         }
         return data.isLinked;
@@ -434,32 +448,25 @@ export const database = {
         return { success: data.success };
     },
 
-    // --- Voice Service ---
     getVoiceResponse: async (text: string): Promise<{ audioDataUrl: string, transcription: string }> => {
-        // Call the dedicated voice-service instead of the monolithic app-service
         const { data, error } = await supabase.functions.invoke('voice-service', {
             body: JSON.stringify({ text })
         });
-
         if (error) {
             let errorMessage = error.message;
             if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
+                try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch (e) {}
             }
-            console.error('Error invoking voice-service:', errorMessage, { error, data });
+            console.error('Error invoking voice-service:', errorMessage);
             throw new Error(errorMessage);
         }
         if (data?.error) {
-            console.error('Error invoking voice-service:', data.error, { error, data });
+            console.error('Error invoking voice-service:', data.error);
             throw new Error(data.error);
         }
         return data;
     },
 
-    // --- Mail Service Functions ---
     getMailsForUser: async (username: string): Promise<{ inbox: Mail[], sent: Mail[] }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'get' })
@@ -467,21 +474,18 @@ export const database = {
         if (error) {
             let errorMessage = error.message;
             if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
+                try { const body = await error.context.json(); errorMessage = body.error || errorMessage; } catch (e) {}
             }
-            console.error("Error fetching mails:", errorMessage, { error, data });
+            console.error("Error fetching mails:", errorMessage);
             return { inbox: [], sent: [] };
         }
         if (data?.error) {
-            console.error("Error fetching mails:", data.error, { error, data });
+            console.error("Error fetching mails:", data.error);
             return { inbox: [], sent: [] };
         }
         const mails = data.mails || [];
         const inbox = mails.filter((m: Mail) => m.recipient === username);
-        const sent = mails.filter((m: Mail) => m.sender.includes(username)); // Approximate for sent items
+        const sent = mails.filter((m: Mail) => m.sender.includes(username));
         return { inbox, sent };
     },
 
@@ -489,19 +493,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'send', payload: mailData })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error('Error sending mail:', errorMessage, { error, data });
-            return null;
-        }
-        if (data?.error) {
-            console.error('Error sending mail:', data.error, { error, data });
+        if (error || data?.error) {
+            console.error('Error sending mail:', error || data.error);
             return null;
         }
         return data.mail;
@@ -511,19 +504,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'markAsRead', payload: { id: mailId } })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error('Error marking mail as read:', errorMessage, { error, data });
-            return false;
-        }
-        if (data?.error) {
-            console.error('Error marking mail as read:', data.error, { error, data });
+        if (error || data?.error) {
+            console.error('Error marking mail as read:', error || data.error);
             return false;
         }
         return true;
@@ -533,19 +515,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'delete', payload: { id: mailId } })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error('Error deleting mail:', errorMessage, { error, data });
-            return false;
-        }
-        if (data?.error) {
-            console.error('Error deleting mail:', data.error, { error, data });
+        if (error || data?.error) {
+            console.error('Error deleting mail:', error || data.error);
             return false;
         }
         return true;
@@ -555,19 +526,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mail_accounts', action: 'get' })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error("Error fetching mail accounts:", errorMessage, { error, data });
-            return [];
-        }
-        if (data?.error) {
-            console.error("Error fetching mail accounts:", data.error, { error, data });
+        if (error || data?.error) {
+            console.error("Error fetching mail accounts:", error || data.error);
             return [];
         }
         return data.accounts || [];
@@ -577,19 +537,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mail_accounts', action: 'add', payload: accountData })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error('Error adding mail account:', errorMessage, { error, data });
-            return null;
-        }
-        if (data?.error) {
-            console.error('Error adding mail account:', data.error, { error, data });
+        if (error || data?.error) {
+            console.error('Error adding mail account:', error || data.error);
             return null;
         }
         return data.account;
@@ -599,42 +548,20 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'mails', action: 'sync', payload: { accountId } })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error('Error syncing mail account:', errorMessage, { error, data });
+        if (error || data?.error) {
+            const errorMessage = error?.message || data?.error;
+            console.error('Error syncing mail account:', errorMessage);
             return { success: false, message: errorMessage };
-        }
-        if (data?.error) {
-            console.error('Error syncing mail account:', data.error, { error, data });
-            return { success: false, message: data.error };
         }
         return { success: true, message: data.message || 'Sync complete.' };
     },
 
-    // --- Contacts Service Functions ---
     getContactsForUser: async (username: string): Promise<Contact[]> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'get' })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error('Error fetching contacts:', errorMessage, { error, data });
-            return [];
-        }
-        if (data?.error) {
-            console.error('Error fetching contacts:', data.error, { error, data });
+        if (error || data?.error) {
+            console.error('Error fetching contacts:', error || data.error);
             return [];
         }
         return data.contacts || [];
@@ -644,19 +571,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'add', payload: contactData })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error('Error adding contact:', errorMessage, { error, data });
-            return null;
-        }
-        if (data?.error) {
-            console.error('Error adding contact:', data.error, { error, data });
+        if (error || data?.error) {
+            console.error('Error adding contact:', error || data.error);
             return null;
         }
         return data.contact;
@@ -666,19 +582,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'update', payload: contactData })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error('Error updating contact:', errorMessage, { error, data });
-            return null;
-        }
-        if (data?.error) {
-            console.error('Error updating contact:', data.error, { error, data });
+        if (error || data?.error) {
+            console.error('Error updating contact:', error || data.error);
             return null;
         }
         return data.contact;
@@ -688,19 +593,8 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: JSON.stringify({ resource: 'contacts', action: 'delete', payload: { id: contactId } })
         });
-        if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) { /* Parsing error, ignore */ }
-            }
-            console.error('Error deleting contact:', errorMessage, { error, data });
-            return false;
-        }
-        if (data?.error) {
-            console.error('Error deleting contact:', data.error, { error, data });
+        if (error || data?.error) {
+            console.error('Error deleting contact:', error || data.error);
             return false;
         }
         return data.success;

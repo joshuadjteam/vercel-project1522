@@ -22,7 +22,8 @@ const LYNX_AI_USER: User = {
     email: 'ai@lynix.local',
     role: UserRole.Standard,
     plan_name: 'System',
-    sipVoice: null,
+    sip_username: null,
+    sip_password: null,
     features: { chat: true, ai: true, mail: false }
 };
 
@@ -137,7 +138,7 @@ const ChatApp: React.FC<ChatAppProps> = ({ initialTargetId }) => {
             isMounted = false;
             chatService.unsubscribe(chatId);
         };
-    }, [currentUser, selectedUser]);
+    }, [currentUser, selectedUser, aiHistory]);
     
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();

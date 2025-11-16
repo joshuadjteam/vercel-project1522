@@ -172,6 +172,12 @@ serve(async (req)=>{
             const { count: contacts } = await supabaseAdmin.from('contacts').select('*', { count: 'exact', head: true });
             return new Response(JSON.stringify({ stats: { messages, mails, contacts } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
         }
+        case 'sip-credentials': {
+            if (userProfile.sip_username && userProfile.sip_password) {
+                 return new Response(JSON.stringify({ username: userProfile.sip_username, password: userProfile.sip_password }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
+            throw { status: 404, message: 'SIP credentials not found for this user.' };
+        }
         case 'chatHistory': {
             const { currentUserId, otherUserId } = payload;
             const chatId = [currentUserId, otherUserId].sort().join('--');

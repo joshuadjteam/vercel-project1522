@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { database } from '../services/database';
@@ -17,7 +16,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
-    const [sip, setSip] = useState('');
+    const [sipUsername, setSipUsername] = useState('');
+    const [sipPassword, setSipPassword] = useState('');
     const [planName, setPlanName] = useState('');
     const [role, setRole] = useState<UserRole>(UserRole.Standard);
     const [features, setFeatures] = useState({ chat: true, ai: true, mail: false });
@@ -29,18 +29,18 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
         if (userToEdit) {
             setUsername(userToEdit.username);
             setEmail(userToEdit.email);
-            setSip(userToEdit.sipVoice || '');
+            setSipUsername(userToEdit.sip_username || '');
+            setSipPassword(userToEdit.sip_password || '');
             setRole(userToEdit.role);
             setPlanName(userToEdit.plan_name || '');
-            // Ensure AI feature is always enabled when editing
             setFeatures({ ...userToEdit.features, ai: true });
-            setPassword(''); // Don't pre-fill password for editing
+            setPassword(''); 
         } else {
-            // Reset form for adding new user, with AI enabled by default
             setUsername('');
             setPassword('');
             setEmail('');
-            setSip('');
+            setSipUsername('');
+            setSipPassword('');
             setRole(UserRole.Standard);
             setPlanName('');
             setFeatures({ chat: true, ai: true, mail: false });
@@ -49,19 +49,18 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
 
     const handleSave = async () => {
         setError('');
-
         if (!userToEdit && !password) {
             setError('Password is required for new users.');
             return;
         }
-        
         setIsLoading(true);
 
         try {
             const userData: Partial<User> & { password?: string } = {
                 username,
                 email,
-                sipVoice: sip || null,
+                sip_username: sipUsername || null,
+                sip_password: sipPassword || null,
                 role,
                 plan_name: planName || null,
                 features,
@@ -70,7 +69,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
             if (userToEdit) {
                 userData.id = userToEdit.id;
                 userData.auth_id = userToEdit.auth_id;
-                if (password) userData.password = password; // Only include password if it's being changed
+                if (password) userData.password = password;
                 const updatedUser = await database.updateUser(userData);
                 if (updatedUser) {
                     onSaveSuccess();
@@ -117,14 +116,20 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
                         <CloseIcon />
                     </button>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                          <input type="text" placeholder="Plan Name (e.g., Premium)" value={planName} onChange={e => setPlanName(e.target.value)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                      <input type="email" placeholder="Email (used for login)" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <input type="password" placeholder={`Password ${userToEdit ? '(leave blank to keep unchanged)' : '(required)'}`} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input type="text" placeholder="SIP" value={sip} onChange={e => setSip(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <div className="border-t border-gray-200 dark:border-slate-700 my-4 pt-4">
+                         <h3 className="text-lg font-semibold mb-3 text-center">SIP Credentials</h3>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" placeholder="SIP Username" value={sipUsername} onChange={e => setSipUsername(e.target.value)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <input type="password" placeholder="SIP Password" value={sipPassword} onChange={e => setSipPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                         </div>
+                    </div>
                     <div className='flex flex-col'>
                         <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Role (Permissions)</label>
                         <select value={role} onChange={e => setRole(e.target.value as UserRole)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
