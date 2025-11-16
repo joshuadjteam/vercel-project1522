@@ -1,14 +1,17 @@
 
 
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
 import { CallProvider } from './hooks/useCall';
+import { SipProvider } from './hooks/useSip';
 import { ConsoleViewProvider, useConsoleView } from './hooks/useConsoleView';
 import useIsMobileDevice from './hooks/useIsMobileDevice';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CallWidget from './components/CallWidget';
+import SipCallWidget from './components/SipCallWidget';
 import CallNotificationWidget from './components/CallNotificationWidget';
 import WindowComponent from './components/Window';
 import FullScreenAppHeader from './components/FullScreenAppHeader';
@@ -321,6 +324,7 @@ const App: React.FC = () => {
                 </div>
             )}
             <CallWidget />
+            <SipCallWidget />
             <CallNotificationWidget />
         </div>
     );
@@ -330,9 +334,11 @@ const Root: React.FC = () => (
     <AuthProvider>
         <ThemeProvider>
             <ConsoleViewProvider>
-                <CallProvider>
-                    <App />
-                </CallProvider>
+                <SipProvider>
+                    <CallProvider>
+                        <App />
+                    </CallProvider>
+                </SipProvider>
             </ConsoleViewProvider>
         </ThemeProvider>
     </AuthProvider>
