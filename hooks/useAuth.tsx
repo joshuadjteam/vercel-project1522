@@ -10,6 +10,7 @@ interface AuthContextType {
     login: (email: string, pass: string) => Promise<{ error: string | null }>;
     loginAsGuest: () => Promise<User | null>;
     logout: () => void;
+    updateUserProfile: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -94,9 +95,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await supabase.auth.signOut();
     };
 
+    const updateUserProfile = (updates: Partial<User>) => {
+        if (user) {
+            setUser({ ...user, ...updates });
+        }
+    };
+
 
     return (
-        <AuthContext.Provider value={{ user, isLoggedIn, isLoading, login, loginAsGuest, logout }}>
+        <AuthContext.Provider value={{ user, isLoggedIn, isLoading, login, loginAsGuest, logout, updateUserProfile }}>
             {children}
         </AuthContext.Provider>
     );

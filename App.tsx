@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
-import { ThemeProvider, useTheme } from './hooks/useTheme';
+import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
 import { CallProvider } from './hooks/useCall';
 import { SipProvider } from './hooks/useSip';
 import { ConsoleViewProvider, useConsoleView } from './hooks/useConsoleView';
@@ -52,7 +52,6 @@ import MobiFileExplorerApp from './pages/mobile-apps/MobiFileExplorerApp';
 import MobiEditorApp from './pages/mobile-apps/MobiEditorApp';
 import MobiUnitConverterApp from './pages/mobile-apps/MobiUnitConverterApp';
 import MobiCalendarApp from './pages/mobile-apps/MobiCalendarApp';
-import MobileSignInPage from './pages/MobileSignInPage';
 import MobiLauncher from './pages/MobiLauncher';
 import MobiConsoleSwitchApp from './pages/mobile-apps/MobiConsoleSwitchApp';
 
@@ -77,21 +76,63 @@ const ConsoleSwitchIcon = (props: { className?: string }) => <svg xmlns="http://
 const ProfileIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 
 
-export const APPS_MAP: Record<string, { component: React.FC<any>, isFullScreen?: boolean, defaultSize?: { width: number, height: number } }> = {
+export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: { width: number, height: number } }> = {
     'app-phone': { component: PhoneApp, defaultSize: { width: 450, height: 700 } },
-    'app-chat': { component: ChatApp, isFullScreen: true },
-    'app-localmail': { component: LocalMailApp, isFullScreen: true },
+    'app-chat': { component: ChatApp },
+    'app-localmail': { component: LocalMailApp },
     'app-contacts': { component: ContactsApp, defaultSize: { width: 800, height: 600 } },
-    'app-notepad': { component: NotepadApp, isFullScreen: true },
+    'app-notepad': { component: NotepadApp },
     'app-calculator': { component: CalculatorApp, defaultSize: { width: 400, height: 600 } },
-    'app-paint': { component: PaintApp, isFullScreen: true },
-    'app-files': { component: FileExplorerApp, isFullScreen: true },
-    'app-editor': { component: EditorApp, isFullScreen: true },
-    'app-converter': { component: UnitConverterApp, isFullScreen: true },
-    'app-calendar': { component: CalendarApp, isFullScreen: true },
+    'app-paint': { component: PaintApp },
+    'app-files': { component: FileExplorerApp },
+    'app-editor': { component: EditorApp },
+    'app-converter': { component: UnitConverterApp },
+    'app-calendar': { component: CalendarApp },
     'app-console-switch': { component: ConsoleSwitchApp, defaultSize: { width: 900, height: 500 } },
-    'profile': { component: MobiProfilePage }, // For mobile
 };
+
+// All items that can be a "page", including full-screen apps and standalone pages
+export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
+    'home': HomePage,
+    'contact': ContactPage,
+    'signin': SignInPage,
+    'profile': ProfilePage,
+    'admin': AdminPortal,
+    'auth-callback': AuthCallbackPage,
+    'app-chat': ChatApp,
+    'app-localmail': LocalMailApp,
+    'app-notepad': NotepadApp,
+    'app-paint': PaintApp,
+    'app-files': FileExplorerApp,
+    'app-editor': EditorApp,
+    'app-converter': UnitConverterApp,
+    'app-calendar': CalendarApp,
+    'app-phone': PhoneApp,
+    'app-contacts': ContactsApp,
+    'app-calculator': CalculatorApp,
+    'app-console-switch': ConsoleSwitchApp,
+};
+
+// All items that can be a "page" on mobile
+export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
+    'home': MobiLauncher,
+    'profile': MobiProfilePage,
+    'admin': AdminPortal,
+    'contact': ContactPage,
+    'app-phone': MobiPhoneApp,
+    'app-chat': MobiChatApp,
+    'app-localmail': MobiLocalMailApp,
+    'app-contacts': MobiContactsApp,
+    'app-notepad': MobiNotepadApp,
+    'app-calculator': MobiCalculatorApp,
+    'app-paint': MobiPaintApp,
+    'app-files': MobiFileExplorerApp,
+    'app-editor': MobiEditorApp,
+    'app-converter': MobiUnitConverterApp,
+    'app-calendar': MobiCalendarApp,
+    'app-console-switch': MobiConsoleSwitchApp,
+};
+
 
 export const APPS_LIST: AppLaunchable[] = [
   { id: 'app-phone', label: 'Phone', icon: <PhoneIcon />, page: 'app-phone' },
@@ -125,13 +166,12 @@ const App: React.FC = () => {
     const { view: consoleView, isInitialChoice } = useConsoleView();
     const [page, setPage] = useState<Page>('home');
     const [pageParams, setPageParams] = useState<any>({});
-    const { isDark } = useTheme();
+    const { isDark, wallpaper } = useTheme();
     const isMobileDevice = useIsMobileDevice();
     const [windows, setWindows] = useState<WindowInstance[]>([]);
     const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
     const nextZIndex = useRef(10);
     
-    // Handle initial routing from URL path for OAuth callbacks
     useEffect(() => {
         const path = window.location.pathname;
         const params = new URLSearchParams(window.location.search);
@@ -140,35 +180,43 @@ const App: React.FC = () => {
 
         if ((path === '/auth/callback' || path.startsWith('/auth/callback/')) && code && state) {
             setPage('auth-callback');
+        } else {
+            const pageFromPath = path.substring(1) as Page;
+            if (Object.keys(FULL_PAGE_MAP).includes(pageFromPath) || Object.keys(APPS_MAP).includes(pageFromPath)) {
+                if (pageFromPath !== 'signin' && pageFromPath !== 'contact') {
+                    setPage(pageFromPath);
+                }
+            } else {
+                setPage('home');
+            }
         }
     }, []);
 
     const navigate = useCallback((newPage: Page, params: any = {}) => {
-        // For windowed consoles, opening an app creates a window
-        if (isLoggedIn && !isMobileDevice && (consoleView === 'syno' || consoleView === 'fais' || consoleView === 'lega' || consoleView === 'con') && newPage.startsWith('app-')) {
-            const appConfig = APPS_MAP[newPage];
-            if (!appConfig) return;
-
-            // Check if window already exists
+        const isWindowedConsole = isLoggedIn && !isMobileDevice && ['syno', 'fais'].includes(consoleView);
+        const isApp = !!APPS_MAP[newPage as keyof typeof APPS_MAP];
+        const isWindowablePage = ['contact', 'profile', 'admin'].includes(newPage);
+        
+        // Rule: Open in a window ONLY if it's a windowed console AND it's an app/windowable page.
+        if (isWindowedConsole && (isApp || isWindowablePage)) {
             const existingWindow = windows.find(w => w.appId === newPage);
             if (existingWindow) {
-                // If it exists and is minimized, restore it and focus.
                 if (existingWindow.state === 'minimized') {
                      setWindows(wins => wins.map(w => w.id === existingWindow.id ? { ...w, state: 'open', zIndex: nextZIndex.current++ } : w));
                 } else {
-                    // Otherwise, just focus it.
                     setWindows(wins => wins.map(w => w.id === existingWindow.id ? { ...w, zIndex: nextZIndex.current++ } : w));
                 }
                 setActiveWindowId(existingWindow.id);
                 return;
             }
 
+            const appConfig = APPS_MAP[newPage as keyof typeof APPS_MAP];
             const newWindow: WindowInstance = {
                 id: `${newPage}-${Date.now()}`,
                 appId: newPage,
-                title: APPS_LIST.find(app => app.page === newPage)?.label || 'Application',
+                title: APPS_LIST.find(app => app.page === newPage)?.label || newPage.charAt(0).toUpperCase() + newPage.slice(1),
                 position: { x: Math.random() * 200 + 50, y: Math.random() * 100 + 50 },
-                size: appConfig.defaultSize || { width: 700, height: 500 },
+                size: appConfig?.defaultSize || { width: 700, height: 500 },
                 zIndex: nextZIndex.current++,
                 state: 'open',
                 props: params,
@@ -176,152 +224,160 @@ const App: React.FC = () => {
             setWindows([...windows, newWindow]);
             setActiveWindowId(newWindow.id);
         } else {
-            // For full-screen consoles or mobile, just change the page
+            // Otherwise, navigate full screen.
             setPage(newPage);
             setPageParams(params);
         }
     }, [isLoggedIn, isMobileDevice, consoleView, windows]);
 
     useEffect(() => {
-        if (isLoggedIn && page === 'home') {
-           // If logged in, 'home' should redirect to the console launcher.
-           if (isMobileDevice) {
-               // Default to MobiLauncher on mobile
-           } else if (isInitialChoice) {
+        if (isLoggedIn && (page === 'home' || page === 'signin')) {
+           if (!isMobileDevice && isInitialChoice) {
                navigate('app-console-switch');
+           } else {
+              setPage('home'); 
            }
         }
     }, [isLoggedIn, page, isMobileDevice, isInitialChoice, navigate]);
 
-    // Window management functions
     const closeWindow = (id: string) => setWindows(windows.filter(win => win.id !== id));
+    
     const focusWindow = (id: string) => {
         if (id === activeWindowId) return;
         setWindows(windows.map(win => win.id === id ? { ...win, zIndex: nextZIndex.current++ } : win));
         setActiveWindowId(id);
     };
-    const minimizeWindow = (id: string) => setWindows(windows.map(win => win.id === id ? { ...win, state: 'minimized' } : win));
+
+    const minimizeWindow = (id: string) => {
+        setWindows(windows.map(win => win.id === id ? { ...win, state: 'minimized' } : win));
+        if (activeWindowId === id) {
+            const nextActive = windows.filter(w => w.id !== id && w.state === 'open').sort((a, b) => b.zIndex - a.zIndex)[0];
+            setActiveWindowId(nextActive ? nextActive.id : null);
+        }
+    };
+    
     const updateWindowPosition = (id: string, newPosition: { x: number, y: number }) => {
-        setWindows(wins => wins.map(w => w.id === id ? { ...w, position: newPosition } : w));
+        setWindows(windows.map(win => win.id === id ? { ...win, position: newPosition } : win));
     };
+
     const updateWindowSize = (id: string, newSize: { width: number, height: number }) => {
-        setWindows(wins => wins.map(w => w.id === id ? { ...w, size: newSize } : w));
+        setWindows(windows.map(win => win.id === id ? { ...win, size: newSize } : win));
     };
 
-
-    const renderPage = () => {
-        if (isLoggedIn && isMobileDevice) {
-            const MobiAppComponent = APPS_MAP[page]?.component;
-            if (MobiAppComponent) {
-                 switch (page) {
-                    case 'home': return <MobiLauncher navigate={navigate} appsList={APPS_LIST} />;
-                    case 'profile': return <MobiProfilePage navigate={navigate} />;
-                    case 'app-phone': return <MobiPhoneApp />;
-                    case 'app-chat': return <MobiChatApp {...pageParams} />;
-                    case 'app-localmail': return <MobiLocalMailApp />;
-                    case 'app-contacts': return <MobiContactsApp />;
-                    case 'app-notepad': return <MobiNotepadApp />;
-                    case 'app-calculator': return <MobiCalculatorApp />;
-                    case 'app-paint': return <MobiPaintApp />;
-                    case 'app-files': return <MobiFileExplorerApp navigate={navigate} />;
-                    case 'app-editor': return <MobiEditorApp navigate={navigate} {...pageParams} />;
-                    case 'app-converter': return <MobiUnitConverterApp />;
-                    case 'app-calendar': return <MobiCalendarApp />;
-                    case 'app-console-switch': return <MobiConsoleSwitchApp />;
-                    default: return <MobiLauncher navigate={navigate} appsList={APPS_LIST} />;
-                 }
-            }
-             return <MobiLauncher navigate={navigate} appsList={APPS_LIST} />;
+    const renderLayout = () => {
+        if (isLoading) {
+            return (
+                <div className="flex-grow flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+            );
         }
 
-        switch (page) {
-            case 'home': return isLoggedIn ? <ConsolePage navigate={navigate} appsList={APPS_LIST} /> : <HomePage />;
-            case 'contact': return <ContactPage />;
-            case 'signin': return <SignInPage navigate={navigate} />;
-            case 'profile': return <ProfilePage navigate={navigate} />;
-            case 'admin': return <AdminPortal />;
-            case 'auth-callback': return <AuthCallbackPage navigate={navigate} />;
-            default: return isLoggedIn ? <ConsolePage navigate={navigate} appsList={APPS_LIST} /> : <HomePage />;
-        }
-    };
-    
-    const renderConsole = () => {
-        switch (consoleView) {
-            case 'fais': return <FaisConsole navigate={navigate} appsList={APPS_LIST} />;
-            case 'lega': return <LegaLauncher navigate={navigate} appsList={APPS_LIST} />;
-            case 'con': return <ConConsole navigate={navigate} appsList={APPS_LIST} />;
-            case 'syno':
-            default:
-                return <ConsolePage navigate={navigate} appsList={APPS_LIST} />;
-        }
-    };
-    
-    if (isLoading) {
-        return <div className="w-screen h-screen bg-dark-bg flex items-center justify-center text-white">Loading...</div>;
-    }
-
-    const isFullScreenApp = (isLoggedIn && !isMobileDevice && (APPS_MAP[page]?.isFullScreen || isInitialChoice));
-
-    return (
-        <div className={`w-screen h-screen overflow-hidden flex flex-col ${isDark ? 'dark' : ''}`}>
-             <Analytics />
-             <SpeedInsights />
-            {isLoggedIn ? (
-                isMobileDevice ? (
-                    <div className="w-screen h-screen flex flex-col bg-light-bg dark:bg-dark-bg">
-                        <MobileTopBar />
-                        <main className="flex-grow overflow-auto flex flex-col">
-                            {renderPage()}
+        if (isLoggedIn) {
+            if (isMobileDevice) {
+                const MobileComponent = MOBILE_PAGES_MAP[page] || MobiLauncher;
+                return (
+                    <>
+                        <MobileTopBar navigate={navigate} />
+                        <main className="flex-grow overflow-hidden">
+                            <MobileComponent navigate={navigate} appsList={APPS_LIST} {...pageParams} />
                         </main>
                         <MobileNavBar navigate={navigate} />
-                    </div>
-                ) : (
-                    isFullScreenApp ? (
-                        <div className="flex-grow flex flex-col overflow-hidden">
-                            <FullScreenAppHeader navigate={navigate} />
-                            <main className="flex-grow overflow-auto">
-                               {APPS_MAP[page]?.isFullScreen && React.createElement(APPS_MAP[page].component, { navigate, ...pageParams })}
-                               {isInitialChoice && <ConsoleSwitchApp closeWindow={() => navigate('home')} />}
-                            </main>
-                        </div>
-                    ) : (
-                        <div className="flex-grow flex flex-col overflow-hidden relative">
-                             {renderConsole()}
-                            {/* Window manager area */}
-                            <div className="absolute inset-0 pointer-events-none p-4">
-                                {windows.map(win => (
-                                    <WindowComponent
-                                        key={win.id}
-                                        win={win}
-                                        onClose={closeWindow}
-                                        onFocus={focusWindow}
-                                        onMinimize={minimizeWindow}
-                                        onPositionChange={updateWindowPosition}
-                                        onSizeChange={updateWindowSize}
-                                        isActive={win.id === activeWindowId}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )
-                )
-            ) : ( // Not logged in
-                isMobileDevice ? (
-                     <div className="flex-grow flex flex-col bg-light-bg dark:bg-dark-bg">
-                        <main className="flex-grow flex items-center justify-center p-4" style={{backgroundImage: 'linear-gradient(to top, #1a202c, #2d3748)'}}>
-                            <SignInPage navigate={navigate} />
+                    </>
+                );
+            }
+
+            // --- Desktop Logged In ---
+            let ConsoleComponent;
+            switch (consoleView) {
+                case 'fais': ConsoleComponent = FaisConsole; break;
+                case 'lega': ConsoleComponent = LegaLauncher; break;
+                case 'con': ConsoleComponent = ConConsole; break;
+                default: ConsoleComponent = ConsolePage; // 'syno'
+            }
+
+            const windowedConsoles = ['syno', 'fais'];
+            const isWindowedEnvironment = windowedConsoles.includes(consoleView);
+
+            // An "app page" is any page that isn't the base console view.
+            // For windowed consoles, there are no "app pages", only windows.
+            // For fullscreen consoles, any navigation away from "home" is to an app page.
+            const isShowingAppPage = !isWindowedEnvironment && page !== 'home';
+            const PageToRender = FULL_PAGE_MAP[page];
+
+            if (isShowingAppPage && PageToRender) {
+                // Render the app full screen for 'lega' and 'con' consoles.
+                return (
+                    <div className="flex-grow flex flex-col overflow-hidden">
+                        <FullScreenAppHeader navigate={navigate} />
+                        <main className="flex-grow overflow-y-auto">
+                            <PageToRender navigate={navigate} {...pageParams} />
                         </main>
                     </div>
-                ) : (
-                    <div className="flex-grow flex flex-col bg-light-bg dark:bg-dark-bg">
-                        <Header navigate={navigate} />
-                        <main className="flex-grow flex items-center justify-center p-4" style={{backgroundImage: 'linear-gradient(to top, #1a202c, #2d3748)'}}>
-                            {renderPage()}
-                        </main>
-                        <Footer />
-                    </div>
-                )
-            )}
+                );
+            }
+
+            // Render the base console environment (either windowed or fullscreen launcher)
+            return (
+                <div className="relative flex-grow overflow-hidden">
+                    <ConsoleComponent navigate={navigate} appsList={APPS_LIST} />
+                    {isWindowedEnvironment && (
+                        <div className="absolute inset-0 top-12 pointer-events-none">
+                            {windows.map(win => {
+                                const WindowContent = APPS_MAP[win.appId]?.component || FULL_PAGE_MAP[win.appId];
+                                if (!WindowContent) return null;
+                                return (
+                                    <WindowComponent key={win.id} win={win} onClose={closeWindow} onFocus={focusWindow} onMinimize={minimizeWindow} onPositionChange={updateWindowPosition} onSizeChange={updateWindowSize} isActive={activeWindowId === win.id}>
+                                       <WindowContent {...win.props} closeWindow={() => closeWindow(win.id)} />
+                                    </WindowComponent>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- Not Logged In ---
+        if (page === 'auth-callback') {
+            const PageToRender = FULL_PAGE_MAP[page];
+            return <div className="flex-grow flex items-center justify-center p-4"><PageToRender navigate={navigate} /></div>;
+        }
+        
+        if (isMobileDevice) {
+             return (
+                <div className="flex-grow flex flex-col">
+                    <main className="flex-grow overflow-y-auto">
+                       {/* FIX: Use SignInPage for mobile as well, to unify the login flow and fix prop error. */}
+                       <SignInPage navigate={navigate} />
+                    </main>
+                </div>
+             )
+        }
+        
+        const PageToRender = page === 'signin' ? SignInPage : FULL_PAGE_MAP[page] || HomePage;
+
+
+        return (
+            <>
+                <Header navigate={navigate} />
+                <main className="flex-grow flex items-center justify-center p-4">
+                    <PageToRender navigate={navigate} />
+                </main>
+                <Footer />
+            </>
+        );
+    };
+    
+    const wallpaperClass = !isMobileDevice
+        ? (wallpapers[wallpaper] || wallpapers.forest).class
+        : 'bg-light-bg dark:bg-dark-bg';
+
+    return (
+        <div className={`flex flex-col min-h-screen ${isDark ? 'dark' : ''} ${wallpaperClass} font-sans transition-all duration-500`}>
+            <SpeedInsights/>
+            <Analytics/>
+            {renderLayout()}
             <CallWidget />
             <SipCallWidget />
             <CallNotificationWidget />
@@ -329,18 +385,18 @@ const App: React.FC = () => {
     );
 };
 
-const Root: React.FC = () => (
-    <AuthProvider>
-        <ThemeProvider>
+const Root = () => (
+    <ThemeProvider>
+        <AuthProvider>
             <ConsoleViewProvider>
-                <SipProvider>
-                    <CallProvider>
+                <CallProvider>
+                    <SipProvider>
                         <App />
-                    </CallProvider>
-                </SipProvider>
+                    </SipProvider>
+                </CallProvider>
             </ConsoleViewProvider>
-        </ThemeProvider>
-    </AuthProvider>
+        </AuthProvider>
+    </ThemeProvider>
 );
 
 export default Root;

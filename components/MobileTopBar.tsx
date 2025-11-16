@@ -1,8 +1,17 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { Page } from '../types';
 
-const MobileTopBar: React.FC = () => {
+const ProfileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
+
+
+interface MobileTopBarProps {
+    navigate: (page: Page) => void;
+}
+
+const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate }) => {
     const { user } = useAuth();
     const [time, setTime] = useState(new Date());
 
@@ -11,26 +20,19 @@ const MobileTopBar: React.FC = () => {
         return () => clearInterval(timerId);
     }, []);
 
-    const getDayWithSuffix = (day: number) => {
-        if (day > 3 && day < 21) return `${day}th`;
-        switch (day % 10) {
-            case 1: return `${day}st`;
-            case 2: return `${day}nd`;
-            case 3: return `${day}rd`;
-            default: return `${day}th`;
-        }
-    };
-    
-    const time12h = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(' ', '').toLowerCase();
-    const time24h = `(${time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })})`;
-    const month = time.toLocaleString('default', { month: 'long' });
-    const day = getDayWithSuffix(time.getDate());
-    const isoDate = `(${time.toISOString().split('T')[0]})`;
+    const timeString = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
     return (
-        <header className="w-full bg-gray-800 text-gray-300 text-xs p-1 flex justify-between items-center flex-shrink-0 z-10">
-            <span className="px-2">signed in as "{user?.username}"</span>
-            <span className="px-2">{time12h} {time24h} {month} {day} {isoDate}</span>
+        <header className="w-full bg-gray-800 text-white p-1 flex justify-between items-center flex-shrink-0 z-10 shadow-md">
+            <span className="px-2 text-xs truncate">u: {user?.username}</span>
+            <span className="px-2 text-sm font-semibold">{timeString}</span>
+            <button 
+                onClick={() => navigate('profile')} 
+                className="p-2 rounded-full hover:bg-white/20"
+                aria-label="Open Profile"
+            >
+                <ProfileIcon />
+            </button>
         </header>
     );
 };

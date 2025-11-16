@@ -77,6 +77,31 @@ serve(async (req) => {
         if (error) throw error;
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
+      case 'updateSipCredentials': {
+          const { sip_username, sip_password } = payload;
+          const updateData: { sip_username?: string, sip_password?: string } = {};
+
+          if (typeof sip_username === 'string') {
+              updateData.sip_username = sip_username;
+          }
+          // Only update password if it's explicitly provided. An empty string is valid to clear it.
+          if (typeof sip_password === 'string' && sip_password) {
+              updateData.sip_password = sip_password;
+          }
+          
+          if (Object.keys(updateData).length === 0) {
+              throw { message: 'No SIP credentials provided to update.', status: 400 };
+          }
+
+          const { error: updateError } = await supabaseAdmin
+              .from('users')
+              .update(updateData)
+              .eq('auth_id', authUser.id);
+          
+          if (updateError) throw updateError;
+          
+          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+      }
       case 'createUser': {
         await ensureAdmin();
         const { password, username, role, features, plan_name, sip_username, sip_password } = payload;

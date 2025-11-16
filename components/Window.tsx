@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-import { WindowInstance, APPS_MAP } from '../App';
+import { WindowInstance } from '../App';
 
 interface WindowComponentProps {
     win: WindowInstance;
@@ -9,9 +9,11 @@ interface WindowComponentProps {
     onPositionChange: (id: string, newPosition: { x: number, y: number }) => void;
     onSizeChange: (id: string, newSize: { width: number, height: number }) => void;
     isActive: boolean;
+    // FIX: Add children prop to allow content to be passed into the window.
+    children: React.ReactNode;
 }
 
-const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus, onMinimize, onPositionChange, onSizeChange, isActive }) => {
+const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus, onMinimize, onPositionChange, onSizeChange, isActive, children }) => {
     const headerRef = useRef<HTMLDivElement>(null);
     const windowRef = useRef<HTMLDivElement>(null);
 
@@ -77,9 +79,6 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
 
     }, [win.id, win.size, onFocus, onSizeChange]);
 
-    const WindowContent = APPS_MAP[win.appId]?.component;
-    if (!WindowContent) return null;
-
     return (
         <div
             ref={windowRef}
@@ -107,7 +106,7 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
                 </div>
             </div>
             <div className="flex-grow w-full h-full overflow-auto relative">
-                <WindowContent {...win.props} />
+                {children}
             </div>
             <div 
                 className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-10"

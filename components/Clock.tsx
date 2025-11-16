@@ -12,13 +12,13 @@ const Clock: React.FC = () => {
     // YYYY-MM-DD
     const date1 = time.toISOString().split('T')[0];
 
-    // YYYY Mon DD
-    const date2 = time.toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: '2-digit' }).replace(/,/, '');
+    // Nov 16 2025
+    const date2 = time.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-    // 7:52pm
+    // 2:45 pm
     const time1 = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
     
-    // (19:52)
+    // (14:45)
     const time2 = `(${time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })})`;
 
     return (

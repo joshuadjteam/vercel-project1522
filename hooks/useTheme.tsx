@@ -18,7 +18,7 @@ const MAX_BLUR = 24;
 const DEFAULT_TRANSPARENCY = 0.5;
 const MIN_TRANSPARENCY = 0.1;
 const MAX_TRANSPARENCY = 1.0;
-const DEFAULT_WALLPAPER = 'canyon';
+const DEFAULT_WALLPAPER = 'forest';
 
 interface ThemeContextType {
     isDark: boolean;

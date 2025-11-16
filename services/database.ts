@@ -153,6 +153,25 @@ export const database = {
         }
         return mapDbUserToUser(data.user);
     },
+
+    updateUserSipCredentials: async (sip_username: string, sip_password: string): Promise<{ success: boolean; error?: string }> => {
+        const payload: any = { action: 'updateSipCredentials', sip_username };
+        // Only include password in the payload if it's being changed.
+        if (sip_password) {
+            payload.sip_password = sip_password;
+        }
+
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+            body: JSON.stringify(payload)
+        });
+
+        if (error || data?.error) {
+            const errorMessage = error?.message || data?.error;
+            console.error('Error updating SIP credentials:', errorMessage);
+            return { success: false, error: errorMessage };
+        }
+        return { success: true };
+    },
     
     updateUserPassword: async (currentPassword: string, newPassword: string): Promise<{ error: string | null }> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
@@ -411,9 +430,9 @@ export const database = {
         if (error || data?.error) {
             const errorMessage = (error?.message || data?.error) as string;
             console.error('Error deleting drive file:', errorMessage);
-            return { success: false, error: errorMessage };
+            return { success: true };
         }
-        return { success: true };
+        return { success: data.success };
     },
 
     isDriveLinked: async (): Promise<boolean> => {

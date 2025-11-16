@@ -2,10 +2,15 @@
 import React, { useState } from 'react';
 import Clock from '../components/Clock';
 import AppContainer from '../components/AppContainer';
+import { Page } from '../types';
+
+interface HomePageProps {
+    navigate: (page: Page, params?: any) => void;
+}
 
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
 
-const HomePage: React.FC = () => {
+const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const handleSearch = () => {
@@ -22,16 +27,16 @@ const HomePage: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-4xl flex flex-col items-center justify-center space-y-8">
-            <div className="relative w-full max-w-xl">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">G</span>
+        <div className="w-full max-w-4xl flex flex-col items-center justify-center space-y-8 animate-fade-in">
+            <div className="relative w-full max-w-xl bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 rounded-full flex items-center shadow-lg">
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">G</span>
                 <input
                     type="text"
                     placeholder="Search with Google..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    className="w-full bg-white/70 dark:bg-gray-900/70 border border-gray-300 dark:border-gray-700 text-light-text dark:text-white rounded-full py-3 pl-10 pr-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-transparent text-white rounded-full py-3 pl-12 pr-28 focus:outline-none"
                 />
                 <button 
                     onClick={handleSearch}
