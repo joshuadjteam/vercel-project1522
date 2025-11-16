@@ -5,10 +5,8 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Session persistence is disabled. The user's session will only last for
-    // the duration of the browser tab. This is to align with the request to
-    // "not save cookies" and enhance user privacy by not storing session
-    // information in localStorage.
-    persistSession: false,
+    // Session persistence is now enabled. The user's session will be stored
+    // in localStorage and persist across browser tabs and restarts.
+    persistSession: true,
   },
 });

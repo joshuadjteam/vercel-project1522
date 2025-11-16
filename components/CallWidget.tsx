@@ -34,6 +34,7 @@ const CallWidget: React.FC = () => {
         const video = remoteVideoRef.current;
         if (video && remoteStream) {
             video.srcObject = remoteStream;
+            video.muted = false; // Explicitly unmute to help with autoplay policies
             
             const playVideo = () => {
                 video.play().catch(e => console.error("Remote video play failed", e));
@@ -71,8 +72,10 @@ const CallWidget: React.FC = () => {
         let newY = e.clientY - dragStartPos.current.y;
         
         // Constrain movement within the parent element
-        newX = Math.max(0, Math.min(newX, parentRect.width - pipRef.current.offsetWidth));
-        newY = Math.max(0, Math.min(newY, parentRect.height - pipRef.current.offsetHeight));
+        newX = Math.max(0, newX);
+        newY = Math.max(0, newY);
+        newX = Math.min(newX, parentRect.width - pipRef.current.offsetWidth);
+        newY = Math.min(newY, parentRect.height - pipRef.current.offsetHeight);
 
         setPipPosition({ x: newX, y: newY });
     };
@@ -124,7 +127,7 @@ const CallWidget: React.FC = () => {
             <div className="bg-gray-800/80 border border-gray-700 rounded-2xl shadow-2xl text-white w-full max-w-md md:max-w-lg lg:max-w-2xl h-[90vh] max-h-[700px] flex flex-col p-4">
                 {/* Remote Video */}
                 <div className="relative flex-grow bg-black rounded-lg w-full h-full overflow-hidden flex items-center justify-center">
-                    <video ref={remoteVideoRef} autoPlay playsInline muted={false} className={`w-full h-full object-cover ${!remoteStream ? 'hidden' : ''}`} />
+                    <video ref={remoteVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${!remoteStream ? 'hidden' : ''}`} />
                     {!remoteStream && (
                          <div className="absolute flex flex-col items-center pointer-events-none">
                             <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center font-bold text-4xl text-white mb-4">
