@@ -54,6 +54,19 @@ serve(async (req) => {
         });
     }
 
+    if (action === 'getUserByUsername') {
+        const { username } = payload;
+        const { data, error } = await supabaseAdmin.from('users').select('*').eq('username', username).single();
+        // PGRST116 means not found, which is a valid result (user doesn't exist), not an error.
+        if (error && error.code !== 'PGRST116') {
+            throw error;
+        }
+        return new Response(JSON.stringify({ user: data }), { // data will be null if not found
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+    }
+
     if (action === 'getUserByEmail') {
         const email = normalizeEmail(payload.email);
         if (!email) throw { message: 'A valid email string is required.', status: 400 };
@@ -97,15 +110,6 @@ serve(async (req) => {
     };
     
     switch (action) {
-      case 'getUserByUsername': {
-        const { username } = payload;
-        const { data, error } = await supabaseAdmin.from('users').select('*').eq('username', username).single();
-        if (error) throw error;
-        return new Response(JSON.stringify({ user: data }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        });
-      }
       case 'updatePassword': {
         const { newPassword } = payload;
         const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, { password: newPassword });

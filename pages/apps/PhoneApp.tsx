@@ -1,20 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCall } from '../../hooks/useCall';
 import { database } from '../../services/database';
-import { User } from '../../types';
 import VoiceAssistantWidget from '../../components/VoiceAssistantWidget';
 
 // Original Icons
 const CallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
 const MicrophoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>;
-
-// New Tab Icons
-const KeypadIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>;
-const HistoryIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ContactsIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197" /></svg>;
-
-type PhoneView = 'keypad' | 'history' | 'contacts';
 
 const KeypadView: React.FC<{ onLaunchAssistant: () => void; dialerInput: string; setDialerInput: (input: string) => void; }> = ({ onLaunchAssistant, dialerInput, setDialerInput }) => {
     const { user: currentUser } = useAuth();
@@ -59,66 +51,10 @@ const KeypadView: React.FC<{ onLaunchAssistant: () => void; dialerInput: string;
     );
 }
 
-const ContactsView: React.FC<{ onSelectContact: (username: string) => void }> = ({ onSelectContact }) => {
-    const [contacts, setContacts] = useState<User[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const { user: currentUser } = useAuth();
-
-    useEffect(() => {
-        const fetchContacts = async () => {
-            setIsLoading(true);
-            const userList = await database.getUserDirectory();
-            setContacts(userList.filter(u => u.id !== currentUser?.id));
-            setIsLoading(false);
-        };
-        fetchContacts();
-    }, [currentUser]);
-
-    if (isLoading) { return <div className="text-center p-4 h-96">Loading contacts...</div>; }
-
-    return (
-        <div className="h-96 overflow-y-auto custom-scrollbar pr-2">
-            <ul className="space-y-2">
-                {contacts.map(contact => (
-                    <li key={contact.id} className="flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-700/50 rounded-lg">
-                        <div className="flex items-center space-x-3"><div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-white">{contact.username.charAt(0).toUpperCase()}</div><span className="font-semibold">{contact.username}</span></div>
-                        <button onClick={() => onSelectContact(contact.username)} className="p-2 rounded-full bg-green-500 hover:bg-green-600 text-white"><CallIcon /></button>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-};
-
-const HistoryView: React.FC = () => (
-    <div className="h-96 flex items-center justify-center text-gray-500"><p>Call history will be shown here.</p></div>
-);
-
-const TabButton: React.FC<{ icon: React.ReactNode; label: string; isActive: boolean; onClick: () => void; }> = ({ icon, label, isActive, onClick }) => (
-    <button onClick={onClick} className={`flex flex-col items-center justify-center space-y-1 w-24 py-2 rounded-lg transition-colors ${isActive ? 'text-purple-500' : 'text-gray-500 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'}`}>
-        {icon}
-        <span className="text-xs font-semibold">{label}</span>
-    </button>
-);
-
 const PhoneApp: React.FC = () => {
     const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = useState(false);
-    const [activeView, setActiveView] = useState<PhoneView>('keypad');
     const [dialerInput, setDialerInput] = useState('');
     const { isCalling } = useCall();
-
-    const handleSelectContact = (username: string) => {
-        setDialerInput(username);
-        setActiveView('keypad');
-    };
-
-    const renderView = () => {
-        switch (activeView) {
-            case 'history': return <HistoryView />;
-            case 'contacts': return <ContactsView onSelectContact={handleSelectContact} />;
-            case 'keypad': default: return <KeypadView onLaunchAssistant={() => setIsVoiceAssistantOpen(true)} dialerInput={dialerInput} setDialerInput={setDialerInput} />;
-        }
-    };
     
     return (
         <>
@@ -130,13 +66,10 @@ const PhoneApp: React.FC = () => {
                             <h2 className="text-xl font-semibold">Call in Progress</h2><p>Your call is being handled in the call screen.</p>
                         </div>
                     ) : (
-                        <div>{renderView()}</div>
+                        <div>
+                           <KeypadView onLaunchAssistant={() => setIsVoiceAssistantOpen(true)} dialerInput={dialerInput} setDialerInput={setDialerInput} />
+                        </div>
                     )}
-                    <div className="mt-6 border-t border-purple-700/50 pt-3 flex justify-around">
-                        <TabButton icon={<HistoryIcon className="w-6 h-6"/>} label="History" isActive={activeView === 'history'} onClick={() => setActiveView('history')} />
-                        <TabButton icon={<KeypadIcon className="w-6 h-6"/>} label="Keypad" isActive={activeView === 'keypad'} onClick={() => setActiveView('keypad')} />
-                        <TabButton icon={<ContactsIcon className="w-6 h-6"/>} label="Contacts" isActive={activeView === 'contacts'} onClick={() => setActiveView('contacts')} />
-                    </div>
                 </div>
             </div>
             <VoiceAssistantWidget isOpen={isVoiceAssistantOpen} onClose={() => setIsVoiceAssistantOpen(false)} />
