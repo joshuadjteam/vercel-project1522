@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-// Add DriveFile to imports
+// Add DriveFile type to imports
 import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile } from '../types';
 
 // Helper to map DB user to app User
@@ -59,7 +59,7 @@ export const database = {
 
     getUsers: async (): Promise<User[]> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: { action: 'getUsers' }
+            body: JSON.stringify({ action: 'getUsers' })
         });
         if (error) {
             let errorMessage = error.message;
@@ -81,7 +81,7 @@ export const database = {
 
     getUserDirectory: async (): Promise<User[]> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: { action: 'getDirectory' }
+            body: JSON.stringify({ action: 'getDirectory' })
         });
         if (error) {
             let errorMessage = error.message;
@@ -103,7 +103,7 @@ export const database = {
     
     addUser: async (userData: Partial<User> & { password?: string }): Promise<{ user: User | null; error: string | null }> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: {
+            body: JSON.stringify({
                 action: 'createUser',
                 email: userData.email,
                 password: userData.password,
@@ -112,7 +112,7 @@ export const database = {
                 plan_name: userData.plan_name,
                 sipVoice: userData.sipVoice,
                 features: userData.features,
-            }
+            })
         });
         
         if (error) {
@@ -135,11 +135,11 @@ export const database = {
 
     updateUser: async (userData: Partial<User>): Promise<User | null> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: { 
+            body: JSON.stringify({ 
                 action: 'updateUser',
                 ...userData,
                 sipVoice: userData.sipVoice 
-            }
+            })
         });
         if (error) {
             let errorMessage = error.message;
@@ -161,11 +161,11 @@ export const database = {
     
     updateUserPassword: async (currentPassword: string, newPassword: string): Promise<{ error: string | null }> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: {
+            body: JSON.stringify({
                 action: 'updatePassword',
                 currentPassword,
                 newPassword,
-            },
+            }),
         });
 
         if (error) {
@@ -193,7 +193,7 @@ export const database = {
             return { error: err };
         }
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: { action: 'deleteUser', auth_id: userToDelete.auth_id }
+            body: JSON.stringify({ action: 'deleteUser', auth_id: userToDelete.auth_id })
         });
         if (error) {
             let errorMessage = error.message;
@@ -215,7 +215,7 @@ export const database = {
 
     getUserByUsername: async (username: string): Promise<User | null> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: { action: 'getUserByUsername', username: username }
+            body: JSON.stringify({ action: 'getUserByUsername', username: username })
         });
         if (error) {
             console.log(`User ${username} not found.`);
@@ -230,7 +230,7 @@ export const database = {
 
     getUserByEmail: async (email: string): Promise<User | null> => {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: { action: 'getUserByEmail', email }
+            body: JSON.stringify({ action: 'getUserByEmail', email })
         });
 
         if (error) {
@@ -438,7 +438,7 @@ export const database = {
     getVoiceResponse: async (text: string): Promise<{ audioDataUrl: string, transcription: string }> => {
         // Call the dedicated voice-service instead of the monolithic app-service
         const { data, error } = await supabase.functions.invoke('voice-service', {
-            body: { text }
+            body: JSON.stringify({ text })
         });
 
         if (error) {

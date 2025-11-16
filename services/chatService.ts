@@ -32,13 +32,13 @@ export const chatService = {
      */
     async getChatHistory(userId1: number, userId2: number): Promise<ChatMessage[]> {
         const { data, error } = await supabase.functions.invoke('app-service', {
-            body: {
+            body: JSON.stringify({
                 resource: 'chatHistory',
                 payload: {
                     currentUserId: userId1,
                     otherUserId: userId2,
                 }
-            }
+            })
         });
 
         if (error || data.error) {
