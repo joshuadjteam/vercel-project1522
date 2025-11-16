@@ -5,8 +5,8 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Session persistence is now enabled. The user's session will be stored
-    // in localStorage and persist across browser tabs and restarts.
-    persistSession: true,
+    // Session persistence is disabled. The user's session will only last
+    // for the duration of the tab. Closing the tab will log the user out.
+    persistSession: false,
   },
 });
