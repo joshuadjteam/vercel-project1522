@@ -37,23 +37,15 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
             return;
         }
 
-        try {
-            const userExists = await database.getUserByEmail(email);
-            if (!userExists) {
-                setError("Error 53A : The credentials 'email' is invalid, please check the email and try again");
-                setIsLoading(false);
-                return;
-            }
-
-            const { error: loginError } = await login(email, password);
-            if (loginError) {
-                setError("Error 53B : The credentials 'password' is invalid, please check the password and try again");
-            }
-        } catch (e: any) {
-            setError("Error 50Z : The database cannot be connected at this time, please try again later");
-        } finally {
-            setIsLoading(false);
+        const { error: loginError } = await login(email, password);
+        
+        if (loginError) {
+            // Use the error message directly from Supabase, which is more reliable.
+            // It will be "Invalid login credentials" for both wrong email and password.
+            setError(loginError);
         }
+        
+        setIsLoading(false);
     };
 
     const handleTryOut = async () => {
