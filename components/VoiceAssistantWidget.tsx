@@ -21,8 +21,10 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     const [error, setError] = useState<{ type: ErrorType, message: string } | null>(null);
     const [isMuted, setIsMuted] = useState(false);
 
-    const recognitionRef = useRef<any>(null); // Using `any` for SpeechRecognition for cross-browser compatibility
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const recognitionRef = useRef<any>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const gainNodeRef = useRef<GainNode | null>(null);
+    const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
     const resetState = () => {
         setStatus('idle');
@@ -34,6 +36,22 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     const handleError = (type: ErrorType, message: string) => {
         setError({ type, message });
         setStatus('error');
+    };
+
+    const initAudioContext = () => {
+        if (!audioContextRef.current) {
+            try {
+                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                const context = new AudioContext();
+                audioContextRef.current = context;
+                const gainNode = context.createGain();
+                gainNode.connect(context.destination);
+                gainNodeRef.current = gainNode;
+            } catch (e) {
+                console.error("Failed to create AudioContext:", e);
+                handleError('browser', "Your browser doesn't support web audio.");
+            }
+        }
     };
 
     const getStatusText = () => {
@@ -63,13 +81,28 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
             setAiTranscript(response.transcription);
             setStatus('speaking');
             
-            audioRef.current = new Audio(response.audioDataUrl);
-            audioRef.current.muted = isMuted;
-            audioRef.current.play();
+            if (!audioContextRef.current || !gainNodeRef.current) {
+                handleError('browser', 'Audio could not be initialized.');
+                return;
+            }
+
+            const audioData = await fetch(response.audioDataUrl).then(res => res.arrayBuffer());
+            const audioBuffer = await audioContextRef.current.decodeAudioData(audioData);
             
-            audioRef.current.onended = () => {
+            if (audioSourceRef.current) {
+                audioSourceRef.current.stop();
+            }
+
+            const source = audioContextRef.current.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(gainNodeRef.current);
+            source.start(0);
+
+            source.onended = () => {
                 resetState();
             };
+            audioSourceRef.current = source;
+
         } catch (e: any) {
             console.error("Error processing voice command:", e);
             handleError('network', e.message || "Could not connect to the voice service.");
@@ -77,6 +110,8 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     };
 
     const startListening = () => {
+        initAudioContext();
+        
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) {
             handleError('browser', "Sorry, your browser doesn't support voice recognition.");
@@ -139,21 +174,31 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     const toggleMute = () => {
         const newMutedState = !isMuted;
         setIsMuted(newMutedState);
-        if (audioRef.current) {
-            audioRef.current.muted = newMutedState;
+        if (gainNodeRef.current && audioContextRef.current) {
+            const gainValue = newMutedState ? 0 : 1;
+            gainNodeRef.current.gain.setValueAtTime(gainValue, audioContextRef.current.currentTime);
         }
+    };
+
+    const stopAll = () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+        if (audioSourceRef.current) {
+            audioSourceRef.current.stop();
+            audioSourceRef.current = null;
+        }
+        resetState();
+    };
+
+    const handleClose = () => {
+        stopAll();
+        onClose();
     };
 
     useEffect(() => {
         if (!isOpen) {
-            if (recognitionRef.current) {
-                recognitionRef.current.stop();
-            }
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current = null;
-            }
-            resetState();
+            stopAll();
         }
     }, [isOpen]);
 
@@ -191,7 +236,7 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
                 </button>
                 
                 <button 
-                    onClick={onClose}
+                    onClick={handleClose}
                     title="End"
                     className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white hover:scale-110"
                 >
