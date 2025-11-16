@@ -129,6 +129,14 @@ const App: React.FC = () => {
     const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
     const nextZIndex = useRef(10);
     
+    // Handle initial routing from URL path for OAuth callbacks
+    useEffect(() => {
+        const path = window.location.pathname;
+        if (path === '/auth-callback' || path.startsWith('/auth-callback/')) {
+            setPage('auth-callback');
+        }
+    }, []);
+
     const navigate = useCallback((newPage: Page, params: any = {}) => {
         // For windowed consoles, opening an app creates a window
         if (isLoggedIn && !isMobileDevice && (consoleView === 'syno' || consoleView === 'fais' || consoleView === 'lega' || consoleView === 'con') && newPage.startsWith('app-')) {
