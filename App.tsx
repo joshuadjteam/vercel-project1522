@@ -50,6 +50,8 @@ import MobiUnitConverterApp from './pages/mobile-apps/MobiUnitConverterApp';
 import MobiCalendarApp from './pages/mobile-apps/MobiCalendarApp';
 import MobileSignInPage from './pages/MobileSignInPage';
 import MobiLauncher from './pages/MobiLauncher';
+import MobiConsoleSwitchApp from './pages/mobile-apps/MobiConsoleSwitchApp';
+
 
 import { Page, UserRole, AppLaunchable } from './types';
 import { SpeedInsights } from '@vercel/speed-insights/react';
@@ -216,7 +218,7 @@ const App: React.FC = () => {
                     case 'app-editor': return <MobiEditorApp navigate={navigate} {...pageParams} />;
                     case 'app-converter': return <MobiUnitConverterApp />;
                     case 'app-calendar': return <MobiCalendarApp />;
-                    case 'app-console-switch': return <ConsoleSwitchApp closeWindow={() => navigate('home')} />;
+                    case 'app-console-switch': return <MobiConsoleSwitchApp />;
                     default: return <MobiLauncher navigate={navigate} appsList={APPS_LIST} />;
                  }
             }
@@ -249,7 +251,7 @@ const App: React.FC = () => {
         return <div className="w-screen h-screen bg-dark-bg flex items-center justify-center text-white">Loading...</div>;
     }
 
-    const isFullScreenApp = (isLoggedIn && !isMobileDevice && (APPS_MAP[page]?.isFullScreen || isInitialChoice)) || (isMobileDevice && page === 'app-localmail');
+    const isFullScreenApp = (isLoggedIn && !isMobileDevice && (APPS_MAP[page]?.isFullScreen || isInitialChoice));
 
     return (
         <div className={`w-screen h-screen overflow-hidden flex flex-col ${isDark ? 'dark' : ''}`}>
@@ -258,11 +260,11 @@ const App: React.FC = () => {
             {isLoggedIn ? (
                 isMobileDevice ? (
                     <div className="w-screen h-screen flex flex-col bg-light-bg dark:bg-dark-bg">
-                        {page !== 'app-localmail' && <MobileTopBar />}
+                        <MobileTopBar />
                         <main className="flex-grow overflow-auto flex flex-col">
                             {renderPage()}
                         </main>
-                        {page !== 'app-localmail' && <MobileNavBar navigate={navigate} />}
+                        <MobileNavBar navigate={navigate} />
                     </div>
                 ) : (
                     isFullScreenApp ? (

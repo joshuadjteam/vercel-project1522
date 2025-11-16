@@ -1,40 +1,87 @@
-
-
-
-
-
-
 import React, { useState, useMemo } from 'react';
 import { Page, AppLaunchable } from '../types';
+
+const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
 
 interface MobiLauncherProps {
     navigate: (page: Page, params?: any) => void;
     appsList: AppLaunchable[];
 }
 
-const APPS_PER_PAGE = 12; // 3x4 grid
-
 const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
-    const [currentPage, setCurrentPage] = useState(0);
+    const [searchQuery, setSearchQuery] = useState('');
 
-    const ALL_APPS = useMemo(() => appsList.filter(app => !app.isHidden), [appsList]);
-    const pageCount = Math.ceil(ALL_APPS.length / APPS_PER_PAGE);
+    const handleSearch = () => {
+        if (searchQuery.trim() !== '') {
+            const url = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+            window.open(url, '_blank');
+        }
+    };
 
-    const paginatedApps = useMemo(() => {
-        const start = currentPage * APPS_PER_PAGE;
-        const end = start + APPS_PER_PAGE;
-        return ALL_APPS.slice(start, end);
-    }, [ALL_APPS, currentPage]);
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
+
+    const PINNED_APP_IDS = ['app-phone', 'app-chat', 'app-localmail', 'app-contacts'];
+    
+    const pinnedApps = useMemo(() => 
+        PINNED_APP_IDS.map(id => appsList.find(app => app.id === id)).filter(Boolean) as AppLaunchable[],
+        [appsList]
+    );
+    
+    const otherApps = useMemo(() =>
+        appsList.filter(app => !app.isHidden && !PINNED_APP_IDS.includes(app.id)),
+        [appsList]
+    );
 
     const handleAppClick = (app: AppLaunchable) => {
         navigate(app.page, app.params);
     };
 
     return (
-        <div className="w-full h-full flex flex-col">
-            <main className="flex-grow p-4 overflow-y-auto">
+        <div className="w-full h-full flex flex-col p-4 overflow-y-auto">
+            {/* Pinned Apps */}
+            <div className="grid grid-cols-4 gap-4 mb-8">
+                {pinnedApps.map(app => (
+                    <button 
+                        key={app.id} 
+                        onClick={() => handleAppClick(app)}
+                        className="flex flex-col items-center justify-start p-2 text-center space-y-2 focus:outline-none focus:bg-white/10 rounded-lg"
+                        aria-label={app.label}
+                    >
+                        <div className="w-16 h-16 bg-black/30 rounded-2xl flex items-center justify-center shadow-md">
+                            {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10" })}
+                        </div>
+                        <span className="text-sm font-semibold text-white/90 truncate w-full">{app.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative mb-8">
+                <input
+                    type="text"
+                    placeholder="Search with Google..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="w-full bg-white/10 dark:bg-black/20 border border-white/20 dark:border-black/30 text-light-text dark:text-white rounded-full py-3 pl-5 pr-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button 
+                    onClick={handleSearch}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-1"
+                >
+                    <SearchIcon />
+                    <span>Search</span>
+                </button>
+            </div>
+
+            {/* Other Apps */}
+            <div className="flex-grow">
                 <div className="grid grid-cols-4 gap-y-6 gap-x-2">
-                    {paginatedApps.map(app => (
+                    {otherApps.map(app => (
                         <button 
                             key={app.id} 
                             onClick={() => handleAppClick(app)}
@@ -42,27 +89,13 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
                             aria-label={app.label}
                         >
                             <div className="w-16 h-16 bg-black/20 rounded-2xl flex items-center justify-center">
-                                {/* FIX: Cast app.icon to React.ReactElement<any> to allow cloning with a className prop. */}
                                 {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10" })}
                             </div>
                             <span className="text-xs font-medium text-white/90 truncate w-full">{app.label}</span>
                         </button>
                     ))}
                 </div>
-            </main>
-            
-            {pageCount > 1 && (
-                <div className="flex-shrink-0 flex justify-center items-center py-2 space-x-2">
-                    {Array.from({ length: pageCount }).map((_, i) => (
-                        <button 
-                            key={i} 
-                            onClick={() => setCurrentPage(i)} 
-                            className={`w-2.5 h-2.5 rounded-full transition-colors ${currentPage === i ? 'bg-white' : 'bg-white/40 hover:bg-white/70'}`}
-                            aria-label={`Go to page ${i + 1}`}
-                        />
-                    ))}
-                </div>
-            )}
+            </div>
         </div>
     );
 };
