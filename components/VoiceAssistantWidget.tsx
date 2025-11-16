@@ -25,6 +25,8 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     const audioContextRef = useRef<AudioContext | null>(null);
     const gainNodeRef = useRef<GainNode | null>(null);
     const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+    const statusRef = useRef(status);
+    statusRef.current = status;
 
     const resetState = () => {
         setStatus('idle');
@@ -38,36 +40,14 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
         setStatus('error');
     };
 
-    const initAudioContext = () => {
-        if (!audioContextRef.current) {
-            try {
-                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                const context = new AudioContext();
-                audioContextRef.current = context;
-                const gainNode = context.createGain();
-                gainNode.connect(context.destination);
-                gainNodeRef.current = gainNode;
-            } catch (e) {
-                console.error("Failed to create AudioContext:", e);
-                handleError('browser', "Your browser doesn't support web audio.");
-            }
-        }
-    };
-
     const getStatusText = () => {
         switch (status) {
-            case 'idle':
-                return 'Click the mic to speak';
-            case 'listening':
-                return 'Listening...';
-            case 'processing':
-                return 'Thinking...';
-            case 'speaking':
-                return aiTranscript ? '' : 'Speaking...';
-            case 'error':
-                return error?.message || 'An error occurred';
-            default:
-                return '';
+            case 'idle': return 'Click the mic to speak';
+            case 'listening': return 'Listening...';
+            case 'processing': return 'Thinking...';
+            case 'speaking': return aiTranscript ? '' : 'Speaking...';
+            case 'error': return error?.message || 'An error occurred';
+            default: return '';
         }
     };
     
@@ -89,18 +69,13 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
             const audioData = await fetch(response.audioDataUrl).then(res => res.arrayBuffer());
             const audioBuffer = await audioContextRef.current.decodeAudioData(audioData);
             
-            if (audioSourceRef.current) {
-                audioSourceRef.current.stop();
-            }
+            if (audioSourceRef.current) audioSourceRef.current.stop();
 
             const source = audioContextRef.current.createBufferSource();
             source.buffer = audioBuffer;
             source.connect(gainNodeRef.current);
             source.start(0);
-
-            source.onended = () => {
-                resetState();
-            };
+            source.onended = () => resetState();
             audioSourceRef.current = source;
 
         } catch (e: any) {
@@ -110,65 +85,89 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     };
 
     const startListening = () => {
-        initAudioContext();
+        // Step 1: Initialize AudioContext on user gesture. This is CRITICAL for iOS.
+        if (!audioContextRef.current) {
+            try {
+                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                audioContextRef.current = new AudioContext();
+                gainNodeRef.current = audioContextRef.current.createGain();
+                gainNodeRef.current.connect(audioContextRef.current.destination);
+            } catch (e) {
+                handleError('browser', "Web Audio API is not supported.");
+                return;
+            }
+        }
+        // Always resume on gesture, in case it was suspended.
+        if (audioContextRef.current.state === 'suspended') {
+            audioContextRef.current.resume();
+        }
         
+        // Step 2: Check for SpeechRecognition API support.
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) {
             handleError('browser', "Sorry, your browser doesn't support voice recognition.");
             return;
         }
 
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-        }
-        
+        if (recognitionRef.current) recognitionRef.current.stop();
         resetState();
 
         const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        recognition.onstart = () => {
-            setStatus('listening');
-        };
+        recognition.onstart = () => setStatus('listening');
         
         recognition.onresult = (event: any) => {
             let finalTranscript = '';
-            let interimTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     finalTranscript += event.results[i][0].transcript;
                 } else {
-                    interimTranscript += event.results[i][0].transcript;
+                    setUserTranscript(prev => prev + event.results[i][0].transcript);
                 }
             }
-            setUserTranscript(interimTranscript || finalTranscript);
-
             if (finalTranscript) {
-                processSpeech(finalTranscript.trim());
                 recognition.stop();
+                processSpeech(finalTranscript.trim());
             }
         };
         
         recognition.onerror = (event: any) => {
-            console.error('Speech recognition error:', event.error);
-            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                handleError('permission', 'Microphone permission denied.');
-            } else if (event.error === 'no-speech') {
-                handleError('no-speech', 'No speech was detected. Try again.');
-            } else {
-                handleError('unknown', 'A speech recognition error occurred.');
+            console.error('Speech recognition error:', event.error, event.message);
+            let message = 'A speech recognition error occurred.';
+            let type: ErrorType = 'unknown';
+
+            switch (event.error) {
+                case 'not-allowed':
+                case 'service-not-allowed':
+                    message = 'Microphone permission denied.';
+                    type = 'permission';
+                    break;
+                case 'no-speech':
+                    message = 'No speech was detected.';
+                    type = 'no-speech';
+                    break;
+                case 'network':
+                    message = 'Network error. Please check your connection.';
+                    type = 'network';
+                    break;
+                case 'audio-capture':
+                    message = 'Could not capture audio from microphone.';
+                    type = 'unknown';
+                    break;
             }
+            handleError(type, message);
         };
 
         recognition.onend = () => {
-            if (status === 'listening') { // Ends without a final result
+            if (statusRef.current === 'listening') {
                 setStatus('idle');
             }
         };
 
         recognition.start();
-        recognitionRef.current = recognition;
     };
     
     const toggleMute = () => {
@@ -183,6 +182,7 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     const stopAll = () => {
         if (recognitionRef.current) {
             recognitionRef.current.stop();
+            recognitionRef.current = null;
         }
         if (audioSourceRef.current) {
             audioSourceRef.current.stop();
@@ -197,9 +197,7 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     };
 
     useEffect(() => {
-        if (!isOpen) {
-            stopAll();
-        }
+        if (!isOpen) stopAll();
     }, [isOpen]);
 
     if (!isOpen) return null;
