@@ -52,7 +52,7 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
                         aria-label={app.label}
                     >
                         <div className="w-16 h-16 bg-black/30 rounded-2xl flex items-center justify-center shadow-md text-white">
-                            {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10" })}
+                            {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10 text-white" })}
                         </div>
                         <span className="text-sm font-semibold text-white/90 truncate w-full">{app.label}</span>
                     </button>
@@ -89,7 +89,7 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
                             aria-label={app.label}
                         >
                             <div className="w-16 h-16 bg-black/20 rounded-2xl flex items-center justify-center text-white">
-                                {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10" })}
+                                {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10 text-white" })}
                             </div>
                             <span className="text-xs font-medium text-white/90 truncate w-full">{app.label}</span>
                         </button>
