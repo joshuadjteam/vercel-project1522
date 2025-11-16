@@ -51,6 +51,50 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
         }
     };
     
+    const playAudio = async (audioDataUrl: string) => {
+        try {
+            // 1. Initialize AudioContext on demand, inside a user gesture chain.
+            if (!audioContextRef.current) {
+                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                if (!AudioContext) throw new Error("AudioContext is not supported.");
+                
+                const context = new AudioContext();
+                audioContextRef.current = context;
+                const gain = context.createGain();
+                gainNodeRef.current = gain;
+                gain.connect(context.destination);
+            }
+
+            // 2. Ensure context is running.
+            if (audioContextRef.current.state === 'suspended') {
+                await audioContextRef.current.resume();
+            }
+            if (gainNodeRef.current) {
+                gainNodeRef.current.gain.value = isMuted ? 0 : 1;
+            }
+
+            // 3. Fetch, decode, and play audio.
+            const audioData = await fetch(audioDataUrl).then(res => res.arrayBuffer());
+            const audioBuffer = await audioContextRef.current.decodeAudioData(audioData);
+
+            if (audioSourceRef.current) audioSourceRef.current.stop();
+
+            const source = audioContextRef.current.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(gainNodeRef.current!);
+            source.start(0);
+            source.onended = () => {
+                if(statusRef.current === 'speaking') {
+                     resetState();
+                }
+            };
+            audioSourceRef.current = source;
+        } catch (e: any) {
+            console.error("Audio playback failed:", e);
+            handleError('browser', "Could not play audio response.");
+        }
+    };
+    
     const processSpeech = async (transcript: string) => {
         setStatus('processing');
         setUserTranscript(transcript);
@@ -60,33 +104,7 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
             const response = await database.getVoiceResponse(transcript);
             setAiTranscript(response.transcription);
             setStatus('speaking');
-            
-            if (!audioContextRef.current || !gainNodeRef.current) {
-                handleError('browser', 'Audio could not be initialized for playback.');
-                return;
-            }
-
-            // Ensure context is running before decoding, crucial for iOS after async operations
-            if (audioContextRef.current.state === 'suspended') {
-                await audioContextRef.current.resume();
-            }
-
-            const audioData = await fetch(response.audioDataUrl).then(res => res.arrayBuffer());
-            const audioBuffer = await audioContextRef.current.decodeAudioData(audioData);
-            
-            if (audioSourceRef.current) audioSourceRef.current.stop();
-
-            const source = audioContextRef.current.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(gainNodeRef.current);
-            source.start(0);
-            source.onended = () => {
-                if(statusRef.current === 'speaking') {
-                     resetState();
-                }
-            };
-            audioSourceRef.current = source;
-
+            await playAudio(response.audioDataUrl);
         } catch (e: any) {
             console.error("Error processing voice command:", e);
             handleError('network', e.message || "Could not connect to the voice service.");
@@ -94,23 +112,6 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     };
 
     const startListening = () => {
-        // Forcefully create and resume AudioContext on every user gesture. This is the most
-        // reliable way to handle iOS's strict audio policies, ensuring the audio hardware
-        // is awake for both speech recognition (input) and audio playback (output).
-        try {
-            if (!audioContextRef.current) {
-                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                audioContextRef.current = new AudioContext();
-                gainNodeRef.current = audioContextRef.current.createGain();
-                gainNodeRef.current.connect(audioContextRef.current.destination);
-            }
-            // Always attempt to resume, as the context can be suspended by the browser.
-            audioContextRef.current.resume();
-        } catch (e) {
-            handleError('browser', "Your browser's audio system could not be initialized.");
-            return;
-        }
-        
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) {
             handleError('browser', "Sorry, your browser doesn't support voice recognition.");
@@ -131,39 +132,39 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
             let finalTranscript = '';
             let interimTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
+                const transcriptPart = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
+                    finalTranscript += transcriptPart;
                 } else {
-                    interimTranscript += event.results[i][0].transcript;
+                    interimTranscript += transcriptPart;
                 }
             }
-            if (interimTranscript) setUserTranscript(interimTranscript);
-            if (finalTranscript) {
-                recognition.stop();
+            setUserTranscript(interimTranscript || finalTranscript);
+            if (finalTranscript && statusRef.current === 'listening') {
                 processSpeech(finalTranscript.trim());
             }
         };
         
         recognition.onerror = (event: any) => {
-            let message = "A speech recognition error occurred. Please try again.";
+            let message = "A speech recognition error occurred.";
             let type: ErrorType = 'unknown';
 
             switch (event.error) {
                 case 'not-allowed':
                 case 'service-not-allowed':
-                    message = 'Microphone permission denied. Please enable it in your browser settings.';
+                    message = 'Microphone permission denied.';
                     type = 'permission';
                     break;
                 case 'no-speech':
-                    message = 'No speech was detected. Please speak clearly.';
+                    message = 'I didn\'t catch that. Please try again.';
                     type = 'no-speech';
                     break;
                 case 'network':
-                    message = 'Network error. Please check your internet connection.';
+                    message = 'Network error. Please check your connection.';
                     type = 'network';
                     break;
                 case 'audio-capture':
-                    message = 'Could not capture audio from your microphone. Please check if another app is using it.';
+                    message = 'Could not capture audio from microphone.';
                     type = 'audio-capture';
                     break;
             }
@@ -171,27 +172,24 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
         };
 
         recognition.onend = () => {
-            // Only reset to idle if we were 'listening'. If we are 'processing' or 'speaking', don't change state.
             if (statusRef.current === 'listening') {
                 setStatus('idle');
             }
         };
-
         recognition.start();
     };
     
     const toggleMute = () => {
         const newMutedState = !isMuted;
         setIsMuted(newMutedState);
-        if (gainNodeRef.current && audioContextRef.current) {
-            const gainValue = newMutedState ? 0 : 1;
-            gainNodeRef.current.gain.setValueAtTime(gainValue, audioContextRef.current.currentTime);
+        if (gainNodeRef.current) {
+            gainNodeRef.current.gain.value = newMutedState ? 0 : 1;
         }
     };
 
     const stopAll = () => {
         if (recognitionRef.current) {
-            recognitionRef.current.abort(); // Use abort to prevent onresult firing
+            recognitionRef.current.abort();
             recognitionRef.current = null;
         }
         if (audioSourceRef.current) {

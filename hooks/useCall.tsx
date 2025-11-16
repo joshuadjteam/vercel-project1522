@@ -1,6 +1,3 @@
-
-
-
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
@@ -55,6 +52,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const callChannelRef = useRef<RealtimeChannel | null>(null);
     const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
     const isCallingRef = useRef(isCalling);
+    const audioContextRef = useRef<AudioContext | null>(null);
 
     useEffect(() => {
         isCallingRef.current = isCalling;
@@ -154,8 +152,28 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             supabase.removeChannel(channel);
         };
     }, [user, handleSignalingData]);
+
+    const unlockAudio = useCallback(async () => {
+        if (audioContextRef.current && audioContextRef.current.state === 'running') {
+            return;
+        }
+        try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContext) return;
+            
+            const context = audioContextRef.current || new AudioContext();
+            audioContextRef.current = context;
+
+            if (context.state === 'suspended') {
+                await context.resume();
+            }
+        } catch (e) {
+            console.error("Failed to initialize or resume AudioContext:", e);
+        }
+    }, []);
     
     const startP2PCall = async (calleeUsername: string, withVideo: boolean) => {
+        await unlockAudio();
         if (isCalling || !user) return;
         setIsCalling(true);
         setCallee(calleeUsername);
@@ -199,6 +217,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     const acceptCall = async () => {
+        await unlockAudio();
         if (!incomingCall || !user) return;
         
         setIsCalling(true);
