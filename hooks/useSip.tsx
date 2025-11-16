@@ -67,12 +67,11 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         
         try {
             const ua = new UserAgent({
-                server: 'wss://sip.iptel.org:443',
                 uri: UserAgent.makeURI(`sip:${user}@lynixity.x10.bz`),
                 authorizationPassword: pass,
                 authorizationUsername: user,
                 transportOptions: {
-                    server: 'wss://sip.iptel.org:443'
+                    server: 'wss://sip.iptel.org:8081'
                 },
             });
             userAgent.current = ua;
@@ -89,7 +88,10 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 },
                 onDisconnect: (err) => {
                     setConnectionState('Disconnected');
-                    if (err) setError(`Disconnected: ${err.message}`);
+                    if (err) {
+                        const errorMessage = (err as Error).message || "WebSocket closed";
+                        setError(`Disconnected: ${errorMessage}`);
+                    }
                     cleanupSession();
                 },
                 onInvite: (invitation) => {
@@ -135,7 +137,7 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (!targetUri) { setError('Invalid SIP URI'); return; }
 
         const inviter = new Inviter(userAgent.current, targetUri, {
-             sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } }
+             sessionDescriptionHandlerOptions: { constraints: { audio: true, video: true } }
         });
         activeSession.current = inviter;
         
@@ -172,7 +174,7 @@ export const SipProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }
         });
         
-        invitation.accept({ sessionDescriptionHandlerOptions: { constraints: { audio: true, video: false } } })
+        invitation.accept({ sessionDescriptionHandlerOptions: { constraints: { audio: true, video: true } } })
             .catch(e => { console.error("Answer failed", e); setError("Failed to answer call"); cleanupSession(); });
 
     }, [callState]);
