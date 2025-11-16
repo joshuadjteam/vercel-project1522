@@ -14,7 +14,9 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, type } = await req.json();
+    const bodyText = await req.text();
+    const body = bodyText ? JSON.parse(bodyText) : {};
+    const { prompt, type } = body;
     if (!prompt || !type) {
       throw { status: 400, message: "Request must include 'prompt' and 'type' ('help' or 'chat')." };
     }

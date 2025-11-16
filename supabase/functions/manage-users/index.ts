@@ -22,8 +22,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
-    // Use req.json() for robust body parsing
-    const payload = await req.json();
+    const body = await req.text();
+    const payload = body ? JSON.parse(body) : {};
     const { action } = payload;
     
     const normalizeEmail = (email: any) => {

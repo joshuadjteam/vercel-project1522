@@ -14,7 +14,8 @@ serve(async (req)=>{
   }
 
   try {
-    const body = await req.json();
+    const bodyText = await req.text();
+    const body = bodyText ? JSON.parse(bodyText) : {};
     const { resource, action, payload } = body;
 
     const supabaseAdmin = createClient(

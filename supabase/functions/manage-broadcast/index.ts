@@ -17,7 +17,9 @@ serve(async (req) => {
   }
 
   try {
-    const { action, payload } = await req.json();
+    const bodyText = await req.text();
+    const body = bodyText ? JSON.parse(bodyText) : {};
+    const { action, payload } = body;
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 

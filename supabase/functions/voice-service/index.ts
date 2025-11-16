@@ -25,7 +25,10 @@ serve(async (req) => {
   }
 
   try {
-    const { text: userText } = await req.json();
+    const bodyText = await req.text();
+    const body = bodyText ? JSON.parse(bodyText) : {};
+    const { text: userText } = body;
+
     if (!userText) {
       throw new Error("Text prompt is required.");
     }

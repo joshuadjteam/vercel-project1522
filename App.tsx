@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -308,15 +309,17 @@ const App: React.FC = () => {
                     )
                 )
             ) : ( // Not logged in
-                <div className="flex-grow flex flex-col bg-light-bg dark:bg-dark-bg">
-                    <>
-                       <Header navigate={navigate} />
+                isMobileDevice ? (
+                    <MobileSignInPage navigate={navigate} />
+                ) : (
+                    <div className="flex-grow flex flex-col bg-light-bg dark:bg-dark-bg">
+                        <Header navigate={navigate} />
                         <main className="flex-grow flex items-center justify-center p-4" style={{backgroundImage: 'linear-gradient(to top, #1a202c, #2d3748)'}}>
                             {renderPage()}
                         </main>
                         <Footer />
-                    </>
-                </div>
+                    </div>
+                )
             )}
             <CallWidget />
             <SipCallWidget />
