@@ -22,17 +22,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
-    let body;
-    try {
-      const bodyText = await req.text();
-      body = JSON.parse(bodyText || '{}');
-    } catch (e) {
-      throw { status: 400, message: `Invalid JSON in request body: ${e.message}` };
-    }
-    if (typeof body !== 'object' || body === null) {
-      throw { status: 400, message: 'Request body must be a JSON object.' };
-    }
-    const payload = body;
+    // Use req.json() for robust body parsing
+    const payload = await req.json();
     const { action } = payload;
     
     const normalizeEmail = (email: any) => {
