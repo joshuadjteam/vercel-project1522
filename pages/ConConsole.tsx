@@ -1,8 +1,7 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { Page, AppLaunchable } from '../types';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme, wallpapers } from '../hooks/useTheme';
 import Clock from '../components/Clock';
 import HelpModal from '../components/HelpModal';
 import AppContainer from '../components/AppContainer';
@@ -27,6 +26,7 @@ interface ConConsoleProps {
 
 const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
     const { user } = useAuth();
+    const { wallpaper } = useTheme();
     const [isHelpModalOpen, setHelpModalOpen] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -50,7 +50,7 @@ const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
     };
 
     return (
-        <div className="w-screen h-screen overflow-hidden flex flex-col bg-gradient-to-br from-blue-400 to-indigo-600 text-white">
+        <div className={`w-screen h-screen overflow-hidden flex flex-col text-white ${(wallpapers[wallpaper] || wallpapers.canyon).class}`}>
             {showSearch && (
                  <div 
                     className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 flex items-center justify-center"

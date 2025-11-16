@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -39,7 +38,7 @@ serve(async (req)=>{
         const clientId = Deno.env.get('GCP_CLIENT_ID');
         const redirectUri = Deno.env.get('GCP_REDIRECT_URI');
         if (!clientId || !redirectUri) {
-            throw { status: 500, message: 'Google Drive OAuth is not configured on the server.' };
+            throw { status: 500, message: 'Google OAuth is not configured on the server.' };
         }
         return new Response(JSON.stringify({
             clientId,
@@ -145,7 +144,7 @@ serve(async (req)=>{
         if (getUserError) throw getUserError;
         const refresh_token = userWithMetadata?.user_metadata?.drive_refresh_token;
         if (!refresh_token) {
-            throw { status: 401, message: 'Google Drive token not found. Please link your account.' };
+            throw { status: 401, message: 'Google Account token not found. Please link your account.' };
         }
 
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -165,7 +164,7 @@ serve(async (req)=>{
                 const newMetadata = { ...userWithMetadata.user_metadata };
                 delete newMetadata.drive_refresh_token;
                 await supabaseAdmin.auth.admin.updateUserById(authUser.id, { user_metadata: newMetadata });
-                throw { status: 401, message: 'Access revoked. Please re-link your Google Drive account.' };
+                throw { status: 401, message: 'Access revoked. Please re-link your Google Account.' };
             }
             console.error("Google access token refresh failed:", errorBody);
             throw { status: 500, message: 'Failed to refresh Google access token.' };

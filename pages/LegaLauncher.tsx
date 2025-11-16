@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Page, UserRole, AppLaunchable } from '../types';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme, wallpapers } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import HelpModal from '../components/HelpModal';
 
@@ -45,7 +45,7 @@ interface LegaLauncherProps {
 
 const LegaLauncher: React.FC<LegaLauncherProps> = ({ navigate, appsList }) => {
     const { user, logout } = useAuth();
-    const { isDark, setIsDark } = useTheme();
+    const { isDark, setIsDark, wallpaper } = useTheme();
 
     const [webMenuOpen, setWebMenuOpen] = useState(false);
     const [appsMenuOpen, setAppsMenuOpen] = useState(false);
@@ -107,7 +107,7 @@ const LegaLauncher: React.FC<LegaLauncherProps> = ({ navigate, appsList }) => {
     );
 
     return (
-        <div className="w-screen h-screen overflow-hidden bg-gradient-to-br from-[#024358] to-[#00c885] text-white flex flex-col font-sans">
+        <div className={`w-screen h-screen overflow-hidden flex flex-col font-sans text-white ${(wallpapers[wallpaper] || wallpapers.canyon).class}`}>
             {/* Header */}
             <header className="w-full bg-slate-900/50 backdrop-blur-sm text-white shadow-lg z-50 flex-shrink-0">
                 <div className="container mx-auto px-4 py-2 flex justify-between items-center">
