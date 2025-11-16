@@ -4,7 +4,7 @@ export const geminiService = {
     getHelpResponse: async (prompt: string): Promise<string> => {
         try {
             const { data, error } = await supabase.functions.invoke('gemini-service', {
-                body: { type: 'help', prompt }
+                body: JSON.stringify({ type: 'help', prompt })
             });
 
             if (error) throw error;
@@ -30,7 +30,7 @@ export const geminiService = {
     getChatAIResponse: async (prompt: string): Promise<string> => {
         try {
             const { data, error } = await supabase.functions.invoke('gemini-service', {
-                body: { type: 'chat', prompt }
+                body: JSON.stringify({ type: 'chat', prompt })
             });
 
             if (error) throw error;
