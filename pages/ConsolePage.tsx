@@ -87,7 +87,6 @@ const ConsolePage: React.FC<ConsolePageProps> = ({ navigate, appsList }) => {
                 <div className="grid grid-cols-10 gap-4">
                     {DESKTOP_APPS.map(app => (
                          <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-white/10 transition-colors space-y-2 text-center w-24 h-24">
-                            {/* FIX: Cast app.icon to React.ReactElement<any> to allow cloning with a className prop. */}
                             {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-12 h-12" })}
                             <span className="text-sm font-medium text-shadow" style={{textShadow: '1px 1px 3px rgba(0,0,0,0.7)'}}>{app.label}</span>
                         </button>
@@ -117,7 +116,6 @@ const ConsolePage: React.FC<ConsolePageProps> = ({ navigate, appsList }) => {
                                 <div className="grid grid-cols-4 gap-4">
                                     {ALL_APPS.map(app => (
                                         <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-white/10 transition-colors space-y-2 text-center">
-                                            {/* FIX: Cast app.icon to React.ReactElement<any> to allow cloning with a className prop. */}
                                             {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10" })}
                                             <span className="text-xs">{app.label}</span>
                                         </button>
