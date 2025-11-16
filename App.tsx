@@ -9,7 +9,7 @@ import useIsMobileDevice from './hooks/useIsMobileDevice';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CallWidget from './components/CallWidget';
-import IncomingCallWidget from './components/IncomingCallWidget';
+import CallNotificationWidget from './components/CallNotificationWidget';
 import WindowComponent from './components/Window';
 import FullScreenAppHeader from './components/FullScreenAppHeader';
 import MobileTopBar from './components/MobileTopBar';
@@ -309,7 +309,7 @@ const App: React.FC = () => {
                 </div>
             )}
             <CallWidget />
-            <IncomingCallWidget />
+            <CallNotificationWidget />
         </div>
     );
 };

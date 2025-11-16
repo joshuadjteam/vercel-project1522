@@ -97,7 +97,7 @@ const CallWidget: React.FC = () => {
     }, [isDragging]);
 
 
-    if (!isCalling) {
+    if (!isCalling || callStatus.startsWith('Ringing')) {
         return null;
     }
 
@@ -112,8 +112,6 @@ const CallWidget: React.FC = () => {
         let content;
         if (callStatus === 'Connected') {
             content = <span className="text-green-400">{formatDuration(callDuration)}</span>;
-        } else if (callStatus.startsWith('Ringing')) {
-            content = <span className="text-yellow-400 animate-pulse">{callStatus}</span>;
         } else {
             content = <span className="text-yellow-400">{callStatus}</span>;
         }
