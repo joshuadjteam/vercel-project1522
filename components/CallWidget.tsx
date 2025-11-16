@@ -23,6 +23,7 @@ const CallWidget: React.FC = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [pipPosition, setPipPosition] = useState({ x: 10, y: 10 }); // Initial position from bottom right
     const dragStartPos = useRef({ x: 0, y: 0 });
+    const [showUnmuteButton, setShowUnmuteButton] = useState(false);
 
     useEffect(() => {
         if (localStream && localVideoRef.current) {
@@ -34,19 +35,22 @@ const CallWidget: React.FC = () => {
         const video = remoteVideoRef.current;
         if (video && remoteStream) {
             video.srcObject = remoteStream;
+            setShowUnmuteButton(false); // Reset on new stream
             
-            // This logic is critical for cross-browser audio playback.
-            // 1. The <video> element is `muted` and `autoPlay` by default.
-            // 2. We explicitly call `play()`. The browser allows this because it's muted.
-            // 3. Once the play promise resolves, we know the video is playing, so we can safely unmute.
             const playPromise = video.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
-                    // Success! Video is playing (silently). Now we can unmute.
                     video.muted = false;
+                    // Double-check if it's really playing on some mobile browsers
+                     setTimeout(() => {
+                        if (video.paused && remoteStream.getAudioTracks().length > 0) {
+                            console.error("Video auto-play seems to have failed silently. Showing unmute button.");
+                            setShowUnmuteButton(true);
+                        }
+                    }, 500);
                 }).catch(error => {
-                    console.error("Remote video auto-play failed. User may need to interact.", error);
-                    // You might want to show an "unmute" button to the user here as a fallback.
+                    console.error("Remote video auto-play failed, showing unmute button.", error);
+                    setShowUnmuteButton(true);
                 });
             }
         }
@@ -96,6 +100,18 @@ const CallWidget: React.FC = () => {
         };
     }, [isDragging]);
 
+    const handleManualUnmute = () => {
+        const video = remoteVideoRef.current;
+        if (video) {
+            video.muted = false;
+            video.play().then(() => {
+                setShowUnmuteButton(false);
+            }).catch(err => {
+                console.error("Manual play also failed:", err);
+                // Button remains visible for user to try again.
+            });
+        }
+    };
 
     if (!isCalling || callStatus.startsWith('Ringing')) {
         return null;
@@ -124,6 +140,19 @@ const CallWidget: React.FC = () => {
                 {/* Remote Video */}
                 <div className="relative flex-grow bg-black rounded-lg w-full h-full overflow-hidden flex items-center justify-center">
                     <video ref={remoteVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${!remoteStream ? 'hidden' : ''}`} />
+                    
+                    {showUnmuteButton && (
+                        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center animate-fade-in">
+                            <p className="text-lg mb-4">Remote audio might be muted.</p>
+                            <button
+                                onClick={handleManualUnmute}
+                                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+                            >
+                                Tap to Unmute
+                            </button>
+                        </div>
+                    )}
+                    
                     {!remoteStream && (
                          <div className="absolute flex flex-col items-center pointer-events-none">
                             <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center font-bold text-4xl text-white mb-4">
@@ -169,7 +198,8 @@ const CallWidget: React.FC = () => {
                             {isVideoEnabled ? <VideoOnIcon /> : <VideoOffIcon />}
                         </button>
                         <button 
-                            onClick={endCall} 
+                            // FIX: The onClick handler should be a function that calls endCall, to match the expected event handler type.
+                            onClick={() => endCall()} 
                             title="End Call"
                             className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white text-2xl font-semibold hover:scale-110"
                         >

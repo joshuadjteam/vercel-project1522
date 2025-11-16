@@ -65,7 +65,8 @@ const CallNotificationWidget: React.FC = () => {
                 <div className="flex justify-center items-center">
                     <div className="flex flex-col items-center">
                         <button 
-                            onClick={endCall} 
+                            // FIX: The onClick handler should be a function that calls endCall, to match the expected event handler type.
+                            onClick={() => endCall()} 
                             className="h-16 w-16 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white font-semibold hover:scale-110"
                             aria-label="End call"
                         >
