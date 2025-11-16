@@ -31,28 +31,24 @@ const CallWidget: React.FC = () => {
     }, [localStream]);
     
     useEffect(() => {
-        const videoElement = remoteVideoRef.current;
-        if (videoElement) {
-            videoElement.srcObject = remoteStream;
+        const video = remoteVideoRef.current;
+        if (video && remoteStream) {
+            video.srcObject = remoteStream;
 
-            const playPromise = videoElement.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.error("Autoplay was prevented:", error);
-                    // On some browsers, we need to wait for user interaction to play.
-                    // The onloadedmetadata handler helps ensure we try again once data is ready.
+            const handleMetadataLoaded = () => {
+                video.play().catch(error => {
+                    console.error("Error playing remote stream after metadata loaded:", error);
                 });
-            }
-
-            const handleCanPlay = () => {
-                videoElement.play().catch(e => console.error("Error playing remote stream on canplay:", e));
             };
 
-            videoElement.addEventListener('canplay', handleCanPlay);
-            
+            video.addEventListener('loadedmetadata', handleMetadataLoaded);
+
+            // Fallback play attempt for browsers that might not fire loadedmetadata consistently with streams
+            video.play().catch(() => {});
+
             return () => {
-                videoElement.removeEventListener('canplay', handleCanPlay);
-            }
+                video.removeEventListener('loadedmetadata', handleMetadataLoaded);
+            };
         }
     }, [remoteStream]);
     

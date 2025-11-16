@@ -12,7 +12,7 @@ interface VoiceAssistantWidgetProps {
 }
 
 type Status = 'idle' | 'listening' | 'processing' | 'speaking' | 'error';
-type ErrorType = 'browser' | 'permission' | 'no-speech' | 'network' | 'unknown';
+type ErrorType = 'browser' | 'permission' | 'no-speech' | 'network' | 'unknown' | 'audio-capture';
 
 const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onClose }) => {
     const [status, setStatus] = useState<Status>('idle');
@@ -62,8 +62,13 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
             setStatus('speaking');
             
             if (!audioContextRef.current || !gainNodeRef.current) {
-                handleError('browser', 'Audio could not be initialized.');
+                handleError('browser', 'Audio could not be initialized for playback.');
                 return;
+            }
+
+            // Ensure context is running before decoding, crucial for iOS after async operations
+            if (audioContextRef.current.state === 'suspended') {
+                await audioContextRef.current.resume();
             }
 
             const audioData = await fetch(response.audioDataUrl).then(res => res.arrayBuffer());
@@ -75,7 +80,11 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
             source.buffer = audioBuffer;
             source.connect(gainNodeRef.current);
             source.start(0);
-            source.onended = () => resetState();
+            source.onended = () => {
+                if(statusRef.current === 'speaking') {
+                     resetState();
+                }
+            };
             audioSourceRef.current = source;
 
         } catch (e: any) {
@@ -85,24 +94,23 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
     };
 
     const startListening = () => {
-        // Step 1: Initialize AudioContext on user gesture. This is CRITICAL for iOS.
-        if (!audioContextRef.current) {
-            try {
+        // Forcefully create and resume AudioContext on every user gesture. This is the most
+        // reliable way to handle iOS's strict audio policies, ensuring the audio hardware
+        // is awake for both speech recognition (input) and audio playback (output).
+        try {
+            if (!audioContextRef.current) {
                 const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
                 audioContextRef.current = new AudioContext();
                 gainNodeRef.current = audioContextRef.current.createGain();
                 gainNodeRef.current.connect(audioContextRef.current.destination);
-            } catch (e) {
-                handleError('browser', "Web Audio API is not supported.");
-                return;
             }
-        }
-        // Always resume on gesture, in case it was suspended.
-        if (audioContextRef.current.state === 'suspended') {
+            // Always attempt to resume, as the context can be suspended by the browser.
             audioContextRef.current.resume();
+        } catch (e) {
+            handleError('browser', "Your browser's audio system could not be initialized.");
+            return;
         }
         
-        // Step 2: Check for SpeechRecognition API support.
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) {
             handleError('browser', "Sorry, your browser doesn't support voice recognition.");
@@ -121,13 +129,15 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
         
         recognition.onresult = (event: any) => {
             let finalTranscript = '';
+            let interimTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     finalTranscript += event.results[i][0].transcript;
                 } else {
-                    setUserTranscript(prev => prev + event.results[i][0].transcript);
+                    interimTranscript += event.results[i][0].transcript;
                 }
             }
+            if (interimTranscript) setUserTranscript(interimTranscript);
             if (finalTranscript) {
                 recognition.stop();
                 processSpeech(finalTranscript.trim());
@@ -135,33 +145,33 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
         };
         
         recognition.onerror = (event: any) => {
-            console.error('Speech recognition error:', event.error, event.message);
-            let message = 'A speech recognition error occurred.';
+            let message = "A speech recognition error occurred. Please try again.";
             let type: ErrorType = 'unknown';
 
             switch (event.error) {
                 case 'not-allowed':
                 case 'service-not-allowed':
-                    message = 'Microphone permission denied.';
+                    message = 'Microphone permission denied. Please enable it in your browser settings.';
                     type = 'permission';
                     break;
                 case 'no-speech':
-                    message = 'No speech was detected.';
+                    message = 'No speech was detected. Please speak clearly.';
                     type = 'no-speech';
                     break;
                 case 'network':
-                    message = 'Network error. Please check your connection.';
+                    message = 'Network error. Please check your internet connection.';
                     type = 'network';
                     break;
                 case 'audio-capture':
-                    message = 'Could not capture audio from microphone.';
-                    type = 'unknown';
+                    message = 'Could not capture audio from your microphone. Please check if another app is using it.';
+                    type = 'audio-capture';
                     break;
             }
             handleError(type, message);
         };
 
         recognition.onend = () => {
+            // Only reset to idle if we were 'listening'. If we are 'processing' or 'speaking', don't change state.
             if (statusRef.current === 'listening') {
                 setStatus('idle');
             }
@@ -181,7 +191,7 @@ const VoiceAssistantWidget: React.FC<VoiceAssistantWidgetProps> = ({ isOpen, onC
 
     const stopAll = () => {
         if (recognitionRef.current) {
-            recognitionRef.current.stop();
+            recognitionRef.current.abort(); // Use abort to prevent onresult firing
             recognitionRef.current = null;
         }
         if (audioSourceRef.current) {
