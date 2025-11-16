@@ -1,5 +1,4 @@
-
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useCall } from '../hooks/useCall';
 
 const DeclineIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12.01,16.46c-2.3,0-4.52-0.62-6.52-1.75l-2.12,2.12c-0.39,0.39-1.02,0.39-1.41,0l-1.42-1.42c-0.39-0.39-0.39-1.02,0-1.41l2.12-2.12C1.62,10.04,1,7.82,1,5.52c0-0.41,0.34-0.75,0.75-0.75h4c0.35,0,0.66,0.24,0.74,0.58l0.85,3.83c0.07,0.32-0.01,0.66-0.23,0.9L5.5,11.53c0.95,1.86,2.5,3.4,4.37,4.37l1.45-1.45c0.23-0.23,0.58-0.3,0.9-0.23l3.83,0.85c0.34,0.08,0.58,0.39,0.58,0.74v4c0,0.41-0.34,0.75-0.75,0.75C17.3,21,14.67,20.08,12.01,16.46z" transform="rotate(-135 12 12)" /></svg>;
@@ -7,24 +6,6 @@ const AcceptIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 
 
 const IncomingCallWidget: React.FC = () => {
     const { incomingCall, acceptCall, declineCall } = useCall();
-    const ringtoneRef = useRef<HTMLAudioElement>(null);
-
-    useEffect(() => {
-        if (incomingCall && ringtoneRef.current) {
-            ringtoneRef.current.loop = true;
-            ringtoneRef.current.play().catch(e => console.error("Ringtone playback failed", e));
-        } else if (!incomingCall && ringtoneRef.current) {
-            ringtoneRef.current.pause();
-            ringtoneRef.current.currentTime = 0;
-        }
-        
-        return () => {
-            if (ringtoneRef.current) {
-                ringtoneRef.current.pause();
-                ringtoneRef.current.currentTime = 0;
-            }
-        };
-    }, [incomingCall]);
 
     if (!incomingCall) {
         return null;
@@ -34,7 +15,6 @@ const IncomingCallWidget: React.FC = () => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-[100] animate-fade-in">
-             <audio ref={ringtoneRef} src="https://assets.mixkit.co/sfx/preview/mixkit-marimba-waiting-ringtone-1360.mp3" preload="auto" />
             <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl w-full max-w-sm p-8 text-center text-white animate-pulse-slow">
                 <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center font-bold text-4xl text-white mx-auto mb-4">
                     {incomingCall.from.charAt(0).toUpperCase()}
