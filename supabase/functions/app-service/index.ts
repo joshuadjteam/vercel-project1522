@@ -182,25 +182,34 @@ serve(async (req)=>{
 
     if (resource === 'users' && action === 'update_installed_apps') {
         const { appIds } = payload;
-        if (!Array.isArray(appIds)) throw { status: 400, message: 'appIds must be an array.' };
-    
-        const { data: updatedUser, error } = await supabaseAdmin
-            .from('users')
-            .update({ installed_webly_apps: appIds })
-            .eq('auth_id', userProfile.auth_id)
-            .select('installed_webly_apps')
-            .single();
-        
-        if (error) {
-            console.error("Supabase update/select error:", error);
-            throw { status: 500, message: `Database operation failed: ${error.message}` };
+        if (!Array.isArray(appIds)) {
+            throw { status: 400, message: 'appIds must be an array.' };
         }
 
-        if (!updatedUser) {
-            throw { status: 404, message: 'User not found after update, could not confirm write.' };
+        // Step 1: Perform the update.
+        const { error: updateError } = await supabaseAdmin
+            .from('users')
+            .update({ installed_webly_apps: appIds })
+            .eq('auth_id', userProfile.auth_id);
+
+        if (updateError) {
+            console.error("Supabase update error:", updateError);
+            throw { status: 500, message: `Database update failed: ${updateError.message}` };
         }
         
-        return new Response(JSON.stringify({ installed_webly_apps: updatedUser.installed_webly_apps }), { 
+        // Step 2: Read the data back to confirm the write was successful.
+        const { data: updatedData, error: selectError } = await supabaseAdmin
+            .from('users')
+            .select('installed_webly_apps')
+            .eq('auth_id', userProfile.auth_id)
+            .single();
+
+        if (selectError) {
+            console.error("Supabase select-after-update error:", selectError);
+            throw { status: 500, message: `Could not verify update: ${selectError.message}` };
+        }
+        
+        return new Response(JSON.stringify({ installed_webly_apps: updatedData.installed_webly_apps }), { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
             status: 200 
         });

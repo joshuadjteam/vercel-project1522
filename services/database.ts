@@ -636,8 +636,22 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'users', action: 'update_installed_apps', payload: { appIds } }
         });
-        if (error || data?.error) {
-            console.error('Error updating user installed apps:', error || data?.error);
+        if (error) {
+            let errorMessage = error.message;
+            // Try to extract the more specific error message from the function response
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) {
+                    // Ignore JSON parsing error, stick with original message
+                }
+            }
+            console.error("Error updating user installed apps:", errorMessage, { originalError: error });
+            return null;
+        }
+        if (data?.error) {
+            console.error('Error from app-service function:', data.error);
             return null;
         }
         return data.installed_webly_apps;
