@@ -1,5 +1,6 @@
 import React, { useRef, useCallback } from 'react';
 import { WindowInstance } from '../App';
+import { database } from '../services/database';
 
 interface WindowComponentProps {
     win: WindowInstance;
@@ -19,7 +20,7 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
 
     const onMouseDown = useCallback((e: React.MouseEvent) => {
         if (!headerRef.current || !windowRef.current) return;
-        if (!headerRef.current.contains(e.target as Node)) return;
+        if (!headerRef.current.contains(e.target as Node) || (e.target as HTMLElement).closest('button')) return;
 
         onFocus(win.id);
         
@@ -79,6 +80,33 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
 
     }, [win.id, win.size, onFocus, onSizeChange]);
 
+    const handleSaveToDrive = async () => {
+        if (!win.props?.url || !win.title) return;
+        const fileName = `Browse-App(${win.title}).brwselynix`;
+        
+        const content = JSON.stringify({
+            url: win.props.url,
+            title: win.title,
+            size: win.size,
+            position: win.position,
+        }, null, 2);
+
+        alert('Saving to Google Drive...');
+        const { file, error } = await database.createDriveFile(fileName);
+        if (file) {
+            const { success, error: updateError } = await database.updateDriveFile(file.id, { content });
+            if (success) {
+                alert('Shortcut saved to your Google Drive!');
+            } else {
+                alert(`Failed to save content: ${updateError}`);
+                // Attempt to delete the empty file
+                await database.deleteDriveFile(file.id);
+            }
+        } else {
+            alert(`Failed to create file on Drive: ${error}`);
+        }
+    };
+
     return (
         <div
             ref={windowRef}
@@ -99,8 +127,13 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
                 onMouseDown={onMouseDown}
                 className="flex items-center justify-between px-3 py-1 bg-gray-200 dark:bg-slate-800 cursor-grab active:cursor-grabbing flex-shrink-0"
             >
-                <span className="font-bold text-sm text-light-text dark:text-dark-text">{win.title}</span>
-                <div className="flex items-center space-x-1">
+                 <div className="flex items-center flex-grow overflow-hidden">
+                    {win.props?.isWebApp && (
+                        <button onClick={handleSaveToDrive} className="px-2 py-1 mr-2 text-xs rounded bg-green-600 hover:bg-green-700 text-white flex-shrink-0">Save to Drive</button>
+                    )}
+                    <span className="font-bold text-sm text-light-text dark:text-dark-text truncate">{win.title}</span>
+                </div>
+                <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
                     <button onClick={() => onMinimize(win.id)} className="w-5 h-5 rounded-full bg-yellow-500 hover:bg-yellow-600" />
                     <button onClick={() => onClose(win.id)} className="w-5 h-5 rounded-full bg-red-500 hover:bg-red-600" />
                 </div>

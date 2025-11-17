@@ -22,8 +22,6 @@ const LYNX_AI_USER: User = {
     email: 'ai@lynix.local',
     role: UserRole.Standard,
     plan_name: 'System',
-    sip_username: null,
-    sip_password: null,
     features: { chat: true, ai: true, mail: false }
 };
 

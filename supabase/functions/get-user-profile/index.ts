@@ -41,7 +41,7 @@ serve(async (req)=>{
     // This client uses the service role key to bypass RLS.
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
     // Fetch the user's profile from the public.users table.
-    const { data: profileData, error: profileError } = await supabaseAdmin.from('users').select('*').eq('auth_id', user.id).single();
+    const { data: profileData, error: profileError } = await supabaseAdmin.from('users').select('*, installed_webly_apps').eq('auth_id', user.id).single();
     if (profileError) {
       // PGRST116 indicates that the query returned no rows, which means no profile was found.
       if (profileError.code === 'PGRST116') {

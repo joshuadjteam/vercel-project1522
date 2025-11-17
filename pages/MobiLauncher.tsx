@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Page, AppLaunchable } from '../types';
 
@@ -38,7 +37,11 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
     );
 
     const handleAppClick = (app: AppLaunchable) => {
-        navigate(app.page, app.params);
+        if (app.isWebApp && app.url) {
+            window.open(app.url, '_blank');
+        } else {
+            navigate(app.page, app.params);
+        }
     };
 
     return (

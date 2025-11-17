@@ -1,15 +1,15 @@
+
+
+
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
-import { CallProvider } from './hooks/useCall';
-import { SipProvider } from './hooks/useSip';
 import { ConsoleViewProvider, useConsoleView } from './hooks/useConsoleView';
+import { CallProvider } from './hooks/useCall';
 import useIsMobileDevice from './hooks/useIsMobileDevice';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import CallWidget from './components/CallWidget';
-import SipCallWidget from './components/SipCallWidget';
-import CallNotificationWidget from './components/CallNotificationWidget';
 import WindowComponent from './components/Window';
 import FullScreenAppHeader from './components/FullScreenAppHeader';
 import MobileTopBar from './components/MobileTopBar';
@@ -36,6 +36,8 @@ import UnitConverterApp from './pages/apps/UnitConverterApp';
 import CalendarApp from './pages/apps/CalendarApp';
 import ConsoleSwitchApp from './pages/apps/ConsoleSwitchApp';
 import AuthCallbackPage from './pages/AuthCallbackPage';
+import WeblyStoreApp from './pages/apps/WeblyStoreApp';
+import WebAppViewer from './pages/apps/WebAppViewer';
 
 // Mobile App Imports
 import MobiProfilePage from './pages/mobile-apps/MobiProfilePage';
@@ -52,11 +54,17 @@ import MobiUnitConverterApp from './pages/mobile-apps/MobiUnitConverterApp';
 import MobiCalendarApp from './pages/mobile-apps/MobiCalendarApp';
 import MobiLauncher from './pages/MobiLauncher';
 import MobiConsoleSwitchApp from './pages/mobile-apps/MobiConsoleSwitchApp';
+import MobiWeblyStoreApp from './pages/mobile-apps/MobiWeblyStoreApp';
+
+// Call-related imports
+import CallWidget from './components/CallWidget';
+import CallNotificationWidget from './components/CallNotificationWidget';
 
 
-import { Page, UserRole, AppLaunchable } from './types';
+import { Page, UserRole, AppLaunchable, WeblyApp } from './types';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
+import { database } from './services/database';
 
 // --- Icon Components (Centralized) ---
 const PhoneIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
@@ -72,6 +80,7 @@ const ConverterIcon = (props: { className?: string }) => <svg xmlns="http://www.
 const CalendarIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 const ConsoleSwitchIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
 const ProfileIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
+const WeblyStoreIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1012 10.125A2.625 2.625 0 0012 4.875z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.125v10.125" /><path strokeLinecap="round" strokeLinejoin="round" d="M18.375 10.125c.621 0 1.125.504 1.125 1.125v8.25" /><path strokeLinecap="round" strokeLinejoin="round" d="M5.625 10.125c-.621 0-1.125.504-1.125 1.125v8.25" /></svg>;
 
 
 export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: { width: number, height: number } }> = {
@@ -87,6 +96,8 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
     'app-converter': { component: UnitConverterApp },
     'app-calendar': { component: CalendarApp },
     'app-console-switch': { component: ConsoleSwitchApp, defaultSize: { width: 900, height: 500 } },
+    'app-webly-store': { component: WeblyStoreApp },
+    'app-webview': { component: WebAppViewer, defaultSize: { width: 1024, height: 768 } },
 };
 
 // All items that can be a "page", including full-screen apps and standalone pages
@@ -109,6 +120,8 @@ export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
     'app-contacts': ContactsApp,
     'app-calculator': CalculatorApp,
     'app-console-switch': ConsoleSwitchApp,
+    'app-webly-store': WeblyStoreApp,
+    'app-webview': WebAppViewer,
 };
 
 // All items that can be a "page" on mobile
@@ -129,6 +142,7 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-converter': MobiUnitConverterApp,
     'app-calendar': MobiCalendarApp,
     'app-console-switch': MobiConsoleSwitchApp,
+    'app-webly-store': MobiWeblyStoreApp,
 };
 
 
@@ -145,6 +159,7 @@ export const APPS_LIST: AppLaunchable[] = [
   { id: 'app-converter', label: 'Converter', icon: <ConverterIcon />, page: 'app-converter' },
   { id: 'app-calendar', label: 'Calendar', icon: <CalendarIcon />, page: 'app-calendar' },
   { id: 'app-console-switch', label: 'Consoles', icon: <ConsoleSwitchIcon />, page: 'app-console-switch' },
+  { id: 'app-webly-store', label: 'Webly Store', icon: <WeblyStoreIcon />, page: 'app-webly-store' },
   { id: 'profile', label: 'Profile', icon: <ProfileIcon />, page: 'profile', isHidden: true },
 ];
 
@@ -160,7 +175,7 @@ export interface WindowInstance {
 }
 
 const App: React.FC = () => {
-    const { isLoggedIn, isLoading } = useAuth();
+    const { user, isLoggedIn, isLoading } = useAuth();
     const { view: consoleView, isInitialChoice } = useConsoleView();
     const [page, setPage] = useState<Page>('home');
     const [pageParams, setPageParams] = useState<any>({});
@@ -169,6 +184,42 @@ const App: React.FC = () => {
     const [windows, setWindows] = useState<WindowInstance[]>([]);
     const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
     const nextZIndex = useRef(10);
+    const [allWeblyApps, setAllWeblyApps] = useState<WeblyApp[]>([]);
+
+    useEffect(() => {
+        database.getWeblyApps().then(setAllWeblyApps);
+    }, []);
+
+    const dynamicAppsList = useMemo(() => {
+        const nativeApps = APPS_LIST;
+        if (!user?.installed_webly_apps || allWeblyApps.length === 0) {
+            return nativeApps;
+        }
+
+        const GenericWebIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21V3M12 3a9.004 9.004 0 00-8.716 6.747M12 3c4.805 0 8.716 3.91 8.716 8.747M3.284 8.747C5.536 4.29 8.276 3 12 3v18c-3.724 0-6.464-1.29-8.716-5.747" /></svg>;
+
+        // FIX: Annotate the return type of the map callback to (AppLaunchable | null).
+        // This solves two issues:
+        // 1. It provides a target type for the returned object, preventing TypeScript from widening `page: 'home'` to `page: string`.
+        // 2. It makes the type of `app` in the subsequent `.filter()` call `AppLaunchable | null`, which makes the type predicate `app is AppLaunchable` valid.
+        const installedWebApps: AppLaunchable[] = user.installed_webly_apps
+            .map((appId): AppLaunchable | null => {
+                const appData = allWeblyApps.find(app => app.id === appId);
+                if (!appData) return null;
+                return {
+                    id: `webly-${appData.id}`,
+                    label: appData.name,
+                    icon: appData.icon_svg ? <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: appData.icon_svg }} /> : <GenericWebIcon />,
+                    page: 'app-webview',
+                    isWebApp: true,
+                    url: appData.url,
+                    params: { url: appData.url, title: appData.name, isWebApp: true } 
+                };
+            })
+            .filter((app): app is AppLaunchable => app !== null);
+        
+        return [...nativeApps, ...installedWebApps];
+    }, [user?.installed_webly_apps, allWeblyApps]);
     
     useEffect(() => {
         const path = window.location.pathname;
@@ -201,7 +252,7 @@ const App: React.FC = () => {
         const isFullScreenOverride = newPage === 'app-console-switch';
         
         if (isWindowedConsole && !isFullScreenOverride && (isApp || isWindowablePage)) {
-            const existingWindow = windows.find(w => w.appId === newPage);
+            const existingWindow = windows.find(w => w.appId === newPage && w.props?.title === params?.title);
             if (existingWindow) {
                 if (existingWindow.state === 'minimized') {
                      setWindows(wins => wins.map(w => w.id === existingWindow.id ? { ...w, state: 'open', zIndex: nextZIndex.current++ } : w));
@@ -216,7 +267,7 @@ const App: React.FC = () => {
             const newWindow: WindowInstance = {
                 id: `${newPage}-${Date.now()}`,
                 appId: newPage,
-                title: APPS_LIST.find(app => app.page === newPage)?.label || newPage.charAt(0).toUpperCase() + newPage.slice(1),
+                title: params?.title || APPS_LIST.find(app => app.page === newPage)?.label || newPage.charAt(0).toUpperCase() + newPage.slice(1),
                 position: { x: Math.random() * 200 + 50, y: Math.random() * 100 + 50 },
                 size: appConfig?.defaultSize || { width: 700, height: 500 },
                 zIndex: nextZIndex.current++,
@@ -282,7 +333,7 @@ const App: React.FC = () => {
                     <>
                         <MobileTopBar navigate={navigate} />
                         <main className="flex-grow overflow-hidden">
-                            <MobileComponent navigate={navigate} appsList={APPS_LIST} {...pageParams} />
+                            <MobileComponent navigate={navigate} appsList={dynamicAppsList} {...pageParams} />
                         </main>
                         <MobileNavBar navigate={navigate} />
                     </>
@@ -311,7 +362,7 @@ const App: React.FC = () => {
                 // Render the app full screen for 'lega' and 'con' consoles.
                 return (
                     <div className="flex-grow flex flex-col overflow-hidden">
-                        <FullScreenAppHeader navigate={navigate} />
+                        <FullScreenAppHeader navigate={navigate} pageParams={pageParams} />
                         <main className="flex-grow overflow-y-auto">
                             <PageToRender navigate={navigate} {...pageParams} />
                         </main>
@@ -322,7 +373,7 @@ const App: React.FC = () => {
             // Render the base console environment (either windowed or fullscreen launcher)
             return (
                 <div className="relative flex-grow overflow-hidden">
-                    <ConsoleComponent navigate={navigate} appsList={APPS_LIST} />
+                    <ConsoleComponent navigate={navigate} appsList={dynamicAppsList} />
                     {isWindowedEnvironment && (
                         <div className="absolute inset-0 top-12 pointer-events-none">
                             {windows.map(win => {
@@ -381,7 +432,6 @@ const App: React.FC = () => {
             <Analytics/>
             {renderLayout()}
             <CallWidget />
-            <SipCallWidget />
             <CallNotificationWidget />
         </div>
     );
@@ -392,9 +442,7 @@ const Root = () => (
         <AuthProvider>
             <ConsoleViewProvider>
                 <CallProvider>
-                    <SipProvider>
-                        <App />
-                    </SipProvider>
+                    <App />
                 </CallProvider>
             </ConsoleViewProvider>
         </AuthProvider>

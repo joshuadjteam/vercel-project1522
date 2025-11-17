@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient';
 // Add DriveFile type to imports
-import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile } from '../types';
+import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile, WeblyApp } from '../types';
 
 // Helper to map DB user to app User
 const mapDbUserToUser = (dbUser: any): User => {
@@ -13,6 +13,7 @@ const mapDbUserToUser = (dbUser: any): User => {
         role: dbUser.role,
         plan_name: dbUser.plan_name,
         features: dbUser.features,
+        installed_webly_apps: dbUser.installed_webly_apps || [],
     };
 };
 
@@ -270,91 +271,7 @@ export const database = {
         }
         return data.stats || fallbackStats;
     },
-
-    updateUserSipCredentials: async (sip_username: string, sip_password?: string): Promise<{ success: boolean; error?: string }> => {
-        const { data, error } = await supabase.functions.invoke('manage-users', {
-            body: {
-                action: 'updateSipCredentials',
-                sip_username,
-                sip_password: sip_password || null, // Send null if empty
-            }
-        });
-         if (error) {
-            let errorMessage = error.message;
-            if (error.context && typeof error.context.json === 'function') {
-                try {
-                    const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
-                } catch (e) {}
-            }
-            return { success: false, error: errorMessage };
-        }
-        if (data?.error) {
-            return { success: false, error: data.error };
-        }
-        return { success: true };
-    },
     
-    // --- New SIP Credential Management via Google Drive ---
-    findSipCredFile: async (): Promise<DriveFile | null> => {
-        const { files, error } = await database.getDriveFiles("name contains '.sipcred' and trashed=false");
-        if (error || !files || files.length === 0) {
-            return null;
-        }
-        return files[0];
-    },
-
-    readSipCredFile: async (fileId: string): Promise<{ username: string, password?: string } | null> => {
-        const { file, error } = await database.getDriveFileDetails(fileId);
-        if (error || !file?.content) {
-            return null;
-        }
-        try {
-            return JSON.parse(file.content);
-        } catch(e) {
-            console.error("Failed to parse .sipcred file content.");
-            return null;
-        }
-    },
-
-    saveSipCredFile: async (currentUserUsername: string, username: string, password?: string): Promise<{ success: boolean; error?: string }> => {
-        try {
-            const content = JSON.stringify({ username, password });
-            const existingFile = await database.findSipCredFile();
-
-            if (existingFile) {
-                // Update existing file
-                return await database.updateDriveFile(existingFile.id, { content });
-            } else {
-                // Create new file
-                const fileName = `sipservice-${currentUserUsername}.sipcred`;
-                const { file, error } = await database.createDriveFile(fileName);
-                if (error || !file) {
-                    return { success: false, error: error || 'Failed to create credential file.' };
-                }
-                // Now update the content of the newly created empty file
-                return await database.updateDriveFile(file.id, { content });
-            }
-        } catch(e: any) {
-            return { success: false, error: e.message || 'An unexpected error occurred.' };
-        }
-    },
-    
-    sendSystemAlertMail: async (targetUsername: string): Promise<void> => {
-        const body = `We cannot find a sipcred file in your Google Drive. Please add your SIP account in Account Profile. To block these messages add this in Sip Account in Account Services in My Profile
-
-username : nosip
-password : *blank*`;
-
-        await database.sendMail({
-            sender: 'alerts@admin.local',
-            recipient: targetUsername,
-            subject: 'No sipcred file found',
-            body,
-        });
-    },
-
-
     // --- Google Drive Service ---
     getDriveOAuthConfig: async (): Promise<{ clientId: string; redirectUri: string } | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
@@ -658,5 +575,82 @@ password : *blank*`;
             return false;
         }
         return data.success;
+    },
+
+    // --- Webly Store ---
+    getWeblyApps: async (): Promise<WeblyApp[]> => {
+        const { data, error } = await supabase.functions.invoke('webly-service', {
+            body: { action: 'get' }
+        });
+
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
+            console.error('Error fetching webly apps:', errorMessage);
+            return [];
+        }
+
+        if (data?.error) {
+            console.error('Error fetching webly apps:', data.error);
+            return [];
+        }
+        
+        return data.apps || [];
+    },
+    addWeblyApp: async (appData: Omit<WeblyApp, 'id' | 'created_at'>): Promise<WeblyApp | null> => {
+        const { data, error } = await supabase.functions.invoke('webly-service', {
+            body: { action: 'add', payload: appData }
+        });
+        if (error || data?.error) {
+            console.error('Error adding webly app:', error || data?.error);
+            return null;
+        }
+        return data.app;
+    },
+    updateWeblyApp: async (appData: Partial<WeblyApp> & { id: string }): Promise<WeblyApp | null> => {
+        const { data, error } = await supabase.functions.invoke('webly-service', {
+            body: { action: 'update', payload: appData }
+        });
+        if (error || data?.error) {
+            console.error('Error updating webly app:', error || data?.error);
+            return null;
+        }
+        return data.app;
+    },
+    deleteWeblyApp: async (id: string): Promise<boolean> => {
+        const { data, error } = await supabase.functions.invoke('webly-service', {
+            body: { action: 'delete', payload: { id } }
+        });
+        if (error || data?.error) {
+            console.error('Error deleting webly app:', error || data?.error);
+            return false;
+        }
+        return data.success;
+    },
+    updateUserInstalledApps: async (appIds: string[]): Promise<string[] | null> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'users', action: 'update_installed_apps', payload: { appIds } }
+        });
+        if (error || data?.error) {
+            console.error('Error updating user installed apps:', error || data?.error);
+            return null;
+        }
+        return data.installed_webly_apps;
+    },
+    resetDatabaseTable: async (target: 'chat' | 'mail'): Promise<{ success: boolean; message: string }> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'database_reset', payload: { target } }
+        });
+        if (error || data?.error) {
+            const errorMessage = error?.message || data?.error || 'Failed to reset table.';
+            console.error(`Error resetting ${target}:`, errorMessage);
+            return { success: false, message: errorMessage };
+        }
+        return { success: data.success, message: data.message };
     },
 };

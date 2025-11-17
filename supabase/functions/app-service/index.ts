@@ -14,8 +14,18 @@ serve(async (req)=>{
   }
 
   try {
-    const body = await req.json();
-    const { resource, action, payload } = body;
+    let resource, action, payload;
+
+    // Handle GET requests by parsing URL params, handle POST by parsing body
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      resource = url.searchParams.get('resource');
+      action = url.searchParams.get('action');
+      // payload is not used for GET in this app
+    } else {
+      const body = await req.json().catch(() => ({}));
+      ({ resource, action, payload } = body as any);
+    }
 
     const supabaseAdmin = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
@@ -75,7 +85,13 @@ serve(async (req)=>{
     const userClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', { global: { headers: { Authorization: req.headers.get('Authorization') } } });
     const { data: authData, error: authError } = await userClient.auth.getUser();
     const authUser = authData?.user;
-    if (authError || !authUser) throw { message: 'User not authenticated', status: 401 };
+    if (authError || !authUser) {
+      if (resource) {
+        throw { message: 'User not authenticated', status: 401 };
+      } else {
+        return new Response(JSON.stringify({ error: 'Public request with empty/invalid body' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+      }
+    }
 
     // --- Google Drive Resource ---
     if (resource === 'drive') {
@@ -164,14 +180,46 @@ serve(async (req)=>{
     const { data: userProfile, error: profileError } = await supabaseAdmin.from('users').select('*').eq('auth_id', authUser.id).single();
     if (profileError) throw { status: 403, message: 'User profile not found.' };
 
-    switch(resource) {
-        case 'stats': {
-            if (userProfile.role !== 'Admin') throw { status: 403, message: 'Permission denied' };
+    if (resource === 'users' && action === 'update_installed_apps') {
+        const { appIds } = payload;
+        if (!Array.isArray(appIds)) throw { status: 400, message: 'appIds must be an array.' };
+    
+        const { data, error } = await supabaseAdmin
+            .from('users')
+            .update({ installed_webly_apps: appIds })
+            .eq('id', userProfile.id)
+            .select('installed_webly_apps')
+            .single();
+        
+        if (error) throw error;
+        return new Response(JSON.stringify({ installed_webly_apps: data.installed_webly_apps }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+    }
+
+    // --- Admin-only endpoints ---
+    if (userProfile.role === 'Admin') {
+        if (resource === 'stats') {
             const { count: messages } = await supabaseAdmin.from('chat_messages').select('*', { count: 'exact', head: true });
             const { count: mails } = await supabaseAdmin.from('mails').select('*', { count: 'exact', head: true });
             const { count: contacts } = await supabaseAdmin.from('contacts').select('*', { count: 'exact', head: true });
             return new Response(JSON.stringify({ stats: { messages, mails, contacts } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
         }
+        if (resource === 'database_reset') {
+            const { target } = payload;
+            let error;
+            if (target === 'chat') {
+                ({ error } = await supabaseAdmin.from('chat_messages').delete().neq('id', 0));
+            } else if (target === 'mail') {
+                ({ error } = await supabaseAdmin.from('mails').delete().neq('id', 0));
+            } else {
+                throw { status: 400, message: 'Invalid reset target.' };
+            }
+            if (error) throw error;
+            return new Response(JSON.stringify({ success: true, message: `${target} has been cleared.` }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        }
+    }
+
+
+    switch(resource) {
         case 'chatHistory': {
             const { currentUserId, otherUserId } = payload;
             const chatId = [currentUserId, otherUserId].sort().join('--');
@@ -226,7 +274,13 @@ serve(async (req)=>{
             }
             break;
         }
-        default: throw { status: 400, message: 'Invalid resource specified.' };
+        default: {
+          if (resource) { // Only throw error if resource was specified.
+            throw { status: 400, message: 'Invalid resource specified.' };
+          }
+           // If no resource, it was likely an empty body from a public check, which is fine.
+           return new Response(JSON.stringify({ message: "OK" }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        }
     }
 
   } catch (error) {

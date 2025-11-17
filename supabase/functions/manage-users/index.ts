@@ -76,15 +76,6 @@ serve(async (req) => {
         if (error) throw error;
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
-      case 'updateSipCredentials': {
-        const { sip_username, sip_password } = payload;
-        const { error } = await supabaseAdmin
-            .from('users')
-            .update({ sip_username, sip_password })
-            .eq('auth_id', authUser.id);
-        if (error) throw error;
-        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-      }
       case 'createUser': {
         await ensureAdmin();
         const { password, username, role, features } = payload;

@@ -9,7 +9,7 @@ import AppContainer from '../components/AppContainer';
 // Icons
 const ContactIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
 const ConsoleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
-const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066 2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const YoutubeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" /></svg>;
 const HelpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const CalendarIconSmall = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
@@ -33,6 +33,14 @@ const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
 
     const featuredApps = useMemo(() => FEATURED_APPS.map(id => appsList.find(app => app.id === id)).filter(Boolean) as AppLaunchable[], [appsList]);
     const allApps = useMemo(() => appsList.filter(app => !app.isHidden), [appsList]);
+    
+    const handleAppClick = (app: AppLaunchable) => {
+        if (app.isWebApp && app.url) {
+            navigate('app-webview', { url: app.url, title: app.label, isWebApp: true });
+        } else {
+            navigate(app.page, app.params);
+        }
+    };
 
     const handleSearch = () => {
         if (searchQuery.trim() !== '') {
@@ -103,7 +111,7 @@ const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
                                 <Clock/>
                             </AppContainer>
                             {featuredApps.map((app, i) => (
-                                <button key={app.id} onClick={() => navigate(app.page, app.params)} className={`col-span-2 h-32 rounded-2xl flex flex-col items-center justify-center space-y-2 text-white font-semibold text-lg transition-transform hover:scale-105 ${APP_COLORS[i % APP_COLORS.length]}`}>
+                                <button key={app.id} onClick={() => handleAppClick(app)} className={`col-span-2 h-32 rounded-2xl flex flex-col items-center justify-center space-y-2 text-white font-semibold text-lg transition-transform hover:scale-105 ${APP_COLORS[i % APP_COLORS.length]}`}>
                                     {React.cloneElement(app.icon as React.ReactElement<any>, { className: 'w-10 h-10' })}
                                     <span>{app.label}</span>
                                 </button>
@@ -113,7 +121,7 @@ const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
                             <h2 className="text-2xl font-bold mb-4 text-white">All Apps</h2>
                             <div className="grid grid-cols-6 gap-4">
                                {allApps.map(app => (
-                                   <button key={app.id} onClick={() => navigate(app.page, app.params)} className="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-white/10 transition-colors space-y-2 text-center">
+                                   <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-white/10 transition-colors space-y-2 text-center">
                                        {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10" })}
                                        <span className="text-xs text-white/90">{app.label}</span>
                                    </button>

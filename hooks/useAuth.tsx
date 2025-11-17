@@ -11,6 +11,7 @@ interface AuthContextType {
     loginAsGuest: () => Promise<User | null>;
     logout: () => void;
     updateUserProfile: (updates: Partial<User>) => void;
+    updateInstalledWeblyApps: (appIds: string[]) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -101,9 +102,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const updateInstalledWeblyApps = async (appIds: string[]) => {
+        if (user) {
+            // Optimistically update UI
+            setUser({ ...user, installed_webly_apps: appIds });
+            // Persist change to DB
+            const updatedIds = await database.updateUserInstalledApps(appIds);
+            if (updatedIds === null) {
+                // Revert on failure
+                setUser({ ...user, installed_webly_apps: user.installed_webly_apps || [] });
+                // Optionally show an error to the user
+            }
+        }
+    };
+
 
     return (
-        <AuthContext.Provider value={{ user, isLoggedIn, isLoading, login, loginAsGuest, logout, updateUserProfile }}>
+        <AuthContext.Provider value={{ user, isLoggedIn, isLoading, login, loginAsGuest, logout, updateUserProfile, updateInstalledWeblyApps }}>
             {children}
         </AuthContext.Provider>
     );

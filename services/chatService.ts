@@ -7,6 +7,7 @@ const activeChannels = new Map<string, RealtimeChannel>();
 // Helper to map DB user to app User, assuming snake_case from DB
 const mapDbUserToUser = (dbUser: any): User => {
     if (!dbUser) return {} as User;
+    // FIX: Update mapping to include all properties of the User type.
     return {
         id: dbUser.id,
         auth_id: dbUser.auth_id,
@@ -14,9 +15,8 @@ const mapDbUserToUser = (dbUser: any): User => {
         email: dbUser.email,
         role: dbUser.role,
         plan_name: dbUser.plan_name,
-        sip_username: dbUser.sip_username,
-        sip_password: dbUser.sip_password,
         features: dbUser.features,
+        installed_webly_apps: dbUser.installed_webly_apps || [],
     };
 };
 

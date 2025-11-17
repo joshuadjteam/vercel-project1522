@@ -20,9 +20,7 @@ export interface User {
         ai: boolean;
         mail: boolean;
     };
-    // FIX: Add missing sip_username and sip_password properties to match usage in chat service and components.
-    sip_username?: string | null;
-    sip_password?: string | null;
+    installed_webly_apps?: string[];
 }
 
 export interface ChatMessage {
@@ -91,6 +89,15 @@ export interface DriveFile {
     iconLink: string;
 }
 
+export interface WeblyApp {
+    id: string; 
+    name: string;
+    description: string;
+    url: string;
+    icon_svg: string;
+    created_at: string;
+}
+
 export type Page = 
     | 'home' 
     | 'contact' 
@@ -109,6 +116,8 @@ export type Page =
     | 'app-converter'
     | 'app-calendar'
     | 'app-console-switch'
+    | 'app-webly-store'
+    | 'app-webview'
     | 'auth-callback';
 
 // --- Centralized Console Types ---
@@ -120,6 +129,8 @@ export type AppLaunchable = {
   page: Page;
   params?: any;
   isHidden?: boolean;
+  isWebApp?: boolean;
+  url?: string;
 };
 
 export type NavAction = {

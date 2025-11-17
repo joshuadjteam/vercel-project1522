@@ -59,14 +59,11 @@ interface MobiProfilePageProps {
 }
 
 const MobiProfilePage: React.FC<MobiProfilePageProps> = ({ navigate }) => {
-    const { user, logout, updateUserProfile } = useAuth();
+    const { user, logout } = useAuth();
     const { wallpaper, setWallpaper } = useTheme();
     
-    const [sipUsername, setSipUsername] = useState(user?.sip_username || '');
-    const [sipPassword, setSipPassword] = useState('');
     const [driveLinked, setDriveLinked] = useState(false);
     const [isCheckingDrive, setIsCheckingDrive] = useState(true);
-    const [statusMessage, setStatusMessage] = useState('');
     const [driveStatus, setDriveStatus] = useState('');
 
     useEffect(() => {
@@ -75,20 +72,6 @@ const MobiProfilePage: React.FC<MobiProfilePageProps> = ({ navigate }) => {
             setIsCheckingDrive(false);
         });
     }, []);
-
-    const handleSaveSip = async () => {
-        setStatusMessage('Saving...');
-        const { success, error } = await database.updateUserSipCredentials(sipUsername, sipPassword);
-
-        if (success) {
-            setStatusMessage('SIP credentials saved successfully!');
-            setSipPassword(''); // Clear password field for security
-            updateUserProfile({ sip_username: sipUsername, sip_password: '' }); // Update local state
-        } else {
-            setStatusMessage(`Error: ${error || 'Failed to save.'}`);
-        }
-        setTimeout(() => setStatusMessage(''), 3000);
-    };
     
     const handleLinkDrive = async () => {
         setDriveStatus('Redirecting to Google...');
@@ -126,17 +109,6 @@ const MobiProfilePage: React.FC<MobiProfilePageProps> = ({ navigate }) => {
                  <section className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow">
                     <h2 className="text-lg font-semibold mb-3 border-b pb-2 border-gray-200 dark:border-gray-700">Account Services</h2>
                     
-                    {/* SIP Credentials */}
-                    <div className="mb-4">
-                        <h3 className="font-semibold mb-2">SIP Account</h3>
-                        <div className="space-y-3">
-                            <input type="text" placeholder="SIP Username" value={sipUsername} onChange={e => setSipUsername(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2" />
-                            <input type="password" placeholder="SIP Password (optional)" value={sipPassword} onChange={e => setSipPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2" />
-                            <button onClick={handleSaveSip} className="w-full text-sm bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700">Save SIP Credentials</button>
-                            {statusMessage && <p className="text-xs text-center text-gray-500 mt-1">{statusMessage}</p>}
-                        </div>
-                    </div>
-
                     {/* Google Drive */}
                     <div>
                          <h3 className="font-semibold mb-2">Google Drive</h3>

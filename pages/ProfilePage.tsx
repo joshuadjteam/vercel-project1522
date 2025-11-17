@@ -35,12 +35,8 @@ const InfoTabContent = () => {
 };
 
 const AccountServicesTabContent = () => {
-    const { user } = useAuth();
-    const [sipUsername, setSipUsername] = useState('');
-    const [sipPassword, setSipPassword] = useState('');
     const [driveLinked, setDriveLinked] = useState(false);
     const [isCheckingDrive, setIsCheckingDrive] = useState(true);
-    const [statusMessage, setStatusMessage] = useState('');
     const [driveStatus, setDriveStatus] = useState('');
 
     useEffect(() => {
@@ -49,32 +45,6 @@ const AccountServicesTabContent = () => {
             setIsCheckingDrive(false);
         });
     }, []);
-
-    const handleSaveSip = async () => {
-        setStatusMessage('Saving...');
-        
-        const isLinked = await database.isDriveLinked();
-        if (!isLinked) {
-            setStatusMessage('Error 56B - Your Google Account Is NOT liked with your account. Please link your Google ID to save your credentials');
-            setTimeout(() => setStatusMessage(''), 5000);
-            return;
-        }
-
-        if (!user) {
-            setStatusMessage('Error: User not found.');
-            setTimeout(() => setStatusMessage(''), 3000);
-            return;
-        }
-
-        const result = await database.saveSipCredFile(user.username, sipUsername, sipPassword);
-        if (result.success) {
-            setStatusMessage('SIP credentials saved to Google Drive! Please reload for changes to take effect.');
-            setSipPassword('');
-        } else {
-            setStatusMessage(`Error: ${result.error}`);
-        }
-        setTimeout(() => setStatusMessage(''), 5000);
-    };
 
     const handleLinkDrive = async () => {
         setDriveStatus('Redirecting to Google...');
@@ -102,17 +72,9 @@ const AccountServicesTabContent = () => {
         <div className="animate-fade-in">
             <h3 className="text-2xl font-semibold mb-6">Account Services</h3>
             <div className="space-y-6 max-w-sm">
-                 <div>
-                    <h4 className="font-semibold mb-2 text-gray-800 dark:text-gray-100">SIP Account</h4>
-                    <div className="space-y-3">
-                        <input type="text" placeholder="SIP Username" value={sipUsername} onChange={e => setSipUsername(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2" />
-                        <input type="password" placeholder="SIP Password" value={sipPassword} onChange={e => setSipPassword(e.target.value)} className="w-full bg-gray-100 dark:bg-slate-700/50 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2" />
-                        <button onClick={handleSaveSip} className="w-full text-sm bg-purple-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-purple-700">Save SIP Credentials</button>
-                        {statusMessage && <p className="text-xs text-center text-gray-500 mt-1">{statusMessage}</p>}
-                    </div>
-                </div>
                 <div>
                      <h4 className="font-semibold mb-2 text-gray-800 dark:text-gray-100">Google Drive</h4>
+                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Link your Google Drive to save notes and other files in the cloud.</p>
                      {isCheckingDrive ? <p className="text-sm text-gray-500">Checking status...</p> : 
                         driveLinked ? (
                             <button onClick={handleUnlinkDrive} className="w-full text-sm bg-red-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-700">Unlink Google Drive</button>
