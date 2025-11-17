@@ -180,41 +180,6 @@ serve(async (req)=>{
     const { data: userProfile, error: profileError } = await supabaseAdmin.from('users').select('*').eq('auth_id', authUser.id).single();
     if (profileError) throw { status: 403, message: 'User profile not found.' };
 
-    if (resource === 'users' && action === 'update_installed_apps') {
-        const { appIds } = payload;
-        if (!Array.isArray(appIds)) {
-            throw { status: 400, message: 'appIds must be an array.' };
-        }
-
-        // Step 1: Perform the update.
-        const { error: updateError } = await supabaseAdmin
-            .from('users')
-            .update({ installed_webly_apps: appIds })
-            .eq('auth_id', userProfile.auth_id);
-
-        if (updateError) {
-            console.error("Supabase update error:", updateError);
-            throw { status: 500, message: `Database update failed: ${updateError.message}` };
-        }
-        
-        // Step 2: Read the data back to confirm the write was successful.
-        const { data: updatedData, error: selectError } = await supabaseAdmin
-            .from('users')
-            .select('installed_webly_apps')
-            .eq('auth_id', userProfile.auth_id)
-            .single();
-
-        if (selectError) {
-            console.error("Supabase select-after-update error:", selectError);
-            throw { status: 500, message: `Could not verify update: ${selectError.message}` };
-        }
-        
-        return new Response(JSON.stringify({ installed_webly_apps: updatedData.installed_webly_apps }), { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
-            status: 200 
-        });
-    }
-
     // --- Admin-only endpoints ---
     if (userProfile.role === 'Admin') {
         if (resource === 'stats') {
