@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useCall } from '../hooks/useCall';
 
 const MuteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>;
@@ -10,10 +10,52 @@ const CallWidget: React.FC = () => {
     const { 
         isCalling, callee, callStatus, endCall,
         isMuted, toggleMute, 
-        callDuration,
+        callDuration, localStream, remoteStream, isVideoCall
     } = useCall();
     
-    if (!isCalling || callStatus.startsWith('Ringing')) {
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+    const remoteVideoRef = useRef<HTMLVideoElement>(null);
+    const pipRef = useRef<HTMLDivElement>(null);
+    const [pipPosition, setPipPosition] = useState({ x: 20, y: 20 });
+    
+    useEffect(() => {
+        if (localVideoRef.current && localStream) localVideoRef.current.srcObject = localStream;
+    }, [localStream]);
+
+    useEffect(() => {
+        if (remoteVideoRef.current && remoteStream) remoteVideoRef.current.srcObject = remoteStream;
+    }, [remoteStream]);
+
+    const handlePipMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        const startPos = { x: e.clientX, y: e.clientY };
+        const initialPos = pipPosition;
+
+        const onMouseMove = (moveEvent: MouseEvent) => {
+            const dx = moveEvent.clientX - startPos.x;
+            const dy = moveEvent.clientY - startPos.y;
+            const parentRect = pipRef.current?.parentElement?.getBoundingClientRect();
+            if(!pipRef.current || !parentRect) return;
+
+            let newX = initialPos.x + dx;
+            let newY = initialPos.y + dy;
+
+            newX = Math.max(0, Math.min(newX, parentRect.width - pipRef.current.offsetWidth));
+            newY = Math.max(0, Math.min(newY, parentRect.height - pipRef.current.offsetHeight));
+
+            setPipPosition({ x: newX, y: newY });
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    };
+
+    if (!isCalling || callStatus !== 'Connected') {
         return null;
     }
 
@@ -23,30 +65,29 @@ const CallWidget: React.FC = () => {
         const s = Math.floor(seconds % 60).toString().padStart(2, '0');
         return seconds >= 3600 ? `${h}:${m}:${s}` : `${m}:${s}`;
     };
-    
-    const StatusIndicator: React.FC = () => {
-        let content;
-        if (callStatus === 'Connected') {
-            content = <span className="text-green-400">{formatDuration(callDuration)}</span>;
-        } else {
-            content = <span className="text-yellow-400">{callStatus}</span>;
-        }
-        return <p className="text-lg truncate">{content}</p>;
-    };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[100] animate-fade-in">
-            <div className="bg-gray-800/80 border border-gray-700 rounded-2xl shadow-2xl text-white w-full max-w-sm h-auto flex flex-col p-8 items-center justify-center">
-                
-                <div className="w-32 h-32 bg-blue-500 rounded-full flex items-center justify-center font-bold text-6xl text-white mb-6 ring-4 ring-blue-500/30">
-                    {callee.charAt(0).toUpperCase()}
-                </div>
-                <h2 className="text-4xl font-semibold">{callee}</h2>
-                <div className="h-8 mt-1">
-                    <StatusIndicator />
-                </div>
+        <div className="fixed inset-0 bg-black flex items-center justify-center z-[100] animate-fade-in">
+            {isVideoCall && remoteStream && (
+                <video ref={remoteVideoRef} autoPlay playsInline className="absolute top-0 left-0 w-full h-full object-cover" />
+            )}
 
-                <div className="flex justify-center items-center space-x-6 mt-8">
+            <div className="absolute inset-0 bg-black/50 flex flex-col p-8 items-center justify-between">
+                {/* Top Info */}
+                <div className="text-center text-white">
+                    <h2 className="text-4xl font-semibold">{callee}</h2>
+                    <p className="text-lg text-green-400">{formatDuration(callDuration)}</p>
+                </div>
+                
+                {/* Audio-only Avatar */}
+                {!isVideoCall && (
+                    <div className="w-48 h-48 bg-blue-500 rounded-full flex items-center justify-center font-bold text-8xl text-white ring-4 ring-blue-500/30">
+                        {callee.charAt(0).toUpperCase()}
+                    </div>
+                )}
+                
+                {/* Controls */}
+                <div className="flex justify-center items-center space-x-6">
                     <button 
                         onClick={toggleMute} 
                         title={isMuted ? "Unmute" : "Mute"}
@@ -64,6 +105,17 @@ const CallWidget: React.FC = () => {
                     </button>
                 </div>
             </div>
+
+            {isVideoCall && localStream && (
+                <div 
+                    ref={pipRef} 
+                    style={{ transform: `translate(${pipPosition.x}px, ${pipPosition.y}px)` }} 
+                    className="absolute top-0 left-0 w-48 h-36 cursor-move" 
+                    onMouseDown={handlePipMouseDown}
+                >
+                     <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full rounded-lg object-cover shadow-lg border-2 border-white/50" />
+                </div>
+            )}
         </div>
     );
 };

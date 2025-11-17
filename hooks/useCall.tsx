@@ -9,8 +9,9 @@ interface CallContextType {
     isMuted: boolean;
     incomingCall: { from: string; isVideoCall: boolean; } | null; 
     localStream: MediaStream | null;
+    remoteStream: MediaStream | null;
+    isVideoCall: boolean;
     callDuration: number;
-    // FIX: Update startP2PCall signature to accept withVideo boolean
     startP2PCall: (callee: string, withVideo: boolean) => void;
     acceptCall: () => void;
     declineCall: () => void;
@@ -34,6 +35,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isMuted, setIsMuted] = useState(false);
     const [incomingCall, setIncomingCall] = useState<{ from: string; isVideoCall: boolean; } | null>(null);
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+    const [isVideoCall, setIsVideoCall] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
 
     const pc = useRef<RTCPeerConnection | null>(null);
@@ -41,10 +44,15 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const offerForIncomingCall = useRef<RTCSessionDescriptionInit | null>(null);
     const callTimeoutRef = useRef<number | null>(null);
     const callDurationIntervalRef = useRef<number | null>(null);
-    const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+
+    // Refs to hold current state for use inside WebSocket closures
+    const isCallingRef = useRef(isCalling);
+    useEffect(() => { isCallingRef.current = isCalling; }, [isCalling]);
+    const calleeRef = useRef(callee);
+    useEffect(() => { calleeRef.current = callee; }, [callee]);
     
     const endCall = useCallback((targetOverride?: string) => {
-        const target = targetOverride || callee;
+        const target = targetOverride || calleeRef.current;
         if (target && user && ws.current?.readyState === WebSocket.OPEN) {
             ws.current.send(JSON.stringify({ target, type: 'call-ended', payload: { from: user.username } }));
         }
@@ -57,13 +65,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             localStream.getTracks().forEach(track => track.stop());
             setLocalStream(null);
         }
-        if (remoteAudioRef.current) {
-            remoteAudioRef.current.srcObject = null;
-            if (remoteAudioRef.current.parentElement) {
-                remoteAudioRef.current.parentElement.removeChild(remoteAudioRef.current);
-            }
-            remoteAudioRef.current = null;
-        }
+        
         if (callTimeoutRef.current) {
             window.clearTimeout(callTimeoutRef.current);
             callTimeoutRef.current = null;
@@ -73,15 +75,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             callDurationIntervalRef.current = null;
         }
         
+        setRemoteStream(null);
+        setIsVideoCall(false);
         setIsCalling(false);
         setCallee('');
         setCallStatus('');
         setCallDuration(0);
         setIncomingCall(null);
         offerForIncomingCall.current = null;
-    }, [callee, localStream, user]);
+    }, [localStream, user]);
 
-    // WebSocket connection management
+    // WebSocket connection management, now with a stable dependency array
     useEffect(() => {
         if (isLoggedIn && user && !ws.current) {
             const connect = async () => {
@@ -107,12 +111,11 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     
                     switch (message.type) {
                         case 'incoming-call':
-                            // FIX: Use isVideoCall from payload instead of hardcoding to false
                             setIncomingCall({ from: message.from, isVideoCall: message.payload.isVideoCall });
                             offerForIncomingCall.current = message.payload.offer;
                             break;
                         case 'call-accepted':
-                            if (pc.current && callee === message.from) {
+                            if (pc.current && calleeRef.current === message.from) {
                                 try {
                                     await pc.current.setRemoteDescription(new RTCSessionDescription(message.payload.answer));
                                     setCallStatus('Connecting...');
@@ -125,19 +128,19 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             }
                             break;
                         case 'call-declined':
-                            if (isCalling && callee === message.from) {
+                            if (isCallingRef.current && calleeRef.current === message.from) {
                                 setCallStatus('Call Declined');
                                 setTimeout(() => endCall(message.from), 2000);
                             }
                             break;
                         case 'user-unavailable':
-                             if (isCalling && callee === message.payload.username) {
+                             if (isCallingRef.current && calleeRef.current === message.payload.username) {
                                 setCallStatus('User unavailable');
                                 setTimeout(() => endCall(message.payload.username), 2000);
                             }
                             break;
                         case 'call-ended':
-                             if (isCalling && callee === message.from) {
+                             if (isCallingRef.current && calleeRef.current === message.from) {
                                 endCall(message.from);
                             }
                             break;
@@ -157,7 +160,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             ws.current = null;
         }
         return () => { if (ws.current) { ws.current.close(); ws.current = null; } };
-    }, [isLoggedIn, user, callee, isCalling, endCall]);
+    }, [isLoggedIn, user, endCall]);
 
     const sendMessage = useCallback((target: string, type: string, payload: any) => {
         if (ws.current?.readyState === WebSocket.OPEN) {
@@ -170,11 +173,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [endCall]);
 
     const createPeerConnection = useCallback(async (targetUsername: string, stream: MediaStream) => {
-        const config = { 
-            iceServers: DEFAULT_ICE_SERVERS,
-            sdpSemantics: 'unified-plan'
-        };
-        const peerConnection = new RTCPeerConnection(config as any);
+        const config = { iceServers: DEFAULT_ICE_SERVERS };
+        const peerConnection = new RTCPeerConnection(config);
         pc.current = peerConnection;
 
         stream.getTracks().forEach(track => pc.current?.addTrack(track, stream));
@@ -186,17 +186,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
         
         pc.current.ontrack = event => {
-            if (event.track.kind === 'audio') {
-                if (!remoteAudioRef.current) {
-                    const audioEl = document.createElement('audio');
-                    audioEl.autoplay = true;
-                    // FIX: Use setAttribute for 'playsinline' to ensure compatibility with TypeScript's HTMLAudioElement type.
-                    audioEl.setAttribute('playsinline', 'true');
-                    document.body.appendChild(audioEl);
-                    remoteAudioRef.current = audioEl;
-                }
-                remoteAudioRef.current.srcObject = event.streams[0];
-            }
+            setRemoteStream(event.streams[0]);
         };
 
         pc.current.onconnectionstatechange = () => {
@@ -211,10 +201,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return peerConnection;
     }, [sendMessage, endCall]);
 
-    // FIX: Update function signature to accept withVideo and implement video call logic
     const startP2PCall = useCallback(async (calleeUsername: string, withVideo: boolean) => {
         setIsCalling(true);
         setCallStatus('Calling...');
+        setIsVideoCall(withVideo);
         try {
             if (!user) throw new Error("User not logged in.");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
@@ -229,7 +219,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             
             setCallStatus('Ringing...');
             callTimeoutRef.current = window.setTimeout(() => {
-                if(isCalling && callStatus.startsWith('Ringing')) {
+                if(isCallingRef.current && callStatus.startsWith('Ringing')) {
                     setCallStatus('User unavailable');
                     setTimeout(() => endCall(calleeUsername), 2000);
                 }
@@ -239,7 +229,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setCallStatus(`Error: ${error.message}`);
             setTimeout(() => endCall(calleeUsername), 3000);
         }
-    }, [user, createPeerConnection, isCalling, callStatus, sendMessage, endCall]);
+    }, [user, createPeerConnection, callStatus, sendMessage, endCall]);
 
     const acceptCall = useCallback(async () => {
         if (!incomingCall || !user || !offerForIncomingCall.current) return;
@@ -248,8 +238,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsCalling(true);
             setCallStatus('Connecting...');
             setCallee(caller);
+            setIsVideoCall(incomingCall.isVideoCall);
             
-            // FIX: Use isVideoCall from incomingCall object instead of hardcoding false
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: incomingCall.isVideoCall });
             setLocalStream(stream);
 
@@ -282,7 +272,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const value = { isCalling, callee, callStatus, isMuted, incomingCall, localStream, callDuration, startP2PCall, acceptCall, declineCall, endCall, toggleMute };
+    const value = { isCalling, callee, callStatus, isMuted, incomingCall, localStream, remoteStream, isVideoCall, callDuration, startP2PCall, acceptCall, declineCall, endCall, toggleMute };
 
     return <CallContext.Provider value={value}>{children}</CallContext.Provider>;
 };

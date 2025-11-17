@@ -62,8 +62,6 @@ import CallNotificationWidget from './components/CallNotificationWidget';
 
 
 import { Page, UserRole, AppLaunchable, WeblyApp } from './types';
-import { SpeedInsights } from '@vercel/speed-insights/react';
-import { Analytics } from '@vercel/analytics/react';
 import { database } from './services/database';
 
 // --- Icon Components (Centralized) ---
@@ -428,8 +426,6 @@ const App: React.FC = () => {
 
     return (
         <div className={`flex flex-col min-h-screen ${isDark ? 'dark' : ''} ${wallpaperClass} font-sans transition-all duration-500`}>
-            <SpeedInsights/>
-            <Analytics/>
             {renderLayout()}
             <CallWidget />
             <CallNotificationWidget />

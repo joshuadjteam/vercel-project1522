@@ -184,15 +184,26 @@ serve(async (req)=>{
         const { appIds } = payload;
         if (!Array.isArray(appIds)) throw { status: 400, message: 'appIds must be an array.' };
     
-        const { data, error } = await supabaseAdmin
+        const { data: updatedUser, error } = await supabaseAdmin
             .from('users')
             .update({ installed_webly_apps: appIds })
-            .eq('id', userProfile.id)
+            .eq('auth_id', userProfile.auth_id)
             .select('installed_webly_apps')
             .single();
         
-        if (error) throw error;
-        return new Response(JSON.stringify({ installed_webly_apps: data.installed_webly_apps }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        if (error) {
+            console.error("Supabase update/select error:", error);
+            throw { status: 500, message: `Database operation failed: ${error.message}` };
+        }
+
+        if (!updatedUser) {
+            throw { status: 404, message: 'User not found after update, could not confirm write.' };
+        }
+        
+        return new Response(JSON.stringify({ installed_webly_apps: updatedUser.installed_webly_apps }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+            status: 200 
+        });
     }
 
     // --- Admin-only endpoints ---

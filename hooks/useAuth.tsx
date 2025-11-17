@@ -103,16 +103,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateInstalledWeblyApps = async (appIds: string[]) => {
-        if (user) {
-            // Optimistically update UI
-            setUser({ ...user, installed_webly_apps: appIds });
+        if (!user) return;
+
+        const originalApps = user.installed_webly_apps || [];
+        // Optimistically update UI
+        setUser({ ...user, installed_webly_apps: appIds });
+
+        try {
             // Persist change to DB
             const updatedIds = await database.updateUserInstalledApps(appIds);
             if (updatedIds === null) {
                 // Revert on failure
-                setUser({ ...user, installed_webly_apps: user.installed_webly_apps || [] });
-                // Optionally show an error to the user
+                console.error("Edge function failed to update apps. Reverting UI.");
+                setUser(prevUser => {
+                    if (!prevUser) return null;
+                    return { ...prevUser, installed_webly_apps: originalApps };
+                });
+            } else {
+                // On success, sync with the definitive state from the server.
+                setUser(prevUser => {
+                    if (!prevUser) return null;
+                    return { ...prevUser, installed_webly_apps: updatedIds };
+                });
             }
+        } catch (e) {
+            console.error("Network or other error while updating apps. Reverting UI.", e);
+            setUser(prevUser => {
+                if (!prevUser) return null;
+                return { ...prevUser, installed_webly_apps: originalApps };
+            });
         }
     };
 

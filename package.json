@@ -12,9 +12,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "@google/genai": "^0.14.0",
-    "@supabase/supabase-js": "^2.44.4",
-    "@vercel/speed-insights": "^1.2.0",
-    "@vercel/analytics": "^1.5.0"
+    "@supabase/supabase-js": "^2.44.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
