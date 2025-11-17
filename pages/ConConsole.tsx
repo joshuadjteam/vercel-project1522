@@ -35,11 +35,7 @@ const ConConsole: React.FC<ConConsoleProps> = ({ navigate, appsList }) => {
     const allApps = useMemo(() => appsList.filter(app => !app.isHidden), [appsList]);
     
     const handleAppClick = (app: AppLaunchable) => {
-        if (app.isWebApp && app.url) {
-            navigate('app-webview', { url: app.url, title: app.label, isWebApp: true });
-        } else {
-            navigate(app.page, app.params);
-        }
+        navigate(app.page, { ...app.params, appData: app });
     };
 
     const handleSearch = () => {

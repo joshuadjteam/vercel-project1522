@@ -76,11 +76,7 @@ const LegaLauncher: React.FC<LegaLauncherProps> = ({ navigate, appsList }) => {
     useClickOutside(settingsMenuRef, () => setSettingsMenuOpen(false));
     
     const handleAppClick = (app: AppLaunchable) => {
-        if (app.isWebApp && app.url) {
-            navigate('app-webview', { url: app.url, title: app.label, isWebApp: true });
-        } else {
-            navigate(app.page, app.params);
-        }
+        navigate(app.page, { ...app.params, appData: app });
         setAppsMenuOpen(false);
     };
 

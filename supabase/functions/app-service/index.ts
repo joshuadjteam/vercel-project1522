@@ -8,6 +8,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
+// FIX: Add helper function to find or create the 'lynix' folder in Google Drive.
+const getLynixFolderId = async (accessToken: string) => {
+    // Check if folder exists
+    let query = "mimeType='application/vnd.google-apps.folder' and name='lynix' and trashed=false";
+    let response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id)`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+    if (!response.ok) throw { status: response.status, message: `Failed to search for folder: ${await response.text()}` };
+    let data = await response.json();
+    if (data.files && data.files.length > 0) {
+        return data.files[0].id;
+    }
+
+    // If not, create it
+    response = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: 'lynix',
+            mimeType: 'application/vnd.google-apps.folder',
+        })
+    });
+    if (!response.ok) throw { status: response.status, message: `Failed to create folder: ${await response.text()}` };
+    data = await response.json();
+    return data.id;
+};
+
 serve(async (req)=>{
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -160,6 +185,59 @@ serve(async (req)=>{
                 const { fileId } = payload;
                 await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${accessToken}` } });
                 return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
+            // FIX: Add get-saved-states and save-web-app-state actions.
+            case 'get-saved-states': {
+                const folderId = await getLynixFolderId(accessToken);
+                const query = `'${folderId}' in parents and name contains '.brwselynix' and trashed=false`;
+                const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,modifiedTime,webViewLink,iconLink)`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                if (!response.ok) throw { status: response.status, message: await response.text() };
+                const data = await response.json();
+                return new Response(JSON.stringify({ files: data.files }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
+            case 'save-web-app-state': {
+                const { title, url, size, position } = payload;
+                if (!title || !url) {
+                    throw { status: 400, message: 'Title and URL are required to save a session.' };
+                }
+                const folderId = await getLynixFolderId(accessToken);
+                const fileName = `WebApp-${title.replace(/[^a-zA-Z0-9.-]/g, '_')}.brwselynix`;
+                const fileContent = JSON.stringify({ url, title, size, position }, null, 2);
+    
+                // Check if file with same name exists to update it, or create new
+                const searchQuery = `'${folderId}' in parents and name = '${fileName}' and trashed=false`;
+                const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id)`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+                if (!searchResponse.ok) throw { status: searchResponse.status, message: `Failed to search for existing file: ${await searchResponse.text()}` };
+                const searchData = await searchResponse.json();
+                
+                let fileId;
+                if (searchData.files && searchData.files.length > 0) {
+                    fileId = searchData.files[0].id;
+                } else {
+                    const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: fileName,
+                            parents: [folderId],
+                            mimeType: 'application/json'
+                        })
+                    });
+                    if (!createResponse.ok) throw { status: createResponse.status, message: `Failed to create file: ${await createResponse.text()}` };
+                    const fileData = await createResponse.json();
+                    fileId = fileData.id;
+                }
+    
+                // Now update content
+                const updateResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: fileContent
+                });
+    
+                if (!updateResponse.ok) throw { status: updateResponse.status, message: `Failed to update file content: ${await updateResponse.text()}` };
+                
+                return new Response(JSON.stringify({ success: true, fileId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
             }
             case 'check-status': {
                 return new Response(JSON.stringify({ isLinked: !!refreshToken }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });

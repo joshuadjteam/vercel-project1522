@@ -13,7 +13,6 @@ export interface User {
     username: string;
     email: string;
     role: UserRole;
-    // FIX: Add missing 'plan_name' property. This was causing type errors where User objects were created. Made optional to avoid breaking other parts of the code that may not provide this property.
     plan_name?: string;
     features: {
         chat: boolean;
@@ -96,6 +95,7 @@ export interface WeblyApp {
     url: string;
     icon_svg: string;
     created_at: string;
+    load_in_console: boolean;
 }
 
 export type Page = 
@@ -118,6 +118,8 @@ export type Page =
     | 'app-console-switch'
     | 'app-webly-store'
     | 'app-webview'
+    | 'app-history'
+    | 'mobi-app-webview'
     | 'auth-callback';
 
 // --- Centralized Console Types ---
@@ -131,6 +133,7 @@ export type AppLaunchable = {
   isHidden?: boolean;
   isWebApp?: boolean;
   url?: string;
+  load_in_console?: boolean;
 };
 
 export type NavAction = {

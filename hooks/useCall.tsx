@@ -1,13 +1,16 @@
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
+import { RealtimeChannel } from '@supabase/supabase-js';
+// FIX: Import database service to check if user exists before call.
+import { database } from '../services/database';
 
 interface CallContextType {
     isCalling: boolean;
     callee: string;
     callStatus: string;
     isMuted: boolean;
-    incomingCall: { from: string; isVideoCall: boolean; } | null; 
+    incomingCall: { from: string; isVideoCall: boolean; } | null;
     localStream: MediaStream | null;
     remoteStream: MediaStream | null;
     isVideoCall: boolean;
@@ -22,8 +25,16 @@ interface CallContextType {
 const CallContext = createContext<CallContextType | undefined>(undefined);
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun.l.google.com:5349" },
+    { urls: "stun:stun1.l.google.com:3478" },
+    { urls: "stun:stun1.l.google.com:5349" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:5349" },
+    { urls: "stun:stun3.l.google.com:3478" },
+    { urls: "stun:stun3.l.google.com:5349" },
+    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:5349" },
     { urls: 'stun:stun.services.mozilla.com' },
 ];
 
@@ -40,239 +51,155 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [callDuration, setCallDuration] = useState(0);
 
     const pc = useRef<RTCPeerConnection | null>(null);
-    const ws = useRef<WebSocket | null>(null);
+    const channel = useRef<RealtimeChannel | null>(null);
     const offerForIncomingCall = useRef<RTCSessionDescriptionInit | null>(null);
     const callTimeoutRef = useRef<number | null>(null);
     const callDurationIntervalRef = useRef<number | null>(null);
-
-    // Refs to hold current state for use inside WebSocket closures
-    const isCallingRef = useRef(isCalling);
-    useEffect(() => { isCallingRef.current = isCalling; }, [isCalling]);
-    const calleeRef = useRef(callee);
-    useEffect(() => { calleeRef.current = callee; }, [callee]);
     
-    const endCall = useCallback((targetOverride?: string) => {
-        const target = targetOverride || calleeRef.current;
-        if (target && user && ws.current?.readyState === WebSocket.OPEN) {
-            ws.current.send(JSON.stringify({ target, type: 'call-ended', payload: { from: user.username } }));
-        }
+    // Using refs for state and callbacks to ensure stability inside async functions and useEffect cleanup
+    const stateRef = useRef({ user, isCalling, callee, callStatus, incomingCall, localStream });
+    stateRef.current = { user, isCalling, callee, callStatus, incomingCall, localStream };
 
-        if (pc.current) {
-            pc.current.close();
-            pc.current = null;
+    const stableSendMessage = useCallback(async (target: string, type: string, payload: any) => {
+        if (!stateRef.current.user) {
+            console.error("Cannot send message, user is not defined.");
+            return;
         }
-        if (localStream) {
-            localStream.getTracks().forEach(track => track.stop());
+        const { error } = await supabase.from('webrtc_signaling').insert({
+            sender_username: stateRef.current.user.username,
+            recipient_username: target,
+            type,
+            payload,
+        });
+        if (error) {
+            console.error("Failed to send signaling message:", error);
+            setCallStatus("Error: Signaling failed");
+        }
+    }, []);
+
+    const stableEndCall = useCallback((targetOverride?: string) => {
+        const target = targetOverride || stateRef.current.callee || stateRef.current.incomingCall?.from;
+        if (target && stateRef.current.user) {
+            stableSendMessage(target, 'call-ended', { from: stateRef.current.user.username });
+        }
+        if (pc.current) { pc.current.close(); pc.current = null; }
+        if (stateRef.current.localStream) {
+            stateRef.current.localStream.getTracks().forEach(track => track.stop());
             setLocalStream(null);
         }
-        
-        if (callTimeoutRef.current) {
-            window.clearTimeout(callTimeoutRef.current);
-            callTimeoutRef.current = null;
-        }
-        if (callDurationIntervalRef.current) {
-            window.clearInterval(callDurationIntervalRef.current);
-            callDurationIntervalRef.current = null;
-        }
-        
-        setRemoteStream(null);
-        setIsVideoCall(false);
-        setIsCalling(false);
-        setCallee('');
-        setCallStatus('');
-        setCallDuration(0);
-        setIncomingCall(null);
+        if (callTimeoutRef.current) { window.clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
+        if (callDurationIntervalRef.current) { window.clearInterval(callDurationIntervalRef.current); callDurationIntervalRef.current = null; }
+        setRemoteStream(null); setIsVideoCall(false); setIsCalling(false); setCallee(''); setCallStatus(''); setCallDuration(0); setIncomingCall(null);
         offerForIncomingCall.current = null;
-    }, [localStream, user]);
-
-    // WebSocket connection management, now with a stable dependency array
-    useEffect(() => {
-        if (isLoggedIn && user && !ws.current) {
-            const connect = async () => {
-                const { data } = await supabase.auth.getSession();
-                if (!data.session) return;
-                
-                const WEBSOCKET_URL = `wss://jnnpxifvsrlzfpaisdhy.supabase.co/functions/v1/webrtc-signaling-server?token=${data.session.access_token}`;
-                
-                const socket = new WebSocket(WEBSOCKET_URL);
-                ws.current = socket;
-
-                socket.onopen = () => console.log("WebSocket connected");
-                socket.onclose = (event) => { 
-                    console.log("WebSocket disconnected", `Code: ${event.code}`, `Reason: ${event.reason}`); 
-                    ws.current = null; 
-                };
-                socket.onerror = (event) => {
-                    console.error("A WebSocket error occurred:", event);
-                };
-
-                socket.onmessage = async (event) => {
-                    const message = JSON.parse(event.data);
-                    
-                    switch (message.type) {
-                        case 'incoming-call':
-                            setIncomingCall({ from: message.from, isVideoCall: message.payload.isVideoCall });
-                            offerForIncomingCall.current = message.payload.offer;
-                            break;
-                        case 'call-accepted':
-                            if (pc.current && calleeRef.current === message.from) {
-                                try {
-                                    await pc.current.setRemoteDescription(new RTCSessionDescription(message.payload.answer));
-                                    setCallStatus('Connecting...');
-                                    if (callTimeoutRef.current) window.clearTimeout(callTimeoutRef.current);
-                                } catch(e) {
-                                    console.error("Error setting remote description:", e);
-                                    setCallStatus("Error: Connection failed");
-                                    setTimeout(() => endCall(message.from), 2000);
-                                }
-                            }
-                            break;
-                        case 'call-declined':
-                            if (isCallingRef.current && calleeRef.current === message.from) {
-                                setCallStatus('Call Declined');
-                                setTimeout(() => endCall(message.from), 2000);
-                            }
-                            break;
-                        case 'user-unavailable':
-                             if (isCallingRef.current && calleeRef.current === message.payload.username) {
-                                setCallStatus('User unavailable');
-                                setTimeout(() => endCall(message.payload.username), 2000);
-                            }
-                            break;
-                        case 'call-ended':
-                             if (isCallingRef.current && calleeRef.current === message.from) {
-                                endCall(message.from);
-                            }
-                            break;
-                        case 'ice-candidate':
-                            if (pc.current && message.payload.candidate) {
-                                try {
-                                    await pc.current.addIceCandidate(new RTCIceCandidate(message.payload.candidate));
-                                } catch (e) { console.error("Error adding ICE candidate:", e); }
-                            }
-                            break;
-                    }
-                };
-            };
-            connect();
-        } else if (!isLoggedIn && ws.current) {
-            ws.current.close();
-            ws.current = null;
-        }
-        return () => { if (ws.current) { ws.current.close(); ws.current = null; } };
-    }, [isLoggedIn, user, endCall]);
-
-    const sendMessage = useCallback((target: string, type: string, payload: any) => {
-        if (ws.current?.readyState === WebSocket.OPEN) {
-            ws.current.send(JSON.stringify({ target, type, payload }));
-        } else {
-            console.error("WebSocket is not connected.");
-            setCallStatus("Error: Not connected to server");
-            setTimeout(() => endCall(target), 2000);
-        }
-    }, [endCall]);
-
-    const createPeerConnection = useCallback(async (targetUsername: string, stream: MediaStream) => {
-        const config = { iceServers: DEFAULT_ICE_SERVERS };
-        const peerConnection = new RTCPeerConnection(config);
-        pc.current = peerConnection;
-
+    }, [stableSendMessage]);
+    
+    const createPeerConnection = useCallback(async (targetUsername: string, stream: MediaStream): Promise<RTCPeerConnection> => {
+        pc.current = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS });
         stream.getTracks().forEach(track => pc.current?.addTrack(track, stream));
-
-        pc.current.onicecandidate = event => {
-            if (event.candidate) {
-                sendMessage(targetUsername, 'ice-candidate', { candidate: event.candidate });
-            }
-        };
-        
-        pc.current.ontrack = event => {
-            setRemoteStream(event.streams[0]);
-        };
-
+        pc.current.onicecandidate = e => { if (e.candidate) stableSendMessage(targetUsername, 'ice-candidate', { candidate: e.candidate }); };
+        pc.current.ontrack = e => setRemoteStream(e.streams[0]);
         pc.current.onconnectionstatechange = () => {
             if (pc.current?.connectionState === 'connected') {
                 setCallStatus('Connected');
                 if (callDurationIntervalRef.current) window.clearInterval(callDurationIntervalRef.current);
                 callDurationIntervalRef.current = window.setInterval(() => setCallDuration(d => d + 1), 1000);
             } else if (['disconnected', 'failed', 'closed'].includes(pc.current?.connectionState || '')) {
-                endCall(targetUsername);
+                stableEndCall(targetUsername);
             }
         };
-        return peerConnection;
-    }, [sendMessage, endCall]);
+        return pc.current;
+    }, [stableSendMessage, stableEndCall]);
+
+    useEffect(() => {
+        if (isLoggedIn && user?.username) {
+            const realtimeChannel = supabase.channel(`webrtc-signaling-${user.username}`);
+            channel.current = realtimeChannel;
+
+            realtimeChannel.on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'webrtc_signaling',
+                filter: `recipient_username=eq.${user.username}`,
+            }, async (payload) => {
+                const msg = {
+                    from: payload.new.sender_username,
+                    type: payload.new.type,
+                    payload: payload.new.payload
+                };
+                
+                switch (msg.type) {
+                    case 'incoming-call': setIncomingCall({ from: msg.from, isVideoCall: msg.payload.isVideoCall }); offerForIncomingCall.current = msg.payload.offer; break;
+                    case 'call-accepted': if (pc.current && stateRef.current.callee === msg.from) { try { await pc.current.setRemoteDescription(new RTCSessionDescription(msg.payload.answer)); setCallStatus('Connecting...'); if (callTimeoutRef.current) window.clearTimeout(callTimeoutRef.current); } catch(e) { console.error("Error setting remote desc:", e); setCallStatus("Error: Connection failed"); setTimeout(() => stableEndCall(msg.from), 2000); } } break;
+                    case 'call-declined': if (stateRef.current.isCalling && stateRef.current.callee === msg.from) { setCallStatus('Call Declined'); setTimeout(() => stableEndCall(msg.from), 2000); } break;
+                    case 'call-ended': if (stateRef.current.isCalling) { stableEndCall(msg.from); } break;
+                    case 'ice-candidate': if (pc.current && msg.payload.candidate) { try { await pc.current.addIceCandidate(new RTCIceCandidate(msg.payload.candidate)); } catch (e) { console.error("Error adding ICE candidate:", e); } } break;
+                }
+            }).subscribe();
+
+            return () => {
+                if (channel.current) {
+                    supabase.removeChannel(channel.current);
+                    channel.current = null;
+                }
+            };
+        }
+    }, [isLoggedIn, user?.username, stableEndCall]);
 
     const startP2PCall = useCallback(async (calleeUsername: string, withVideo: boolean) => {
-        setIsCalling(true);
-        setCallStatus('Calling...');
-        setIsVideoCall(withVideo);
         try {
-            if (!user) throw new Error("User not logged in.");
+            if (!stateRef.current.user) throw new Error("User not logged in.");
+            setIsCalling(true); setCallStatus('Calling...'); setIsVideoCall(withVideo); setCallee(calleeUsername);
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
             setLocalStream(stream);
-            setCallee(calleeUsername);
-
             const peerConnection = await createPeerConnection(calleeUsername, stream);
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
-
-            sendMessage(calleeUsername, 'incoming-call', { from: user.username, isVideoCall: withVideo, offer });
             
+            // Check if target user exists before sending call
+            const targetUser = await database.getUserByUsername(calleeUsername);
+            if (!targetUser) {
+                setCallStatus('User unavailable');
+                setTimeout(() => stableEndCall(calleeUsername), 2000);
+                return;
+            }
+
+            stableSendMessage(calleeUsername, 'incoming-call', { from: stateRef.current.user.username, isVideoCall: withVideo, offer });
             setCallStatus('Ringing...');
-            callTimeoutRef.current = window.setTimeout(() => {
-                if(isCallingRef.current && callStatus.startsWith('Ringing')) {
-                    setCallStatus('User unavailable');
-                    setTimeout(() => endCall(calleeUsername), 2000);
-                }
-            }, 30000);
-        } catch (error: any) {
-            console.error('Error starting P2P call:', error);
-            setCallStatus(`Error: ${error.message}`);
-            setTimeout(() => endCall(calleeUsername), 3000);
-        }
-    }, [user, createPeerConnection, callStatus, sendMessage, endCall]);
+            callTimeoutRef.current = window.setTimeout(() => { if(stateRef.current.isCalling && stateRef.current.callStatus.startsWith('Ringing')) { setCallStatus('User unavailable'); setTimeout(() => stableEndCall(calleeUsername), 2000); } }, 30000);
+        } catch (error: any) { console.error('Error starting P2P call:', error); setCallStatus(`Error: ${error.message}`); setTimeout(() => stableEndCall(calleeUsername), 3000); }
+    }, [createPeerConnection, stableSendMessage, stableEndCall]);
 
     const acceptCall = useCallback(async () => {
-        if (!incomingCall || !user || !offerForIncomingCall.current) return;
-        const caller = incomingCall.from;
+        if (!stateRef.current.incomingCall || !stateRef.current.user || !offerForIncomingCall.current) return;
+        const caller = stateRef.current.incomingCall.from;
         try {
-            setIsCalling(true);
-            setCallStatus('Connecting...');
-            setCallee(caller);
-            setIsVideoCall(incomingCall.isVideoCall);
-            
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: incomingCall.isVideoCall });
+            setIsCalling(true); setCallStatus('Connecting...'); setCallee(caller); setIsVideoCall(stateRef.current.incomingCall.isVideoCall);
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: stateRef.current.incomingCall.isVideoCall });
             setLocalStream(stream);
-
             const peerConnection = await createPeerConnection(caller, stream);
             await peerConnection.setRemoteDescription(new RTCSessionDescription(offerForIncomingCall.current));
-            
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
-
-            sendMessage(caller, 'call-accepted', { answer });
-            setIncomingCall(null);
-            offerForIncomingCall.current = null;
-        } catch (error: any) {
-            console.error("Error accepting call:", error);
-            endCall(caller);
-        }
-    }, [incomingCall, user, createPeerConnection, sendMessage, endCall]);
+            stableSendMessage(caller, 'call-accepted', { answer });
+            setIncomingCall(null); offerForIncomingCall.current = null;
+        } catch (error: any) { console.error("Error accepting call:", error); stableEndCall(caller); }
+    }, [createPeerConnection, stableSendMessage, stableEndCall]);
 
     const declineCall = useCallback(() => {
-        if (!incomingCall || !user) return;
-        sendMessage(incomingCall.from, 'call-declined', { from: user.username });
-        setIncomingCall(null);
-        offerForIncomingCall.current = null;
-    }, [incomingCall, user, sendMessage]);
+        if (!stateRef.current.incomingCall || !stateRef.current.user) return;
+        stableSendMessage(stateRef.current.incomingCall.from, 'call-declined', { from: stateRef.current.user.username });
+        setIncomingCall(null); offerForIncomingCall.current = null;
+    }, [stableSendMessage]);
 
-    const toggleMute = () => {
-        if (localStream) {
-            localStream.getAudioTracks().forEach(track => { track.enabled = !track.enabled; });
-            setIsMuted(prev => !prev);
+    const toggleMute = useCallback(() => {
+        if (stateRef.current.localStream) {
+            const wasMuted = !stateRef.current.localStream.getAudioTracks()[0].enabled;
+            stateRef.current.localStream.getAudioTracks().forEach(track => { track.enabled = wasMuted; });
+            setIsMuted(!wasMuted);
         }
-    };
+    }, []);
 
-    const value = { isCalling, callee, callStatus, isMuted, incomingCall, localStream, remoteStream, isVideoCall, callDuration, startP2PCall, acceptCall, declineCall, endCall, toggleMute };
+    const value = { isCalling, callee, callStatus, isMuted, incomingCall, localStream, remoteStream, isVideoCall, callDuration, startP2PCall, acceptCall, declineCall, endCall: stableEndCall, toggleMute };
 
     return <CallContext.Provider value={value}>{children}</CallContext.Provider>;
 };

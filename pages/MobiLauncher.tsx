@@ -37,10 +37,10 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
     );
 
     const handleAppClick = (app: AppLaunchable) => {
-        if (app.isWebApp && app.url) {
-            window.open(app.url, '_blank');
+        if (app.isWebApp) {
+            navigate('mobi-app-webview', { url: app.url, title: app.label });
         } else {
-            navigate(app.page, app.params);
+            navigate(app.page, { ...app.params, appData: app });
         }
     };
 

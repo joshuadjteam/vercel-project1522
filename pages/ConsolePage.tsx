@@ -69,10 +69,8 @@ const ConsolePage: React.FC<ConsolePageProps> = ({ navigate, appsList }) => {
                   navigate('home');
                   break;
           }
-      } else if (app.isWebApp && app.url) {
-          navigate('app-webview', { url: app.url, title: app.label, isWebApp: true });
       } else {
-          navigate(app.page, { navigate, ...app.params });
+          navigate(app.page, { ...app.params, appData: app });
       }
       setLauncherOpen(false);
       setSettingsMenuOpen(false);

@@ -46,30 +46,46 @@ serve(async (req) => {
       return createErrorResponse('Payload must include an `appIds` array.', 400);
     }
 
-    // 3. Create admin client to perform the update
+    // 3. Create admin client
     const supabaseAdmin = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Atomically update the user record and select the new data
-    const { data, error } = await supabaseAdmin
-        .from('users')
-        .update({ installed_webly_apps: appIds })
-        .eq('auth_id', user.id)
-        .select('installed_webly_apps')
-        .single();
+    // 4. Log app activity
+    const currentAppIds = user.app_metadata?.installed_webly_apps || [];
+    const newAppIdsSet = new Set(appIds);
+    const currentAppIdsSet = new Set(currentAppIds);
 
-    if (error) {
-      // The .single() method will cause an error if no user is found, which is helpful.
-      const errorMessage = error.code === 'PGRST116' 
-        ? 'User profile not found during update operation.' 
-        : `Database update failed: ${error.message}`;
-      return createErrorResponse(errorMessage, error.code === 'PGRST116' ? 404 : 500);
+    const toInstall = appIds.filter(id => !currentAppIdsSet.has(id));
+    const toUninstall = currentAppIds.filter(id => !newAppIdsSet.has(id));
+
+    const logs: { user_id: string; app_id: string; action: 'install' | 'uninstall' }[] = [];
+    toInstall.forEach(appId => logs.push({ user_id: user.id, app_id: appId, action: 'install' }));
+    toUninstall.forEach(appId => logs.push({ user_id: user.id, app_id: appId, action: 'uninstall' }));
+    
+    if (logs.length > 0) {
+        const { error: logError } = await supabaseAdmin.from('app_activity_log').insert(logs);
+        if (logError) {
+          // Log the error but don't block the main operation
+          console.error("Failed to log app activity:", logError.message);
+        }
     }
 
-    // 5. Return the confirmed, updated data
-    return new Response(JSON.stringify({ installed_webly_apps: data.installed_webly_apps }), { 
+    // 5. Update the user's app_metadata in the auth schema
+    const { data: updatedUserData, error } = await supabaseAdmin.auth.admin.updateUserById(
+        user.id,
+        { app_metadata: { installed_webly_apps: appIds } }
+    );
+
+    if (error) {
+        return createErrorResponse(`Auth metadata update failed: ${error.message}`, 500);
+    }
+
+    const updatedApps = updatedUserData.user?.app_metadata?.installed_webly_apps || [];
+
+    // 6. Return the confirmed, updated data
+    return new Response(JSON.stringify({ installed_webly_apps: updatedApps }), { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
         status: 200 
     });

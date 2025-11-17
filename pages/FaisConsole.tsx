@@ -50,11 +50,7 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
     useClickOutside(settingsMenuRef, () => setSettingsMenuOpen(false));
 
     const handleAppClick = (app: AppLaunchable) => {
-        if (app.isWebApp && app.url) {
-            navigate('app-webview', { url: app.url, title: app.label, isWebApp: true });
-        } else {
-            navigate(app.page, { navigate, ...app.params });
-        }
+        navigate(app.page, { ...app.params, appData: app });
         setLauncherOpen(false);
     };
 

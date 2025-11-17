@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
@@ -38,6 +34,7 @@ import ConsoleSwitchApp from './pages/apps/ConsoleSwitchApp';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import WeblyStoreApp from './pages/apps/WeblyStoreApp';
 import WebAppViewer from './pages/apps/WebAppViewer';
+import HistoryApp from './pages/apps/HistoryApp';
 
 // Mobile App Imports
 import MobiProfilePage from './pages/mobile-apps/MobiProfilePage';
@@ -55,6 +52,9 @@ import MobiCalendarApp from './pages/mobile-apps/MobiCalendarApp';
 import MobiLauncher from './pages/MobiLauncher';
 import MobiConsoleSwitchApp from './pages/mobile-apps/MobiConsoleSwitchApp';
 import MobiWeblyStoreApp from './pages/mobile-apps/MobiWeblyStoreApp';
+import MobiWebAppViewer from './pages/mobile-apps/MobiWebAppViewer';
+import MobiHistoryApp from './pages/mobile-apps/MobiHistoryApp';
+
 
 // Call-related imports
 import CallWidget from './components/CallWidget';
@@ -79,6 +79,7 @@ const CalendarIcon = (props: { className?: string }) => <svg xmlns="http://www.w
 const ConsoleSwitchIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
 const ProfileIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const WeblyStoreIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1012 10.125A2.625 2.625 0 0012 4.875z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.125v10.125" /><path strokeLinecap="round" strokeLinejoin="round" d="M18.375 10.125c.621 0 1.125.504 1.125 1.125v8.25" /><path strokeLinecap="round" strokeLinejoin="round" d="M5.625 10.125c-.621 0-1.125.504-1.125 1.125v8.25" /></svg>;
+const HistoryIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
 
 export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: { width: number, height: number } }> = {
@@ -96,6 +97,7 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
     'app-console-switch': { component: ConsoleSwitchApp, defaultSize: { width: 900, height: 500 } },
     'app-webly-store': { component: WeblyStoreApp },
     'app-webview': { component: WebAppViewer, defaultSize: { width: 1024, height: 768 } },
+    'app-history': { component: HistoryApp },
 };
 
 // All items that can be a "page", including full-screen apps and standalone pages
@@ -120,6 +122,7 @@ export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
     'app-console-switch': ConsoleSwitchApp,
     'app-webly-store': WeblyStoreApp,
     'app-webview': WebAppViewer,
+    'app-history': HistoryApp,
 };
 
 // All items that can be a "page" on mobile
@@ -141,6 +144,8 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-calendar': MobiCalendarApp,
     'app-console-switch': MobiConsoleSwitchApp,
     'app-webly-store': MobiWeblyStoreApp,
+    'app-history': MobiHistoryApp,
+    'mobi-app-webview': MobiWebAppViewer,
 };
 
 
@@ -158,6 +163,7 @@ export const APPS_LIST: AppLaunchable[] = [
   { id: 'app-calendar', label: 'Calendar', icon: <CalendarIcon />, page: 'app-calendar' },
   { id: 'app-console-switch', label: 'Consoles', icon: <ConsoleSwitchIcon />, page: 'app-console-switch' },
   { id: 'app-webly-store', label: 'Webly Store', icon: <WeblyStoreIcon />, page: 'app-webly-store' },
+  { id: 'app-history', label: 'History', icon: <HistoryIcon />, page: 'app-history' },
   { id: 'profile', label: 'Profile', icon: <ProfileIcon />, page: 'profile', isHidden: true },
 ];
 
@@ -196,10 +202,6 @@ const App: React.FC = () => {
 
         const GenericWebIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21V3M12 3a9.004 9.004 0 00-8.716 6.747M12 3c4.805 0 8.716 3.91 8.716 8.747M3.284 8.747C5.536 4.29 8.276 3 12 3v18c-3.724 0-6.464-1.29-8.716-5.747" /></svg>;
 
-        // FIX: Annotate the return type of the map callback to (AppLaunchable | null).
-        // This solves two issues:
-        // 1. It provides a target type for the returned object, preventing TypeScript from widening `page: 'home'` to `page: string`.
-        // 2. It makes the type of `app` in the subsequent `.filter()` call `AppLaunchable | null`, which makes the type predicate `app is AppLaunchable` valid.
         const installedWebApps: AppLaunchable[] = user.installed_webly_apps
             .map((appId): AppLaunchable | null => {
                 const appData = allWeblyApps.find(app => app.id === appId);
@@ -208,16 +210,17 @@ const App: React.FC = () => {
                     id: `webly-${appData.id}`,
                     label: appData.name,
                     icon: appData.icon_svg ? <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: appData.icon_svg }} /> : <GenericWebIcon />,
-                    page: 'app-webview',
+                    page: isMobileDevice ? 'mobi-app-webview' : 'app-webview',
                     isWebApp: true,
                     url: appData.url,
+                    load_in_console: appData.load_in_console,
                     params: { url: appData.url, title: appData.name, isWebApp: true } 
                 };
             })
             .filter((app): app is AppLaunchable => app !== null);
         
         return [...nativeApps, ...installedWebApps];
-    }, [user?.installed_webly_apps, allWeblyApps]);
+    }, [user?.installed_webly_apps, allWeblyApps, isMobileDevice]);
     
     useEffect(() => {
         const path = window.location.pathname;
@@ -242,14 +245,16 @@ const App: React.FC = () => {
     const navigate = useCallback((newPage: Page, params: any = {}) => {
         const isWindowedConsole = isLoggedIn && !isMobileDevice && ['syno', 'fais'].includes(consoleView);
         const isApp = !!APPS_MAP[newPage as keyof typeof APPS_MAP];
+        const appData = params?.appData as AppLaunchable | undefined;
         
-        // Make 'profile' and 'admin' always windowed on desktop consoles
         const isWindowablePage = ['contact', 'profile', 'admin'].includes(newPage);
-        
-        // Make 'console-switch' always full screen
         const isFullScreenOverride = newPage === 'app-console-switch';
         
-        if (isWindowedConsole && !isFullScreenOverride && (isApp || isWindowablePage)) {
+        const shouldBeWindowed = isWindowedConsole && !isFullScreenOverride && (
+            isApp || isWindowablePage || (appData?.isWebApp && appData?.load_in_console)
+        );
+
+        if (shouldBeWindowed) {
             const existingWindow = windows.find(w => w.appId === newPage && w.props?.title === params?.title);
             if (existingWindow) {
                 if (existingWindow.state === 'minimized') {
@@ -266,8 +271,8 @@ const App: React.FC = () => {
                 id: `${newPage}-${Date.now()}`,
                 appId: newPage,
                 title: params?.title || APPS_LIST.find(app => app.page === newPage)?.label || newPage.charAt(0).toUpperCase() + newPage.slice(1),
-                position: { x: Math.random() * 200 + 50, y: Math.random() * 100 + 50 },
-                size: appConfig?.defaultSize || { width: 700, height: 500 },
+                position: params?.position || { x: Math.random() * 200 + 50, y: Math.random() * 100 + 50 },
+                size: params?.size || appConfig?.defaultSize || { width: 700, height: 500 },
                 zIndex: nextZIndex.current++,
                 state: 'open',
                 props: params,
@@ -350,14 +355,13 @@ const App: React.FC = () => {
             const windowedConsoles = ['syno', 'fais'];
             const isWindowedEnvironment = windowedConsoles.includes(consoleView);
 
-            // An "app page" is any page that isn't the base console view.
-            // For windowed consoles, there are no "app pages", only windows.
-            // For fullscreen consoles, any navigation away from "home" is to an app page.
-            const isShowingAppPage = !isWindowedEnvironment && page !== 'home';
-            const PageToRender = FULL_PAGE_MAP[page];
+            const isFullScreenOverride = page === 'app-console-switch';
 
-            if (isShowingAppPage && PageToRender) {
-                // Render the app full screen for 'lega' and 'con' consoles.
+            const PageToRender = FULL_PAGE_MAP[page];
+            const isShowingAppPage = page !== 'home' && PageToRender && (!isWindowedEnvironment || isFullScreenOverride);
+            
+
+            if (isShowingAppPage) {
                 return (
                     <div className="flex-grow flex flex-col overflow-hidden">
                         <FullScreenAppHeader navigate={navigate} pageParams={pageParams} />
@@ -399,7 +403,6 @@ const App: React.FC = () => {
              return (
                 <div className="flex-grow flex flex-col">
                     <main className="flex-grow overflow-y-auto">
-                       {/* FIX: Use SignInPage for mobile as well, to unify the login flow and fix prop error. */}
                        <SignInPage navigate={navigate} />
                     </main>
                 </div>

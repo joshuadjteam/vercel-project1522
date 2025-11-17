@@ -81,29 +81,18 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
     }, [win.id, win.size, onFocus, onSizeChange]);
 
     const handleSaveToDrive = async () => {
-        if (!win.props?.url || !win.title) return;
-        const fileName = `Browse-App(${win.title}).brwselynix`;
-        
-        const content = JSON.stringify({
-            url: win.props.url,
-            title: win.title,
-            size: win.size,
-            position: win.position,
-        }, null, 2);
+        if (!win.props?.url || !win.title) {
+            alert("This web app session cannot be saved.");
+            return;
+        }
 
-        alert('Saving to Google Drive...');
-        const { file, error } = await database.createDriveFile(fileName);
-        if (file) {
-            const { success, error: updateError } = await database.updateDriveFile(file.id, { content });
-            if (success) {
-                alert('Shortcut saved to your Google Drive!');
-            } else {
-                alert(`Failed to save content: ${updateError}`);
-                // Attempt to delete the empty file
-                await database.deleteDriveFile(file.id);
-            }
-        } else {
-            alert(`Failed to create file on Drive: ${error}`);
+        alert('Saving session to Google Drive in /lynix/ folder...');
+        try {
+            await database.saveWebAppState(win.title, win.props.url, win.size, win.position);
+            alert('Session saved successfully to your Google Drive!');
+        } catch (e: any) {
+            alert(`Failed to save session: ${e.message}`);
+            console.error("Failed to save session:", e);
         }
     };
 

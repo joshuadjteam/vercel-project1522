@@ -41,7 +41,12 @@ serve(async (req)=>{
     // This client uses the service role key to bypass RLS.
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
     // Fetch the user's profile from the public.users table.
-    const { data: profileData, error: profileError } = await supabaseAdmin.from('users').select('*, installed_webly_apps').eq('auth_id', user.id).single();
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('users')
+      .select('*') // No longer selecting the non-existent 'installed_webly_apps' column
+      .eq('auth_id', user.id)
+      .single();
+
     if (profileError) {
       // PGRST116 indicates that the query returned no rows, which means no profile was found.
       if (profileError.code === 'PGRST116') {
@@ -58,9 +63,16 @@ serve(async (req)=>{
       // For other database errors, throw them to be caught by the generic error handler.
       throw profileError;
     }
-    // Return the profile data.
+    
+    // Combine the public profile data with the app metadata from the auth user object.
+    const combinedProfile = {
+      ...profileData,
+      installed_webly_apps: user.app_metadata?.installed_webly_apps || [],
+    };
+
+    // Return the combined profile data.
     return new Response(JSON.stringify({
-      user: profileData
+      user: combinedProfile
     }), {
       headers: {
         ...corsHeaders,
