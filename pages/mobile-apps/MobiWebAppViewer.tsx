@@ -65,11 +65,6 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, navigat
                     </div>
                 )}
                 
-                {/* Background hint */}
-                <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm z-0">
-                    Loading {title}...
-                </div>
-
                 <iframe
                     src={url}
                     className="w-full flex-grow border-0 relative z-10 bg-white"

@@ -41,17 +41,11 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title }) => {
             )}
             
             <div className="flex-grow min-h-0 flex relative">
-                 {/* Background hint */}
-                 <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
-                    Connecting to {title}...
-                </div>
-                
                 <iframe
                     src={url}
                     className="w-full flex-grow border-0 relative z-10 bg-white"
                     title={title}
                     allow="camera; microphone; geolocation; payment; fullscreen"
-                    // Removed sandbox to be as permissive as possible
                     referrerPolicy="no-referrer"
                 />
             </div>
