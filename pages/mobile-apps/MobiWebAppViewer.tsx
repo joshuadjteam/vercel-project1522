@@ -1,10 +1,11 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Page } from '../../types';
 
 // Icons
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m7 7H3" /></svg>;
 const OpenExternalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>;
-const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
 
 
 interface MobiWebAppViewerProps {
@@ -14,6 +15,8 @@ interface MobiWebAppViewerProps {
 }
 
 const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, navigate }) => {
+    const [showWarning, setShowWarning] = useState(true);
+
     if (!url) {
         return (
             <div className="w-full flex-grow flex flex-col bg-gray-100 dark:bg-gray-800 text-light-text dark:text-dark-text">
@@ -45,25 +48,25 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, navigat
                     <OpenExternalIcon />
                 </a>
             </header>
-            <main className="flex-grow flex min-h-0 relative bg-gray-800">
-                <div className="absolute inset-0 p-4 flex flex-col items-center justify-center text-center text-white pointer-events-none">
-                    <InfoIcon />
-                    <h2 className="text-xl font-semibold mt-2">Loading {title}...</h2>
-                    <p className="mt-2 text-sm max-w-xs text-gray-300">
-                        If content doesn't appear, the site (e.g., ChatGPT) may block embedding.
-                    </p>
-                    <a 
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-4 px-4 py-2 bg-blue-600 rounded-lg font-semibold pointer-events-auto"
-                    >
-                        Open in New Tab
-                    </a>
+            
+            {/* Persistent warning bar for blocked sites */}
+            {showWarning && (
+                <div className="bg-blue-600 text-white text-xs px-4 py-2 flex justify-between items-center z-20">
+                    <span>If content doesn't load, click the icon top-right to open in browser.</span>
+                    <button onClick={() => setShowWarning(false)} className="ml-2 p-1 hover:bg-white/20 rounded">
+                        <XIcon />
+                    </button>
+                </div>
+            )}
+
+            <main className="flex-grow flex min-h-0 relative bg-white">
+                {/* Background hint in case iframe is transparent or slow */}
+                <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                    Loading {title}...
                 </div>
                 <iframe
                     src={url}
-                    className="w-full flex-grow border-0 relative z-10 bg-transparent"
+                    className="w-full flex-grow border-0 relative z-10 bg-white"
                     title={title}
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
                 />
