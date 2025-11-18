@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabaseClient';
 // Add DriveFile type to imports
 import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile, WeblyApp } from '../types';
@@ -272,30 +273,6 @@ export const database = {
         return data.stats || fallbackStats;
     },
     
-    // FIX: Implement getSavedWebAppStates and saveWebAppState
-    getSavedWebAppStates: async (): Promise<DriveFile[]> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'drive', action: 'get-saved-states' }
-        });
-        if (error || data?.error) {
-            const errorMessage = error?.message || data?.error;
-            console.error('Error fetching saved sessions:', errorMessage);
-            throw new Error(errorMessage);
-        }
-        return data.files || [];
-    },
-
-    saveWebAppState: async (title: string, url: string, size?: { width: number, height: number }, position?: { x: number, y: number }): Promise<void> => {
-        const { data, error } = await supabase.functions.invoke('app-service', {
-            body: { resource: 'drive', action: 'save-web-app-state', payload: { title, url, size, position } }
-        });
-        if (error || data?.error) {
-            const errorMessage = error?.message || data?.error;
-            console.error('Error saving web app state:', errorMessage);
-            throw new Error(errorMessage);
-        }
-    },
-
     // --- Google Drive Service ---
     getDriveOAuthConfig: async (): Promise<{ clientId: string; redirectUri: string } | null> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
@@ -367,6 +344,30 @@ export const database = {
         }
 
         return { files: data.files || [] };
+    },
+
+    getSavedWebAppStates: async (): Promise<DriveFile[]> => {
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'drive', action: 'get-saved-states' }
+        });
+
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
+            console.error('Error fetching saved states:', errorMessage, { error, data });
+            throw new Error(errorMessage);
+        }
+        if (data?.error) {
+            console.error('Error fetching saved states:', data.error, { error, data });
+            throw new Error(data.error);
+        }
+
+        return data.files || [];
     },
 
     createDriveFile: async (name: string): Promise<{ file?: DriveFile, error?: string }> => {

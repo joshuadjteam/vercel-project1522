@@ -1,6 +1,6 @@
+
 import React from 'react';
 import { Page } from '../types';
-import { database } from '../services/database';
 
 // Icons
 const ConsoleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
@@ -24,30 +24,6 @@ const FullScreenAppHeader: React.FC<FullScreenAppHeaderProps> = ({ navigate, pag
         </button>
     );
 
-    const handleSaveToDrive = async () => {
-        if (!pageParams || !pageParams.title || !pageParams.url) return;
-        const fileName = `Browse-App(${pageParams.title}).brwselynix`;
-        
-        const content = JSON.stringify({
-            url: pageParams.url,
-            title: pageParams.title,
-        }, null, 2);
-
-        alert('Saving to Google Drive...');
-        const { file, error } = await database.createDriveFile(fileName);
-        if (file) {
-            const { success, error: updateError } = await database.updateDriveFile(file.id, { content });
-            if (success) {
-                alert('Shortcut saved to your Google Drive!');
-            } else {
-                alert(`Failed to save content: ${updateError}`);
-                await database.deleteDriveFile(file.id);
-            }
-        } else {
-            alert(`Failed to create file on Drive: ${error}`);
-        }
-    };
-
     return (
         <header className="w-full bg-[#0F2830] text-white shadow-md z-10 flex-shrink-0">
             <div className="container mx-auto px-4 py-2 flex justify-between items-center">
@@ -61,9 +37,6 @@ const FullScreenAppHeader: React.FC<FullScreenAppHeaderProps> = ({ navigate, pag
                 </div>
 
                 <div className="flex items-center space-x-2">
-                     {pageParams?.isWebApp && (
-                        <button onClick={handleSaveToDrive} className="px-3 py-2 text-sm font-medium rounded-md bg-green-600 hover:bg-green-700 text-white">Save to Drive</button>
-                    )}
                     <NavButton onClick={() => navigate('profile')} text="Settings" icon={<SettingsIcon />} />
                     <NavButton onClick={() => navigate('home')} text="Console" icon={<ConsoleIcon />} />
                 </div>

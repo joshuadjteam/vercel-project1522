@@ -1,3 +1,4 @@
+
 import type { ReactNode } from 'react';
 
 export enum UserRole {
@@ -118,7 +119,6 @@ export type Page =
     | 'app-console-switch'
     | 'app-webly-store'
     | 'app-webview'
-    | 'app-history'
     | 'mobi-app-webview'
     | 'auth-callback';
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
@@ -34,7 +35,6 @@ import ConsoleSwitchApp from './pages/apps/ConsoleSwitchApp';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import WeblyStoreApp from './pages/apps/WeblyStoreApp';
 import WebAppViewer from './pages/apps/WebAppViewer';
-import HistoryApp from './pages/apps/HistoryApp';
 
 // Mobile App Imports
 import MobiProfilePage from './pages/mobile-apps/MobiProfilePage';
@@ -53,7 +53,6 @@ import MobiLauncher from './pages/MobiLauncher';
 import MobiConsoleSwitchApp from './pages/mobile-apps/MobiConsoleSwitchApp';
 import MobiWeblyStoreApp from './pages/mobile-apps/MobiWeblyStoreApp';
 import MobiWebAppViewer from './pages/mobile-apps/MobiWebAppViewer';
-import MobiHistoryApp from './pages/mobile-apps/MobiHistoryApp';
 
 
 // Call-related imports
@@ -79,7 +78,6 @@ const CalendarIcon = (props: { className?: string }) => <svg xmlns="http://www.w
 const ConsoleSwitchIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
 const ProfileIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const WeblyStoreIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1012 10.125A2.625 2.625 0 0012 4.875z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.125v10.125" /><path strokeLinecap="round" strokeLinejoin="round" d="M18.375 10.125c.621 0 1.125.504 1.125 1.125v8.25" /><path strokeLinecap="round" strokeLinejoin="round" d="M5.625 10.125c-.621 0-1.125.504-1.125 1.125v8.25" /></svg>;
-const HistoryIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
 
 export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: { width: number, height: number } }> = {
@@ -97,7 +95,6 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
     'app-console-switch': { component: ConsoleSwitchApp, defaultSize: { width: 900, height: 500 } },
     'app-webly-store': { component: WeblyStoreApp },
     'app-webview': { component: WebAppViewer, defaultSize: { width: 1024, height: 768 } },
-    'app-history': { component: HistoryApp },
 };
 
 // All items that can be a "page", including full-screen apps and standalone pages
@@ -122,7 +119,6 @@ export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
     'app-console-switch': ConsoleSwitchApp,
     'app-webly-store': WeblyStoreApp,
     'app-webview': WebAppViewer,
-    'app-history': HistoryApp,
 };
 
 // All items that can be a "page" on mobile
@@ -144,7 +140,6 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-calendar': MobiCalendarApp,
     'app-console-switch': MobiConsoleSwitchApp,
     'app-webly-store': MobiWeblyStoreApp,
-    'app-history': MobiHistoryApp,
     'mobi-app-webview': MobiWebAppViewer,
 };
 
@@ -163,7 +158,6 @@ export const APPS_LIST: AppLaunchable[] = [
   { id: 'app-calendar', label: 'Calendar', icon: <CalendarIcon />, page: 'app-calendar' },
   { id: 'app-console-switch', label: 'Consoles', icon: <ConsoleSwitchIcon />, page: 'app-console-switch' },
   { id: 'app-webly-store', label: 'Webly Store', icon: <WeblyStoreIcon />, page: 'app-webly-store' },
-  { id: 'app-history', label: 'History', icon: <HistoryIcon />, page: 'app-history' },
   { id: 'profile', label: 'Profile', icon: <ProfileIcon />, page: 'profile', isHidden: true },
 ];
 

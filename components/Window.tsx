@@ -1,6 +1,6 @@
+
 import React, { useRef, useCallback } from 'react';
 import { WindowInstance } from '../App';
-import { database } from '../services/database';
 
 interface WindowComponentProps {
     win: WindowInstance;
@@ -10,7 +10,6 @@ interface WindowComponentProps {
     onPositionChange: (id: string, newPosition: { x: number, y: number }) => void;
     onSizeChange: (id: string, newSize: { width: number, height: number }) => void;
     isActive: boolean;
-    // FIX: Add children prop to allow content to be passed into the window.
     children: React.ReactNode;
 }
 
@@ -80,22 +79,6 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
 
     }, [win.id, win.size, onFocus, onSizeChange]);
 
-    const handleSaveToDrive = async () => {
-        if (!win.props?.url || !win.title) {
-            alert("This web app session cannot be saved.");
-            return;
-        }
-
-        alert('Saving session to Google Drive in /lynix/ folder...');
-        try {
-            await database.saveWebAppState(win.title, win.props.url, win.size, win.position);
-            alert('Session saved successfully to your Google Drive!');
-        } catch (e: any) {
-            alert(`Failed to save session: ${e.message}`);
-            console.error("Failed to save session:", e);
-        }
-    };
-
     return (
         <div
             ref={windowRef}
@@ -117,9 +100,6 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
                 className="flex items-center justify-between px-3 py-1 bg-gray-200 dark:bg-slate-800 cursor-grab active:cursor-grabbing flex-shrink-0"
             >
                  <div className="flex items-center flex-grow overflow-hidden">
-                    {win.props?.isWebApp && (
-                        <button onClick={handleSaveToDrive} className="px-2 py-1 mr-2 text-xs rounded bg-green-600 hover:bg-green-700 text-white flex-shrink-0">Save to Drive</button>
-                    )}
                     <span className="font-bold text-sm text-light-text dark:text-dark-text truncate">{win.title}</span>
                 </div>
                 <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
