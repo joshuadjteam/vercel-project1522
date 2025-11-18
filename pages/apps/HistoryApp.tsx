@@ -25,7 +25,7 @@ const HistoryApp: React.FC<HistoryAppProps> = ({ navigate }) => {
         setError('');
         try {
             const files = await database.getSavedWebAppStates();
-            const sessionPromises = files.map(async (file) => {
+            const sessionPromises = files.map(async (file): Promise<SavedSession | null> => {
                 const { file: details, error } = await database.getDriveFileDetails(file.id);
                 if (error || !details) return null;
                 try {
@@ -42,6 +42,7 @@ const HistoryApp: React.FC<HistoryAppProps> = ({ navigate }) => {
                     return null;
                 }
             });
+            // FIX: The type predicate `s is SavedSession` was causing an error because TypeScript couldn't guarantee that the inferred type from the map was assignable to `SavedSession`. Explicitly typing the map's return value fixes this.
             const loadedSessions = (await Promise.all(sessionPromises)).filter((s): s is SavedSession => s !== null);
             setSessions(loadedSessions);
         } catch (e: any) {
