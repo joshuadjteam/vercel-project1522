@@ -335,7 +335,7 @@ const App: React.FC = () => {
                 return (
                     <>
                         <MobileTopBar navigate={navigate} />
-                        <main className="flex-grow overflow-hidden flex min-h-0">
+                        <main className="flex-grow overflow-hidden flex flex-col min-h-0">
                             <MobileComponent navigate={navigate} appsList={dynamicAppsList} {...pageParams} />
                         </main>
                         <MobileNavBar navigate={navigate} />
@@ -365,7 +365,7 @@ const App: React.FC = () => {
                 return (
                     <div className="flex-grow flex flex-col overflow-hidden">
                         <FullScreenAppHeader navigate={navigate} pageParams={pageParams} />
-                        <main className="flex-grow flex min-h-0">
+                        <main className="flex-grow flex flex-col min-h-0">
                             <PageToRender navigate={navigate} {...pageParams} />
                         </main>
                     </div>
