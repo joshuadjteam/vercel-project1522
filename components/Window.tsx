@@ -127,7 +127,7 @@ const WindowComponent: React.FC<WindowComponentProps> = ({ win, onClose, onFocus
                     <button onClick={() => onClose(win.id)} className="w-5 h-5 rounded-full bg-red-500 hover:bg-red-600" />
                 </div>
             </div>
-            <div className="flex-grow w-full h-full overflow-auto relative">
+            <div className="flex-grow w-full h-full overflow-hidden relative min-h-0">
                 {children}
             </div>
             <div 

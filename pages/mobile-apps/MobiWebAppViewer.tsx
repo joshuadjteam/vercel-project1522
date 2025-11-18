@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Page } from '../../types';
-import { database } from '../../services/database';
 
 // Icons
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m7 7H3" /></svg>;
-const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>;
+const OpenExternalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>;
 
 
 interface MobiWebAppViewerProps {
@@ -14,8 +13,6 @@ interface MobiWebAppViewerProps {
 }
 
 const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, navigate }) => {
-    const [status, setStatus] = useState('');
-
     if (!url) {
         return (
             <div className="w-full h-full flex flex-col bg-gray-100 dark:bg-gray-800 text-light-text dark:text-dark-text">
@@ -30,38 +27,24 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, navigat
         );
     }
     
-    const handleSaveSession = async () => {
-        setStatus('Saving...');
-        try {
-            await database.saveWebAppState(title, url);
-            setStatus('Saved!');
-        } catch (e: any) {
-            setStatus('Error!');
-            console.error("Failed to save session:", e);
-        } finally {
-            setTimeout(() => setStatus(''), 2000);
-        }
-    };
-
     return (
         <div className="w-full h-full flex flex-col bg-gray-100 dark:bg-gray-800">
             <header className="flex-shrink-0 bg-white dark:bg-gray-900 p-2 flex items-center justify-between shadow-md z-10">
                 <button onClick={() => navigate('home')} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
                     <BackIcon />
                 </button>
-                <div className="flex flex-col items-center">
-                    <h1 className="text-lg font-bold truncate max-w-[180px] text-light-text dark:text-dark-text">{title}</h1>
-                    {status && <span className="text-xs text-gray-500">{status}</span>}
-                </div>
-                <button 
-                    onClick={handleSaveSession} 
+                <h1 className="text-lg font-bold truncate max-w-[180px] text-light-text dark:text-dark-text">{title}</h1>
+                <a 
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="p-2 rounded-full text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                    aria-label="Save Session"
+                    aria-label="Open in new tab"
                 >
-                    <SaveIcon />
-                </button>
+                    <OpenExternalIcon />
+                </a>
             </header>
-            <main className="flex-grow">
+            <main className="flex-grow flex min-h-0">
                 <iframe
                     src={url}
                     className="w-full h-full border-0"
