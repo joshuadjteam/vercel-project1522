@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Page } from '../../types';
 
 // Icons
@@ -16,11 +16,18 @@ interface MobiWebAppViewerProps {
 const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, navigate }) => {
     const [showWarning, setShowWarning] = useState(true);
 
+    // Normalize URL to ensure it has a protocol
+    const safeUrl = useMemo(() => {
+        if (!url) return '';
+        if (url.startsWith('internal://') || url.startsWith('http://') || url.startsWith('https://')) return url;
+        return `https://${url}`;
+    }, [url]);
+
     const handleOpenExternal = () => {
-        window.open(url, title, 'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=400,height=800');
+        window.open(safeUrl, title, 'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=400,height=800');
     };
 
-    if (!url) {
+    if (!safeUrl) {
         return (
             <div className="w-full flex-grow flex flex-col bg-gray-100 dark:bg-gray-800 text-light-text dark:text-dark-text">
                 <header className="flex-shrink-0 bg-white dark:bg-gray-900 p-3 flex items-center shadow">
@@ -71,13 +78,13 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, navigat
                 </div>
 
                 <iframe
-                    src={url}
+                    src={safeUrl}
                     className="w-full flex-grow border-0 relative z-10 bg-white"
                     title={title}
                     scrolling="yes"
                     allowFullScreen
                     // Allow full permissions to simulate a native tab behavior as much as possible
-                    allow="camera; microphone; geolocation; payment; fullscreen; clipboard-read; clipboard-write"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; camera; microphone; geolocation; payment; fullscreen; clipboard-read; clipboard-write"
                     referrerPolicy="no-referrer"
                     style={{ height: '100%', width: '100%' }}
                     // No sandbox attribute ensures it runs as a normal frame

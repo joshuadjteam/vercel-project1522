@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 interface WebAppViewerProps {
     url: string;
@@ -11,11 +11,20 @@ const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" 
 const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title }) => {
     const [showWarning, setShowWarning] = useState(true);
 
+    // Normalize URL to ensure it has a protocol
+    const safeUrl = useMemo(() => {
+        if (!url) return '';
+        // Check if it's an internal app URI or already has a protocol
+        if (url.startsWith('internal://') || url.startsWith('http://') || url.startsWith('https://')) return url;
+        // Default to https for web apps
+        return `https://${url}`;
+    }, [url]);
+
     const handleLaunch = () => {
-        window.open(url, title, 'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1200,height=800');
+        window.open(safeUrl, title, 'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1200,height=800');
     };
 
-    if (!url) {
+    if (!safeUrl) {
         return (
             <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-light-text dark:text-dark-text">
                 <p>No URL was provided for this web app.</p>
@@ -47,7 +56,7 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title }) => {
                 </div>
                 
                 <iframe
-                    src={url}
+                    src={safeUrl}
                     className="w-full flex-grow border-0 relative z-10 bg-white"
                     title={title}
                     // Allow full permissions to simulate a native tab behavior as much as possible

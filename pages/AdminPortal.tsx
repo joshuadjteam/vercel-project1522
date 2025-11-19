@@ -34,7 +34,8 @@ const WeblyAppModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (d
     }, [appToEdit, isOpen]);
 
     const handleSave = () => {
-        onSave({ id: appToEdit?.id, name, description, url, icon_svg });
+        // FORCE load_in_console to true for all manual entries to ensure they open in the viewer and not a new tab
+        onSave({ id: appToEdit?.id, name, description, url, icon_svg, load_in_console: true });
     };
 
     if (!isOpen) return null;
