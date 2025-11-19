@@ -76,7 +76,8 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, navigat
                     title={title}
                     scrolling="yes"
                     allowFullScreen
-                    allow="camera; microphone; geolocation; payment; fullscreen"
+                    // Allow full permissions to simulate a native tab behavior as much as possible
+                    allow="camera; microphone; geolocation; payment; fullscreen; clipboard-read; clipboard-write"
                     referrerPolicy="no-referrer"
                     style={{ height: '100%', width: '100%' }}
                     // No sandbox attribute ensures it runs as a normal frame

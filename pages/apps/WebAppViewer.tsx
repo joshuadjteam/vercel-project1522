@@ -50,7 +50,8 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title }) => {
                     src={url}
                     className="w-full flex-grow border-0 relative z-10 bg-white"
                     title={title}
-                    allow="camera; microphone; geolocation; payment; fullscreen"
+                    // Allow full permissions to simulate a native tab behavior as much as possible
+                    allow="camera; microphone; geolocation; payment; fullscreen; clipboard-read; clipboard-write"
                     referrerPolicy="no-referrer"
                     // No sandbox attribute ensures it runs as a normal frame (subject to CORS/X-Frame-Options)
                 />
