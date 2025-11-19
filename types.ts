@@ -4,7 +4,13 @@ import type { ReactNode } from 'react';
 export enum UserRole {
     Admin = 'Admin',
     Standard = 'Standard',
-    Trial = 'Trial',
+    NoChat = 'no-chat',
+    NoStore = 'no-store',
+    NoMail = 'no-mail',
+    NoTelephony = 'no-telephony',
+    NoAI = 'no-ai',
+    Overdue = 'overdue',
+    Trial = 'trial',
     Guest = 'Guest',
 }
 

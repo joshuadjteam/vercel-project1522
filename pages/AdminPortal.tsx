@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole, WeblyApp } from '../types';
 import { database } from '../services/database';
@@ -146,15 +147,56 @@ const UserManagementView: React.FC = () => {
 };
 
 const RolesManagementView: React.FC = () => (
-    <div className="text-center p-10">
-        <h2 className="text-2xl font-semibold">Roles Management</h2>
-        <p className="text-gray-500 mt-2">This feature is not yet implemented.</p>
+    <div className="h-full overflow-y-auto p-4">
+        <h2 className="text-2xl font-semibold mb-4">Role Definitions</h2>
+        <div className="space-y-4">
+            <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg">Admin</h3>
+                <p className="text-gray-600 dark:text-gray-400">Default admin account with full access to everything, including this portal.</p>
+            </div>
+            <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg">Standard</h3>
+                <p className="text-gray-600 dark:text-gray-400">Default user account with standard access to apps.</p>
+            </div>
+            <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg">no-chat</h3>
+                <p className="text-gray-600 dark:text-gray-400">User cannot access the Chat application.</p>
+            </div>
+            <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg">no-store</h3>
+                <p className="text-gray-600 dark:text-gray-400">User has preinstalled internal apps but no access to the Webly Store.</p>
+            </div>
+            <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg">no-mail</h3>
+                <p className="text-gray-600 dark:text-gray-400">User cannot access the LocalMail application.</p>
+            </div>
+            <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg">no-telephony</h3>
+                <p className="text-gray-600 dark:text-gray-400">User cannot access the Phone application.</p>
+            </div>
+            <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg">no-ai</h3>
+                <p className="text-gray-600 dark:text-gray-400">User has no access to AI features.</p>
+            </div>
+            <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg text-red-400">overdue</h3>
+                <p className="text-gray-600 dark:text-gray-400">Restricted account for users who haven't paid. Access limited to Profile.</p>
+            </div>
+             <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg">trial</h3>
+                <p className="text-gray-600 dark:text-gray-400">An account that expires (deletes) in a month.</p>
+            </div>
+             <div className="bg-gray-100 dark:bg-white/5 p-4 rounded-lg">
+                <h3 className="font-bold text-lg">Guest</h3>
+                <p className="text-gray-600 dark:text-gray-400">A sandbox account that resets every time it loads.</p>
+            </div>
+        </div>
     </div>
 );
 
 const DatabaseResetView: React.FC = () => {
     const [status, setStatus] = useState('');
-    const handleReset = async (target: 'chat' | 'mail') => {
+    const handleReset = async (target: 'chat' | 'mail' | 'contacts') => {
         if (window.confirm(`ARE YOU SURE you want to delete all ${target} data? This is irreversible.`)) {
             setStatus(`Resetting ${target}...`);
             const { success, message } = await database.resetDatabaseTable(target);
@@ -178,6 +220,13 @@ const DatabaseResetView: React.FC = () => {
                     <p className="text-sm text-red-200">Deletes all messages from the `mails` table.</p>
                 </div>
                 <button onClick={() => handleReset('mail')} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Reset Mail</button>
+            </div>
+             <div className="bg-red-900/50 border border-red-700 p-4 rounded-lg flex justify-between items-center">
+                <div>
+                    <h3 className="font-bold">Reset All Contacts</h3>
+                    <p className="text-sm text-red-200">Deletes all contacts from the `contacts` table.</p>
+                </div>
+                <button onClick={() => handleReset('contacts')} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Reset Contacts</button>
             </div>
         </div>
         {status && <p className="mt-4 text-center text-yellow-300">{status}</p>}

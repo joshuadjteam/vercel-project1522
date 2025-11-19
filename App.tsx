@@ -167,33 +167,68 @@ const App: React.FC = () => {
 
     const dynamicAppsList = useMemo(() => {
         const coreApps = APPS_LIST;
-        if (!user?.installed_webly_apps || allWeblyApps.length === 0) {
-            return coreApps;
+        // Default empty if not loaded
+        let availableApps: AppLaunchable[] = coreApps;
+
+        if (user?.installed_webly_apps && allWeblyApps.length > 0) {
+             const installedApps: AppLaunchable[] = user.installed_webly_apps
+                .map((appId): AppLaunchable | null => {
+                    const appData = allWeblyApps.find(app => app.id === appId);
+                    if (!appData) return null;
+
+                    const isNative = !!APPS_MAP[appData.id];
+                    return {
+                        id: appData.id,
+                        label: appData.name,
+                        icon: <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: appData.icon_svg }} />,
+                        page: isNative ? (appData.id as Page) : (isMobileDevice ? 'mobi-app-webview' : 'app-webview'),
+                        isWebApp: !isNative,
+                        url: appData.url,
+                        load_in_console: appData.load_in_console,
+                        params: isNative ? {} : { url: appData.url, title: appData.name, isWebApp: true } 
+                    };
+                })
+                .filter((app): app is AppLaunchable => app !== null);
+            
+            availableApps = [...coreApps, ...installedApps];
         }
 
-        const installedApps: AppLaunchable[] = user.installed_webly_apps
-            .map((appId): AppLaunchable | null => {
-                const appData = allWeblyApps.find(app => app.id === appId);
-                if (!appData) return null;
+        // --- Apply Role Restrictions ---
+        if (user) {
+            if (user.role === UserRole.Overdue) {
+                // Overdue users can only access Profile (to pay/manage account) and Contact
+                return availableApps.filter(app => ['profile', 'contact', 'app-console-switch'].includes(app.id));
+            }
+            
+            if (user.role === UserRole.NoChat) {
+                availableApps = availableApps.filter(app => app.id !== 'app-chat');
+            }
 
-                // Determine if it's a native internal app or a web app
-                const isNative = !!APPS_MAP[appData.id];
+            if (user.role === UserRole.NoStore) {
+                // No Store: Remove store app AND any installed web-apps (keep only internal system apps)
+                availableApps = availableApps.filter(app => {
+                    // Hide store app
+                    if (app.id === 'app-webly-store') return false;
+                    // Keep profile
+                    if (app.id === 'profile') return true;
+                    // If it is a web app (installed from store), hide it to prevent workaround
+                    if (app.isWebApp) return false;
+                    // Keep internal system apps
+                    return true;
+                });
+            }
 
-                return {
-                    id: appData.id,
-                    label: appData.name,
-                    icon: <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: appData.icon_svg }} />,
-                    page: isNative ? (appData.id as Page) : (isMobileDevice ? 'mobi-app-webview' : 'app-webview'),
-                    isWebApp: !isNative,
-                    url: appData.url,
-                    load_in_console: appData.load_in_console,
-                    params: isNative ? {} : { url: appData.url, title: appData.name, isWebApp: true } 
-                };
-            })
-            .filter((app): app is AppLaunchable => app !== null);
-        
-        return [...coreApps, ...installedApps];
-    }, [user?.installed_webly_apps, allWeblyApps, isMobileDevice]);
+            if (user.role === UserRole.NoMail) {
+                availableApps = availableApps.filter(app => app.id !== 'app-localmail');
+            }
+
+            if (user.role === UserRole.NoTelephony) {
+                availableApps = availableApps.filter(app => app.id !== 'app-phone');
+            }
+        }
+
+        return availableApps;
+    }, [user, allWeblyApps, isMobileDevice]);
     
     useEffect(() => {
         const path = window.location.pathname;

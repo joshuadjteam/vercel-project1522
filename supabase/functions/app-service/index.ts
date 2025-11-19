@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -273,6 +274,8 @@ serve(async (req)=>{
                 ({ error } = await supabaseAdmin.from('chat_messages').delete().neq('id', 0));
             } else if (target === 'mail') {
                 ({ error } = await supabaseAdmin.from('mails').delete().neq('id', 0));
+            } else if (target === 'contacts') {
+                ({ error } = await supabaseAdmin.from('contacts').delete().neq('id', 0));
             } else {
                 throw { status: 400, message: 'Invalid reset target.' };
             }

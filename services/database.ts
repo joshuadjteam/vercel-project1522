@@ -656,7 +656,7 @@ export const database = {
         }
         return data.installed_webly_apps;
     },
-    resetDatabaseTable: async (target: 'chat' | 'mail'): Promise<{ success: boolean; message: string }> => {
+    resetDatabaseTable: async (target: 'chat' | 'mail' | 'contacts'): Promise<{ success: boolean; message: string }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'database_reset', payload: { target } }
         });

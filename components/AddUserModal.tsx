@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { database } from '../services/database';
@@ -113,8 +114,15 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSaveSucc
                         <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Role (Permissions)</label>
                         <select value={role} onChange={e => setRole(e.target.value as UserRole)} className="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value={UserRole.Standard}>Standard</option>
-                            <option value={UserRole.Trial}>Trial</option>
                             <option value={UserRole.Admin}>Admin</option>
+                            <option value={UserRole.NoChat}>No Chat</option>
+                            <option value={UserRole.NoStore}>No Store</option>
+                            <option value={UserRole.NoMail}>No Mail</option>
+                            <option value={UserRole.NoTelephony}>No Telephony</option>
+                            <option value={UserRole.NoAI}>No AI</option>
+                            <option value={UserRole.Overdue}>Overdue</option>
+                            <option value={UserRole.Trial}>Trial</option>
+                            <option value={UserRole.Guest}>Guest</option>
                         </select>
                     </div>
                     
