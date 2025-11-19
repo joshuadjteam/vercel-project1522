@@ -1,7 +1,7 @@
+
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
-import { RealtimeChannel } from '@supabase/supabase-js';
 // FIX: Import database service to check if user exists before call.
 import { database } from '../services/database';
 
@@ -51,7 +51,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [callDuration, setCallDuration] = useState(0);
 
     const pc = useRef<RTCPeerConnection | null>(null);
-    const channel = useRef<RealtimeChannel | null>(null);
+    const channel = useRef<any | null>(null);
     const offerForIncomingCall = useRef<RTCSessionDescriptionInit | null>(null);
     const callTimeoutRef = useRef<number | null>(null);
     const callDurationIntervalRef = useRef<number | null>(null);

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User } from '../types';
 import { database } from '../services/database';
@@ -29,7 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         // onAuthStateChange is the single source of truth for the user's session state.
         // It fires on initial load and whenever the auth state changes.
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const { data: authListener } = (supabase.auth as any).onAuthStateChange(async (event: any, session: any) => {
             try {
                 if (session?.user) {
                     // User is authenticated, now get their application profile.
@@ -39,7 +40,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         // This is a critical error state: user exists in Supabase auth but not in our public.users table
                         // or the profile fetch failed. To prevent a broken UI, sign them out.
                         console.error('User signed in but profile fetch failed. Signing out.', error);
-                        await supabase.auth.signOut();
+                        await (supabase.auth as any).signOut();
                         updateUserState(null);
                     } else {
                         updateUserState(profile);
@@ -51,7 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             } catch (e) {
                 console.error("Error in onAuthStateChange callback:", e);
                 // In case of any unexpected error, sign out and reset state.
-                await supabase.auth.signOut();
+                await (supabase.auth as any).signOut();
                 updateUserState(null);
             } finally {
                 // This will ALWAYS run, regardless of success or error, preventing a stuck loading screen.
@@ -68,7 +69,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const login = async (email: string, pass: string): Promise<{ error: string | null }> => {
         setIsLoading(true);
         // We only initiate the sign-in. The onAuthStateChange listener will handle the result.
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error } = await (supabase.auth as any).signInWithPassword({
             email,
             password: pass,
         });
@@ -93,7 +94,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const logout = async () => {
         // onAuthStateChange will handle clearing the user state when sign-out is complete.
-        await supabase.auth.signOut();
+        await (supabase.auth as any).signOut();
     };
 
     const updateUserProfile = (updates: Partial<User>) => {

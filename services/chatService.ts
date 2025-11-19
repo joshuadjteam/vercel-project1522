@@ -1,8 +1,8 @@
+
 import { supabase } from '../supabaseClient';
 import { ChatMessage, User } from '../types';
-import { RealtimeChannel } from '@supabase/supabase-js';
 
-const activeChannels = new Map<string, RealtimeChannel>();
+const activeChannels = new Map<string, any>();
 
 // Helper to map DB user to app User, assuming snake_case from DB
 const mapDbUserToUser = (dbUser: any): User => {
