@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Page } from '../../types';
@@ -14,6 +15,7 @@ const TabsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-
 const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
 const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
 const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>;
+const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 
 interface MobiLynixBrowserAppProps {
     navigate: (page: Page, params?: any) => void;
@@ -22,15 +24,29 @@ interface MobiLynixBrowserAppProps {
 
 // List of domains that are redirected to the special iframe
 const REDIRECT_ENGINES = [
-    'google.com', 'www.google.com', 'bing.com', 'www.bing.com', 
-    'yahoo.com', 'search.yahoo.com', 'duckduckgo.com', 
-    'baidu.com', 'ask.com', 'aol.com', 'yandex.com'
+    'google.com', 
+    'www.google.com', 
+    'bing.com', 
+    'www.bing.com', 
+    'yahoo.com', 
+    'search.yahoo.com',
+    'duckduckgo.com', 
+    'baidu.com',
+    'ask.com',
+    'aol.com',
+    'yandex.com'
 ];
 
-// List of domains that are known to block iframe embedding.
+// List of domains that are known to block iframe/object embedding.
 const BLOCKED_DOMAINS = [
-    'x.com', 'twitter.com', 'facebook.com', 'instagram.com', 
-    'reddit.com', 'discord.com', 'linkedin.com', 'whatsapp.com', 
+    'x.com', 
+    'twitter.com', 
+    'facebook.com', 
+    'instagram.com', 
+    'reddit.com', 
+    'discord.com', 
+    'linkedin.com', 
+    'whatsapp.com', 
     'netflix.com'
 ];
 
@@ -41,12 +57,15 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     const [history, setHistory] = useState<string[]>(initialUrl ? [initialUrl] : ['']);
     const [historyIndex, setHistoryIndex] = useState(0);
     const [showInfo, setShowInfo] = useState(false);
+    const [showInfoModal, setShowInfoModal] = useState(false);
 
     // --- Spoofed Info ---
     const spoofedDevice = "Unknown Linux Device";
     const spoofedOS = "DozianOS for Lynix v12.0";
     const spoofedMachineName = `LynixWeb-Machine-${user?.id || 'Guest'}`;
     const spoofedClientID = "Firefox/115.0";
+    const spoofedUserAgent = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
+
 
     const handleNavigate = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -56,7 +75,9 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         const lowerUrl = finalUrl.toLowerCase();
         
         // 1. Check for Redirect Engines
-        if (REDIRECT_ENGINES.some(engine => lowerUrl.includes(engine))) {
+        const shouldRedirect = REDIRECT_ENGINES.some(engine => lowerUrl.includes(engine));
+
+        if (shouldRedirect) {
             finalUrl = 'https://lynixity.x10.bz/iframe.html';
         } else {
             // 2. Normal Navigation Logic
@@ -114,6 +135,10 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
     };
+    
+    const openPopup = (url: string) => {
+        window.open(url, '_blank', 'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1200,height=800');
+    };
 
     const isBlocked = BLOCKED_DOMAINS.some(d => url.includes(d));
 
@@ -148,20 +173,10 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                     )}
                 </form>
 
-                <button onClick={() => setShowInfo(!showInfo)} className={`p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 ${showInfo ? 'text-blue-500' : 'text-gray-600 dark:text-gray-300'}`}>
+                <button onClick={() => setShowInfoModal(true)} className={`p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 ${showInfoModal ? 'text-blue-500' : 'text-gray-600 dark:text-gray-300'}`}>
                     <MoreVertical />
                 </button>
             </div>
-
-            {/* Info Panel (Spoof Data) */}
-            {showInfo && (
-                <div className="bg-blue-50 dark:bg-[#242424] border-b border-blue-100 dark:border-gray-700 p-3 text-xs font-mono space-y-1 animate-fade-in shadow-inner">
-                    <div className="flex justify-between"><span className="font-bold text-gray-500">ID:</span> <span>{spoofedMachineName}</span></div>
-                    <div className="flex justify-between"><span className="font-bold text-gray-500">OS:</span> <span>{spoofedOS}</span></div>
-                    <div className="flex justify-between"><span className="font-bold text-gray-500">HW:</span> <span>{spoofedDevice}</span></div>
-                    <div className="flex justify-between"><span className="font-bold text-gray-500">CL:</span> <span>{spoofedClientID}</span></div>
-                </div>
-            )}
 
             {/* Main Content */}
             <div className="flex-grow relative overflow-hidden w-full h-full bg-white dark:bg-[#1a1a1a]">
@@ -172,7 +187,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                             <h2 className="text-xl font-bold mt-4 mb-2">Secure Content</h2>
                             <p className="text-sm text-gray-500 mb-6">This site requires a secure popup window to display correctly.</p>
                             <button 
-                                onClick={() => window.open(url, '_blank')}
+                                onClick={() => openPopup(url)}
                                 className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 shadow-md active:scale-95 transition-transform"
                             >
                                 <span>Open in New Window</span>
@@ -180,13 +195,15 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                             </button>
                         </div>
                     ) : (
-                        <iframe
-                            src={url}
+                        <object
+                            data={url}
+                            type="text/html"
                             className="w-full h-full border-0"
-                            title="Browser Content"
-                            sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"
-                            allow="camera; microphone; geolocation; fullscreen"
-                        />
+                        >
+                            <div className="w-full h-full flex items-center justify-center text-gray-500">
+                                <p>Content failed to load. Please try opening in a secure session.</p>
+                            </div>
+                        </object>
                     )
                 ) : (
                     // Home / New Tab Screen
@@ -251,6 +268,47 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                     1
                 </div>
             </div>
+
+             {/* Spoofed Status Bar (Shown on Info Click) */}
+             {showInfo && (
+                <div className="bg-blue-50 dark:bg-[#242424] border-t border-blue-100 dark:border-gray-700 p-3 text-xs font-mono space-y-1 animate-fade-in shadow-inner absolute bottom-12 left-0 right-0 z-30">
+                    <div className="flex justify-between"><span className="font-bold text-gray-500">ID:</span> <span>{spoofedMachineName}</span></div>
+                    <div className="flex justify-between"><span className="font-bold text-gray-500">OS:</span> <span>{spoofedOS}</span></div>
+                    <div className="flex justify-between"><span className="font-bold text-gray-500">HW:</span> <span>{spoofedDevice}</span></div>
+                    <div className="flex justify-between"><span className="font-bold text-gray-500">CL:</span> <span>{spoofedClientID}</span></div>
+                </div>
+            )}
+
+             {/* System Info Modal */}
+             {showInfoModal && (
+                <div className="absolute top-24 right-4 left-4 bg-white dark:bg-[#292a2d] rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 z-50 p-4 animate-fade-in">
+                    <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-600 pb-2">
+                        <h3 className="font-bold text-lg">About Browser</h3>
+                        <button onClick={() => setShowInfoModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded"><XIcon /></button>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                         <div className="bg-gray-50 dark:bg-black/20 p-2 rounded">
+                             <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Machine ID</label>
+                             <p className="font-mono text-xs truncate">{spoofedMachineName}</p>
+                         </div>
+                         <div>
+                             <label className="block text-xs font-semibold text-gray-500 uppercase">Operating System</label>
+                             <p className="text-gray-700 dark:text-gray-300">{spoofedOS}</p>
+                         </div>
+                         <div>
+                             <label className="block text-xs font-semibold text-gray-500 uppercase">Hardware</label>
+                             <p className="text-gray-700 dark:text-gray-300">{spoofedDevice}</p>
+                         </div>
+                         <div>
+                             <label className="block text-xs font-semibold text-gray-500 uppercase">User Agent</label>
+                             <p className="text-xs text-gray-500 dark:text-gray-400 italic break-words">{spoofedUserAgent}</p>
+                         </div>
+                    </div>
+                    <div className="mt-4 pt-2 border-t border-gray-200 dark:border-gray-600 text-center">
+                        <p className="text-xs text-gray-400">Lynix Browser v1.0.4 (Official Build) (64-bit)</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

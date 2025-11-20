@@ -41,7 +41,7 @@ const REDIRECT_ENGINES = [
     'yandex.com'
 ];
 
-// List of domains that are known to block iframe embedding.
+// List of domains that are known to block iframe/object embedding.
 const BLOCKED_DOMAINS = [
     'x.com', 
     'twitter.com', 
@@ -87,7 +87,6 @@ const LynixBrowserApp: React.FC = () => {
         const lowerUrl = finalUrl.toLowerCase();
         
         // 1. Check for Redirect Engines (Google, Bing, etc.)
-        // This checks if the input *contains* the domain, catching https://google.com or just google.com
         const shouldRedirect = REDIRECT_ENGINES.some(engine => lowerUrl.includes(engine));
 
         if (shouldRedirect) {
@@ -260,13 +259,15 @@ const LynixBrowserApp: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <iframe 
-                            src={activeTab.url} 
-                            className="w-full h-full border-0" 
-                            title={activeTab.title}
-                            allow="camera; microphone; geolocation; fullscreen"
-                            sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"
-                        />
+                        <object
+                            data={activeTab.url}
+                            type="text/html"
+                            className="w-full h-full border-0"
+                        >
+                            <div className="w-full h-full flex items-center justify-center text-gray-500">
+                                <p>Content failed to load. Please try opening in a secure session.</p>
+                            </div>
+                        </object>
                     )
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-[#202124] text-center">
