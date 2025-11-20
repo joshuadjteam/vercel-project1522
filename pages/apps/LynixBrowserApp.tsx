@@ -26,6 +26,34 @@ interface BrowserTab {
     historyIndex: number;
 }
 
+// List of domains that are redirected to the special iframe
+const REDIRECT_ENGINES = [
+    'google.com', 
+    'www.google.com', 
+    'bing.com', 
+    'www.bing.com', 
+    'yahoo.com', 
+    'search.yahoo.com',
+    'duckduckgo.com', 
+    'baidu.com',
+    'ask.com',
+    'aol.com',
+    'yandex.com'
+];
+
+// List of domains that are known to block iframe embedding.
+const BLOCKED_DOMAINS = [
+    'x.com', 
+    'twitter.com', 
+    'facebook.com', 
+    'instagram.com', 
+    'reddit.com', 
+    'discord.com', 
+    'linkedin.com', 
+    'whatsapp.com', 
+    'netflix.com'
+];
+
 const LynixBrowserApp: React.FC = () => {
     const { user } = useAuth();
     const [tabs, setTabs] = useState<BrowserTab[]>([
@@ -52,14 +80,28 @@ const LynixBrowserApp: React.FC = () => {
         setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
     };
 
-    const handleNavigate = (url: string) => {
-        let finalUrl = url;
-        if (!url.trim()) return;
-        if (!url.startsWith('http') && !url.startsWith('internal://')) {
-            if (url.includes('.') && !url.includes(' ')) {
-                finalUrl = `https://${url}`;
-            } else {
-                finalUrl = `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+    const handleNavigate = (input: string) => {
+        let finalUrl = input.trim();
+        if (!finalUrl) return;
+
+        const lowerUrl = finalUrl.toLowerCase();
+        
+        // 1. Check for Redirect Engines (Google, Bing, etc.)
+        // This checks if the input *contains* the domain, catching https://google.com or just google.com
+        const shouldRedirect = REDIRECT_ENGINES.some(engine => lowerUrl.includes(engine));
+
+        if (shouldRedirect) {
+            finalUrl = 'https://lynixity.x10.bz/iframe.html';
+        } else {
+            // 2. Normal Navigation Logic
+            if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
+                // If it looks like a domain
+                if (finalUrl.includes('.') && !finalUrl.includes(' ')) {
+                    finalUrl = `https://${finalUrl}`;
+                } else {
+                    // 3. Default Search: Bing
+                    finalUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
+                }
             }
         }
 
@@ -120,11 +162,6 @@ const LynixBrowserApp: React.FC = () => {
         window.open(url, '_blank', 'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1200,height=800');
     };
 
-    // Blocked domains logic
-    const BLOCKED_DOMAINS = [
-        'x.com', 'twitter.com', 'facebook.com', 'instagram.com', 'reddit.com', 
-        'discord.com', 'linkedin.com', 'whatsapp.com', 'youtube.com', 'google.com', 'netflix.com'
-    ];
     const isBlocked = BLOCKED_DOMAINS.some(d => activeTab.url.includes(d));
 
     return (
@@ -176,10 +213,10 @@ const LynixBrowserApp: React.FC = () => {
                         type="text"
                         value={addressBarInput}
                         onChange={(e) => setAddressBarInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleNavigate(addressBarInput)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleNavigate((e.target as HTMLInputElement).value)}
                         onFocus={(e) => e.target.select()}
                         className="flex-grow bg-transparent border-none outline-none text-sm text-black dark:text-white"
-                        placeholder="Search Google or type a URL"
+                        placeholder="Search or type URL"
                     />
                     <div className="flex space-x-1">
                         <button className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-500"><StarIcon /></button>
@@ -195,9 +232,8 @@ const LynixBrowserApp: React.FC = () => {
 
             {/* Bookmarks Bar */}
             <div className="h-8 bg-white dark:bg-[#35363a] flex items-center px-4 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-black/10 space-x-2">
-                 <button onClick={() => handleNavigate('https://google.com')} className="hover:bg-gray-200 dark:hover:bg-white/10 px-2 py-1 rounded flex items-center space-x-1"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span>Google</span></button>
-                 <button onClick={() => handleNavigate('https://youtube.com')} className="hover:bg-gray-200 dark:hover:bg-white/10 px-2 py-1 rounded flex items-center space-x-1"><div className="w-3 h-3 rounded-full bg-red-500"></div><span>YouTube</span></button>
                  <button onClick={() => handleNavigate('https://wikipedia.org')} className="hover:bg-gray-200 dark:hover:bg-white/10 px-2 py-1 rounded flex items-center space-x-1"><div className="w-3 h-3 rounded-full bg-gray-500"></div><span>Wikipedia</span></button>
+                 <button onClick={() => handleNavigate('https://lynixity.x10.bz/iframe.html')} className="hover:bg-gray-200 dark:hover:bg-white/10 px-2 py-1 rounded flex items-center space-x-1"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span>Lynix Frame</span></button>
             </div>
 
             {/* Main Content Area */}
@@ -234,7 +270,7 @@ const LynixBrowserApp: React.FC = () => {
                     )
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-[#202124] text-center">
-                        <h1 className="text-6xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8">Google</h1>
+                        <h1 className="text-6xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8">Bing</h1>
                         <div className="w-full max-w-lg px-4">
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -242,7 +278,7 @@ const LynixBrowserApp: React.FC = () => {
                                 </div>
                                 <input 
                                     type="text" 
-                                    placeholder="Search Google or type a URL" 
+                                    placeholder="Search Bing or type a URL" 
                                     className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-500 bg-white dark:bg-[#202124] focus:shadow-md focus:outline-none focus:border-transparent dark:text-white transition-shadow"
                                     onKeyDown={(e) => e.key === 'Enter' && handleNavigate((e.target as HTMLInputElement).value)}
                                 />
