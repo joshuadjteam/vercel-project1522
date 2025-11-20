@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Page } from '../../types';
 
@@ -11,10 +11,8 @@ const Home = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" v
 const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 const MoreVertical = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>;
 const SearchIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
-const TabsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>;
 const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
-const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
-const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>;
+const Plus = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 
 interface MobiLynixBrowserAppProps {
@@ -22,8 +20,15 @@ interface MobiLynixBrowserAppProps {
     initialUrl?: string;
 }
 
-// List of domains that are redirected to the special iframe
-const REDIRECT_ENGINES = [
+interface BrowserTab {
+    id: number;
+    title: string;
+    url: string;
+    history: string[];
+    historyIndex: number;
+}
+
+const SPECIAL_REDIRECT_ENGINES = [
     'google.com', 
     'www.google.com', 
     'bing.com', 
@@ -37,35 +42,26 @@ const REDIRECT_ENGINES = [
     'yandex.com'
 ];
 
-// List of domains that are known to block iframe/object embedding.
-const BLOCKED_DOMAINS = [
-    'x.com', 
-    'twitter.com', 
-    'facebook.com', 
-    'instagram.com', 
-    'reddit.com', 
-    'discord.com', 
-    'linkedin.com', 
-    'whatsapp.com', 
-    'netflix.com'
-];
+const SPECIAL_REDIRECT_URL = 'https://lynixity.x10.bz/iframe.html';
 
 const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, initialUrl }) => {
     const { user } = useAuth();
-    const [url, setUrl] = useState(initialUrl || '');
+    const [tabs, setTabs] = useState<BrowserTab[]>([{ id: 1, title: 'New Tab', url: initialUrl || '', history: [initialUrl || ''], historyIndex: 0 }]);
+    const [activeTabId, setActiveTabId] = useState(1);
     const [inputUrl, setInputUrl] = useState(initialUrl || '');
-    const [history, setHistory] = useState<string[]>(initialUrl ? [initialUrl] : ['']);
-    const [historyIndex, setHistoryIndex] = useState(0);
-    const [showInfo, setShowInfo] = useState(false);
-    const [showInfoModal, setShowInfoModal] = useState(false);
+    const [showTabs, setShowTabs] = useState(false);
+
+    const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId)!, [tabs, activeTabId]);
 
     // --- Spoofed Info ---
     const spoofedDevice = "Unknown Linux Device";
     const spoofedOS = "DozianOS for Lynix v12.0";
     const spoofedMachineName = `LynixWeb-Machine-${user?.id || 'Guest'}`;
     const spoofedClientID = "Firefox/115.0";
-    const spoofedUserAgent = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0";
 
+    const updateTab = (id: number, updates: Partial<BrowserTab>) => {
+        setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    };
 
     const handleNavigate = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -73,77 +69,113 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         if (!finalUrl) return;
 
         const lowerUrl = finalUrl.toLowerCase();
-        
-        // 1. Check for Redirect Engines
-        const shouldRedirect = REDIRECT_ENGINES.some(engine => lowerUrl.includes(engine));
+        const shouldRedirect = SPECIAL_REDIRECT_ENGINES.some(engine => lowerUrl.includes(engine));
 
         if (shouldRedirect) {
-            finalUrl = 'https://lynixity.x10.bz/iframe.html';
+            finalUrl = SPECIAL_REDIRECT_URL;
         } else {
-            // 2. Normal Navigation Logic
             if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
-                // If it looks like a domain
                 if (finalUrl.includes('.') && !finalUrl.includes(' ')) {
                     finalUrl = `https://${finalUrl}`;
                 } else {
-                    // 3. Default Search: Bing
                     finalUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
                 }
             }
         }
 
-        setUrl(finalUrl);
-        setInputUrl(finalUrl);
-        
-        const newHistory = history.slice(0, historyIndex + 1);
+        const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
         newHistory.push(finalUrl);
-        setHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
+        updateTab(activeTabId, { url: finalUrl, title: finalUrl, history: newHistory, historyIndex: newHistory.length - 1 });
+        setInputUrl(finalUrl);
     };
 
     const handleBack = () => {
-        if (historyIndex > 0) {
-            const newIndex = historyIndex - 1;
-            const newUrl = history[newIndex];
-            setHistoryIndex(newIndex);
-            setUrl(newUrl);
+        if (activeTab.historyIndex > 0) {
+            const newIndex = activeTab.historyIndex - 1;
+            const newUrl = activeTab.history[newIndex];
+            updateTab(activeTabId, { historyIndex: newIndex, url: newUrl });
             setInputUrl(newUrl);
         }
     };
 
     const handleForward = () => {
-        if (historyIndex < history.length - 1) {
-            const newIndex = historyIndex + 1;
-            const newUrl = history[newIndex];
-            setHistoryIndex(newIndex);
-            setUrl(newUrl);
+        if (activeTab.historyIndex < activeTab.history.length - 1) {
+            const newIndex = activeTab.historyIndex + 1;
+            const newUrl = activeTab.history[newIndex];
+            updateTab(activeTabId, { historyIndex: newIndex, url: newUrl });
             setInputUrl(newUrl);
         }
     };
     
     const handleRefresh = () => {
-        const current = url;
-        setUrl('');
-        setTimeout(() => setUrl(current), 50);
+        if(activeTab.url) {
+            const current = activeTab.url;
+            updateTab(activeTabId, { url: '' });
+            setTimeout(() => updateTab(activeTabId, { url: current }), 10);
+        }
     };
 
     const handleHome = () => {
-        setUrl('');
-        setInputUrl('');
-        const newHistory = history.slice(0, historyIndex + 1);
+        const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
         newHistory.push('');
-        setHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
-    };
-    
-    const openPopup = (url: string) => {
-        window.open(url, '_blank', 'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=1200,height=800');
+        updateTab(activeTabId, { url: '', title: 'New Tab', history: newHistory, historyIndex: newHistory.length - 1 });
+        setInputUrl('');
     };
 
-    const isBlocked = BLOCKED_DOMAINS.some(d => url.includes(d));
+    const addNewTab = () => {
+        const newId = Math.max(0, ...tabs.map(t => t.id)) + 1;
+        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', history: [''], historyIndex: 0 };
+        setTabs([...tabs, newTab]);
+        setActiveTabId(newId);
+        setInputUrl('');
+        setShowTabs(false);
+    };
+
+    const closeTab = (e: React.MouseEvent, id: number) => {
+        e.stopPropagation();
+        if (tabs.length === 1) {
+            updateTab(id, { url: '', title: 'New Tab', history: [''], historyIndex: 0 });
+            setInputUrl('');
+            return;
+        }
+        const newTabs = tabs.filter(t => t.id !== id);
+        setTabs(newTabs);
+        if (id === activeTabId) {
+            setActiveTabId(newTabs[newTabs.length - 1].id);
+            setInputUrl(newTabs[newTabs.length - 1].url);
+        }
+    };
+
+    const switchToTab = (id: number) => {
+        setActiveTabId(id);
+        const tab = tabs.find(t => t.id === id);
+        if (tab) setInputUrl(tab.url);
+        setShowTabs(false);
+    }
 
     return (
-        <div className="w-full h-full flex flex-col bg-white dark:bg-[#1a1a1a] text-black dark:text-white">
+        <div className="w-full h-full flex flex-col bg-white dark:bg-[#1a1a1a] text-black dark:text-white relative">
+             {showTabs && (
+                <div className="absolute inset-0 bg-black/90 z-50 flex flex-col p-4">
+                    <div className="flex justify-between items-center mb-4">
+                         <h2 className="text-white text-lg font-bold">Tabs</h2>
+                         <button onClick={() => setShowTabs(false)} className="text-white p-2">Done</button>
+                    </div>
+                    <div className="flex-grow grid grid-cols-2 gap-4 overflow-y-auto">
+                        {tabs.map(tab => (
+                            <div key={tab.id} onClick={() => switchToTab(tab.id)} className={`relative p-4 rounded-lg border ${activeTabId === tab.id ? 'border-blue-500 bg-blue-900/20' : 'border-gray-600 bg-gray-800'} flex flex-col justify-between h-32`}>
+                                <div className="text-white text-sm font-bold truncate">{tab.title}</div>
+                                <div className="text-gray-400 text-xs truncate">{tab.url || 'Empty'}</div>
+                                <button onClick={(e) => closeTab(e, tab.id)} className="absolute top-2 right-2 bg-gray-700 rounded-full p-1 text-white"><XIcon/></button>
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={addNewTab} className="mt-4 w-full py-3 bg-blue-600 rounded-lg text-white font-bold flex items-center justify-center space-x-2">
+                        <Plus /> <span>New Tab</span>
+                    </button>
+                </div>
+            )}
+
             {/* Address Bar Area */}
             <div className="flex-shrink-0 bg-gray-100 dark:bg-[#2c2c2c] p-2 border-b border-gray-300 dark:border-black flex items-center space-x-2 shadow-sm z-20">
                 <button onClick={handleHome} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
@@ -152,7 +184,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                 
                 <form onSubmit={handleNavigate} className="flex-grow relative">
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        {url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />}
+                        {activeTab.url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />}
                     </div>
                     <input
                         type="text"
@@ -173,46 +205,27 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                     )}
                 </form>
 
-                <button onClick={() => setShowInfoModal(true)} className={`p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 ${showInfoModal ? 'text-blue-500' : 'text-gray-600 dark:text-gray-300'}`}>
+                <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
                     <MoreVertical />
                 </button>
             </div>
 
-            {/* Main Content */}
+            {/* Main Content - EMBEDDED */}
             <div className="flex-grow relative overflow-hidden w-full h-full bg-white dark:bg-[#1a1a1a]">
-                {url ? (
-                     isBlocked ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-gray-50 dark:bg-[#121212]">
-                            <ShieldIcon />
-                            <h2 className="text-xl font-bold mt-4 mb-2">Secure Content</h2>
-                            <p className="text-sm text-gray-500 mb-6">This site requires a secure popup window to display correctly.</p>
-                            <button 
-                                onClick={() => openPopup(url)}
-                                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 shadow-md active:scale-95 transition-transform"
-                            >
-                                <span>Open in New Window</span>
-                                <ExternalLinkIcon />
-                            </button>
-                        </div>
-                    ) : (
-                        <object
-                            data={url}
-                            type="text/html"
-                            className="w-full h-full border-0"
-                        >
-                            <div className="w-full h-full flex items-center justify-center text-gray-500">
-                                <p>Content failed to load. Please try opening in a secure session.</p>
-                            </div>
-                        </object>
-                    )
+                {activeTab.url ? (
+                    <embed 
+                        src={activeTab.url} 
+                        type="text/html" 
+                        className="w-full h-full border-0"
+                    />
                 ) : (
                     // Home / New Tab Screen
                     <div className="flex flex-col items-center justify-center h-full p-8 bg-white dark:bg-[#1a1a1a]">
-                        <h1 className="text-5xl font-bold text-gray-400 dark:text-gray-600 mb-8 select-none">Bing</h1>
+                        <h1 className="text-4xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8 select-none">Bing</h1>
                         <div className="w-full max-w-md">
                              <div className="relative shadow-md rounded-full">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <SearchIcon />
+                                    <SearchIcon className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
                                     type="text"
@@ -221,30 +234,14 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             const val = (e.target as HTMLInputElement).value;
-                                            handleNavigate({ preventDefault: () => {} } as any); // Trigger nav manually
-                                            setInputUrl(val); // Update inputs
+                                            handleNavigate({ preventDefault: () => {} } as any);
+                                            setInputUrl(val);
                                             const finalUrl = `https://www.bing.com/search?q=${encodeURIComponent(val)}`;
-                                            setUrl(finalUrl);
-                                            setHistory([...history, finalUrl]);
-                                            setHistoryIndex(historyIndex + 1);
+                                            updateTab(activeTabId, { url: finalUrl, title: finalUrl, history: [...activeTab.history, finalUrl], historyIndex: activeTab.historyIndex + 1 });
                                         }
                                     }}
                                 />
                              </div>
-                        </div>
-                        <div className="mt-8 flex space-x-4">
-                            <button onClick={() => { setUrl('https://lynixity.x10.bz/iframe.html'); setInputUrl('https://lynixity.x10.bz/iframe.html'); }} className="flex flex-col items-center space-y-1">
-                                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-500">
-                                    <span className="font-bold text-lg">L</span>
-                                </div>
-                                <span className="text-xs text-gray-500">Lynix</span>
-                            </button>
-                             <button onClick={() => { setUrl('https://wikipedia.org'); setInputUrl('https://wikipedia.org'); }} className="flex flex-col items-center space-y-1">
-                                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-gray-500">
-                                    <span className="font-bold text-lg font-serif">W</span>
-                                </div>
-                                <span className="text-xs text-gray-500">Wiki</span>
-                            </button>
                         </div>
                     </div>
                 )}
@@ -252,63 +249,34 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
 
             {/* Bottom Toolbar */}
             <div className="flex-shrink-0 bg-gray-100 dark:bg-[#2c2c2c] h-12 border-t border-gray-300 dark:border-black flex justify-around items-center px-4 shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-20">
-                <button onClick={handleBack} disabled={historyIndex <= 0} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-opacity">
+                <button onClick={handleBack} disabled={activeTab.historyIndex <= 0} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-opacity">
                     <ArrowLeft />
                 </button>
-                <button onClick={handleForward} disabled={historyIndex >= history.length - 1} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-opacity">
+                <button onClick={handleForward} disabled={activeTab.historyIndex >= activeTab.history.length - 1} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-opacity">
                     <ArrowRight />
                 </button>
-                <button onClick={() => setShowInfo(prev => !prev)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
+                <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
                     <InfoIcon />
                 </button>
                 <button onClick={handleRefresh} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10">
                     <RefreshCw />
                 </button>
-                <div className="p-2 rounded-md border border-gray-400 dark:border-gray-500 flex items-center justify-center w-6 h-6 text-xs font-bold text-gray-600 dark:text-gray-300">
-                    1
-                </div>
+                <button onClick={() => setShowTabs(true)} className="p-2 rounded-md border border-gray-400 dark:border-gray-500 flex items-center justify-center w-8 h-8 text-xs font-bold text-gray-600 dark:text-gray-300">
+                    {tabs.length}
+                </button>
             </div>
 
-             {/* Spoofed Status Bar (Shown on Info Click) */}
-             {showInfo && (
-                <div className="bg-blue-50 dark:bg-[#242424] border-t border-blue-100 dark:border-gray-700 p-3 text-xs font-mono space-y-1 animate-fade-in shadow-inner absolute bottom-12 left-0 right-0 z-30">
-                    <div className="flex justify-between"><span className="font-bold text-gray-500">ID:</span> <span>{spoofedMachineName}</span></div>
-                    <div className="flex justify-between"><span className="font-bold text-gray-500">OS:</span> <span>{spoofedOS}</span></div>
-                    <div className="flex justify-between"><span className="font-bold text-gray-500">HW:</span> <span>{spoofedDevice}</span></div>
-                    <div className="flex justify-between"><span className="font-bold text-gray-500">CL:</span> <span>{spoofedClientID}</span></div>
+             {/* Spoofed Status Bar */}
+            <div className="h-6 bg-[#f1f3f4] dark:bg-[#292a2d] border-t border-gray-300 dark:border-black/50 flex items-center justify-between px-3 text-[10px] text-gray-500 font-mono select-none cursor-default">
+                <div className="flex space-x-2 sm:space-x-4">
+                     <span className="flex items-center"><span className="font-bold mr-1">DEVICE:</span> <span className="truncate max-w-[80px] sm:max-w-none">{spoofedDevice}</span></span>
+                     <span className="flex items-center hidden sm:inline-flex"><span className="font-bold mr-1">OS:</span> {spoofedOS}</span>
                 </div>
-            )}
-
-             {/* System Info Modal */}
-             {showInfoModal && (
-                <div className="absolute top-24 right-4 left-4 bg-white dark:bg-[#292a2d] rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 z-50 p-4 animate-fade-in">
-                    <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-600 pb-2">
-                        <h3 className="font-bold text-lg">About Browser</h3>
-                        <button onClick={() => setShowInfoModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded"><XIcon /></button>
-                    </div>
-                    <div className="space-y-3 text-sm">
-                         <div className="bg-gray-50 dark:bg-black/20 p-2 rounded">
-                             <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Machine ID</label>
-                             <p className="font-mono text-xs truncate">{spoofedMachineName}</p>
-                         </div>
-                         <div>
-                             <label className="block text-xs font-semibold text-gray-500 uppercase">Operating System</label>
-                             <p className="text-gray-700 dark:text-gray-300">{spoofedOS}</p>
-                         </div>
-                         <div>
-                             <label className="block text-xs font-semibold text-gray-500 uppercase">Hardware</label>
-                             <p className="text-gray-700 dark:text-gray-300">{spoofedDevice}</p>
-                         </div>
-                         <div>
-                             <label className="block text-xs font-semibold text-gray-500 uppercase">User Agent</label>
-                             <p className="text-xs text-gray-500 dark:text-gray-400 italic break-words">{spoofedUserAgent}</p>
-                         </div>
-                    </div>
-                    <div className="mt-4 pt-2 border-t border-gray-200 dark:border-gray-600 text-center">
-                        <p className="text-xs text-gray-400">Lynix Browser v1.0.4 (Official Build) (64-bit)</p>
-                    </div>
+                <div className="flex space-x-2 sm:space-x-4">
+                     <span className="flex items-center hidden sm:inline-flex"><span className="font-bold mr-1">CLIENT:</span> {spoofedClientID}</span>
+                     <span className="flex items-center"><span className="font-bold mr-1">ID:</span> {spoofedMachineName}</span>
                 </div>
-            )}
+            </div>
         </div>
     );
 };
