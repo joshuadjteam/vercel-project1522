@@ -50,25 +50,84 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [callDuration, setCallDuration] = useState(0);
 
     const pc = useRef<RTCPeerConnection | null>(null);
-    const channel = useRef<any | null>(null);
+    const ws = useRef<WebSocket | null>(null);
     const offerForIncomingCall = useRef<RTCSessionDescriptionInit | null>(null);
     const callTimeoutRef = useRef<number | null>(null);
     const callDurationIntervalRef = useRef<number | null>(null);
+    const reconnectTimeoutRef = useRef<number | null>(null);
     
     const stateRef = useRef({ user, isCalling, callee, callStatus, incomingCall, localStream });
     stateRef.current = { user, isCalling, callee, callStatus, incomingCall, localStream };
 
-    const stableSendMessage = useCallback(async (target: string, type: string, payload: any) => {
-        if (!stateRef.current.user) return;
-        // Use a fire-and-forget approach to avoid blocking if signaling has momentary issues
-        supabase.from('webrtc_signaling').insert({
-            sender_username: stateRef.current.user.username,
-            recipient_username: target,
-            type,
-            payload,
-        }).then(({ error }) => {
-            if (error) console.error("Signaling error:", error);
+    const connectWebSocket = useCallback(() => {
+         if (!user || !isLoggedIn) return;
+
+        // Get session token for auth
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                const token = session.access_token;
+                const wsUrl = `wss://jnnpxifvsrlzfpaisdhy.supabase.co/functions/v1/webrtc-signaling-server?token=${token}`;
+                console.log("Connecting to WS...");
+                const socket = new WebSocket(wsUrl);
+                
+                socket.onopen = () => {
+                    console.log('Connected to Signaling Server');
+                };
+
+                socket.onmessage = (event) => {
+                    try {
+                        const msg = JSON.parse(event.data);
+                        handleSignal(msg);
+                    } catch (e) {
+                        console.error("Failed to parse WS message:", e);
+                    }
+                };
+
+                socket.onclose = () => {
+                    console.log('Disconnected from Signaling Server');
+                    // Reconnect logic
+                     if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+                     reconnectTimeoutRef.current = window.setTimeout(() => {
+                         if (isLoggedIn) connectWebSocket();
+                     }, 3000);
+                };
+                
+                socket.onerror = (e) => {
+                     console.error('WebSocket Error:', e);
+                }
+
+                ws.current = socket;
+            }
         });
+    }, [isLoggedIn, user?.id]);
+
+    // Establish WebSocket connection
+    useEffect(() => {
+        if (isLoggedIn && user) {
+            connectWebSocket();
+        }
+        return () => {
+             if (ws.current) {
+                ws.current.close();
+                ws.current = null;
+            }
+            if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+        };
+    }, [isLoggedIn, user?.id, connectWebSocket]);
+
+    const stableSendMessage = useCallback((target: string, type: string, payload: any) => {
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            ws.current.send(JSON.stringify({
+                target,
+                type,
+                payload
+            }));
+        } else {
+            console.error("WebSocket is not open. Cannot send message. State:", ws.current?.readyState);
+            if (type !== 'call-ended') { // Don't show error for end call cleanup
+                setCallStatus("Connection Error");
+            }
+        }
     }, []);
 
     const stableEndCall = useCallback((targetOverride?: string) => {
@@ -128,89 +187,79 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return peer;
     }, [stableSendMessage, stableEndCall]);
 
-    useEffect(() => {
-        if (!isLoggedIn || !user?.username) return;
+    const handleSignal = async (msg: any) => {
+        const { type, payload, from } = msg;
+        
+        // Handle user-unavailable error
+        if (type === 'user-unavailable') {
+             setCallStatus('User Unavailable');
+             setTimeout(() => stableEndCall(), 3000);
+             return;
+        }
 
-        const channelName = `webrtc-signaling-${user.username}`;
-        const realtimeChannel = supabase.channel(channelName);
-        channel.current = realtimeChannel;
+        console.log(`Received signal: ${type} from ${from}`);
 
-        const handleSignal = async (payload: any) => {
-             const msg = {
-                from: payload.new.sender_username,
-                type: payload.new.type,
-                payload: payload.new.payload
-            };
-            
-            console.log(`Received signal: ${msg.type} from ${msg.from}`);
-
-            switch (msg.type) {
-                case 'incoming-call': 
-                    if (stateRef.current.isCalling) {
-                         stableSendMessage(msg.from, 'call-declined', { from: user.username, reason: 'busy' });
-                    } else {
-                        setIncomingCall({ from: msg.from, isVideoCall: msg.payload.isVideoCall }); 
-                        offerForIncomingCall.current = msg.payload.offer; 
-                    }
-                    break;
-                case 'call-accepted': 
-                    if (pc.current && stateRef.current.callee === msg.from) { 
-                        try { 
-                            await pc.current.setRemoteDescription(new RTCSessionDescription(msg.payload.answer)); 
-                            setCallStatus('Connecting...'); 
-                            if (callTimeoutRef.current) window.clearTimeout(callTimeoutRef.current); 
-                        } catch(e) { 
-                            console.error("Error setting remote desc:", e); 
-                            stableEndCall(msg.from); 
-                        } 
+        switch (type) {
+            case 'incoming-call': 
+                if (stateRef.current.isCalling) {
+                        stableSendMessage(from, 'call-declined', { from: stateRef.current.user?.username, reason: 'busy' });
+                } else {
+                    setIncomingCall({ from: from, isVideoCall: payload.isVideoCall }); 
+                    offerForIncomingCall.current = payload.offer; 
+                }
+                break;
+            case 'call-accepted': 
+                if (pc.current && stateRef.current.callee === from) { 
+                    try { 
+                        await pc.current.setRemoteDescription(new RTCSessionDescription(payload.answer)); 
+                        setCallStatus('Connecting...'); 
+                        if (callTimeoutRef.current) window.clearTimeout(callTimeoutRef.current); 
+                    } catch(e) { 
+                        console.error("Error setting remote desc:", e); 
+                        stableEndCall(from); 
                     } 
-                    break;
-                case 'call-declined': 
-                    if (stateRef.current.isCalling && stateRef.current.callee === msg.from) { 
-                        setCallStatus('Call Declined'); 
-                        setTimeout(() => stableEndCall(msg.from), 2000); 
-                    } 
-                    break;
-                case 'call-ended': 
-                    stableEndCall(msg.from); 
-                    break;
-                case 'ice-candidate': 
-                    if (pc.current && msg.payload.candidate) { 
-                        try { await pc.current.addIceCandidate(new RTCIceCandidate(msg.payload.candidate)); } catch (e) { console.error("Error adding ICE:", e); } 
-                    } 
-                    break;
-            }
-        };
-
-        realtimeChannel.on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'webrtc_signaling',
-            filter: `recipient_username=eq.${user.username}`,
-        }, handleSignal).subscribe((status) => {
-            console.log(`Signaling channel status: ${status}`);
-        });
-
-        return () => {
-            if (channel.current) {
-                supabase.removeChannel(channel.current);
-                channel.current = null;
-            }
-        };
-    }, [isLoggedIn, user?.username, stableSendMessage, stableEndCall]);
+                } 
+                break;
+            case 'call-declined': 
+                if (stateRef.current.isCalling && stateRef.current.callee === from) { 
+                    setCallStatus('Call Declined'); 
+                    setTimeout(() => stableEndCall(from), 2000); 
+                } 
+                break;
+            case 'call-ended': 
+                stableEndCall(from); 
+                break;
+            case 'ice-candidate': 
+                if (pc.current && payload.candidate) { 
+                    try { await pc.current.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (e) { console.error("Error adding ICE:", e); } 
+                } 
+                break;
+        }
+    };
 
     const startP2PCall = useCallback(async (calleeUsername: string, withVideo: boolean) => {
         try {
             if (!stateRef.current.user) throw new Error("User not logged in.");
             
-            // Prevent self-call
             if (calleeUsername === stateRef.current.user.username) {
                 setCallStatus('Cannot call self');
                 setTimeout(() => setCallStatus(''), 2000);
                 return;
             }
+            
+            if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+                setCallStatus('Connecting to server...');
+                // Allow a small delay for socket to open if it was just connecting, otherwise fail
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+                     setCallStatus('Connection failed');
+                     setTimeout(() => setCallStatus(''), 2000);
+                     return;
+                }
+            }
 
             setCallStatus('Checking user...');
+            // Quick DB check to ensure user exists before trying P2P
             const targetUser = await database.getUserByUsername(calleeUsername);
             if (!targetUser) {
                 setCallStatus('User not found');

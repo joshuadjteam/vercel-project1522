@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 
 // --- Icons ---
@@ -20,19 +20,19 @@ interface BrowserTab {
     id: number;
     title: string;
     url: string;
+    displayUrl: string; // The URL actually shown in the address bar
     history: string[];
     historyIndex: number;
     isLoading: boolean;
 }
 
-const SPECIAL_REDIRECT_ENGINES = [
-    'google.com', 
-    'www.google.com', 
-    'bing.com', 
-    'www.bing.com', 
-    'yahoo.com', 
-    'search.yahoo.com',
-    'duckduckgo.com', 
+// Search engines that should be redirected to the iframe.html page.
+// Other sites (YouTube, etc.) will attempt to load directly.
+const SEARCH_ENGINES = [
+    'google.com', 'www.google.com',
+    'bing.com', 'www.bing.com',
+    'yahoo.com', 'search.yahoo.com',
+    'duckduckgo.com',
     'baidu.com',
     'ask.com',
     'aol.com',
@@ -44,7 +44,7 @@ const SPECIAL_REDIRECT_URL = 'https://lynixity.x10.bz/iframe.html';
 const LynixBrowserApp: React.FC = () => {
     const { user } = useAuth();
     const [tabs, setTabs] = useState<BrowserTab[]>([
-        { id: 1, title: 'New Tab', url: '', history: [''], historyIndex: 0, isLoading: false }
+        { id: 1, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false }
     ]);
     const [activeTabId, setActiveTabId] = useState(1);
     const [addressBarInput, setAddressBarInput] = useState('');
@@ -53,13 +53,13 @@ const LynixBrowserApp: React.FC = () => {
     const spoofedDevice = "Unknown Linux Device";
     const spoofedOS = "DozianOS for Lynix v12.0";
     const spoofedMachineName = `LynixWeb-Machine-${user?.id || 'Guest'}`;
-    const spoofedClientID = "Firefox/115.0";
+    const spoofedClientID = "Firefox/115.0"; // Simplified as requested
 
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId)!, [tabs, activeTabId]);
 
     useEffect(() => {
-        setAddressBarInput(activeTab.url);
-    }, [activeTabId, activeTab.url]);
+        setAddressBarInput(activeTab.displayUrl || activeTab.url);
+    }, [activeTabId, activeTab.displayUrl, activeTab.url]);
 
     const updateTab = (id: number, updates: Partial<BrowserTab>) => {
         setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
@@ -70,61 +70,77 @@ const LynixBrowserApp: React.FC = () => {
         if (!finalUrl) return;
 
         const lowerUrl = finalUrl.toLowerCase();
-        const shouldRedirect = SPECIAL_REDIRECT_ENGINES.some(engine => lowerUrl.includes(engine));
+        
+        // Check for search query (no protocol, no dot, or explicit search intention)
+        const isSearch = !lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://') && (!lowerUrl.includes('.') || lowerUrl.includes(' '));
+        
+        // Check if the target is a search engine
+        const isSearchEngine = SEARCH_ENGINES.some(site => lowerUrl.includes(site));
 
-        if (shouldRedirect) {
-            finalUrl = SPECIAL_REDIRECT_URL;
+        let actualUrl = finalUrl;
+        let displayUrl = finalUrl;
+
+        if (isSearch) {
+            // Search queries use Bing, which is a search engine, so redirect to iframe.html
+            actualUrl = SPECIAL_REDIRECT_URL;
+            displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
+        } else if (isSearchEngine) {
+            // Known search engines redirect to iframe.html
+            actualUrl = SPECIAL_REDIRECT_URL;
+            if (!finalUrl.startsWith('http')) displayUrl = `https://${finalUrl}`;
         } else {
+            // All other sites (YouTube, etc.) load directly
             if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
-                if (finalUrl.includes('.') && !finalUrl.includes(' ')) {
-                    finalUrl = `https://${finalUrl}`;
-                } else {
-                    finalUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
-                }
+                actualUrl = `https://${finalUrl}`;
+                displayUrl = actualUrl;
             }
         }
         
         const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
-        newHistory.push(finalUrl);
+        newHistory.push(displayUrl);
 
         updateTab(activeTabId, {
-            url: finalUrl,
-            title: finalUrl,
+            url: actualUrl,
+            displayUrl: displayUrl,
+            title: displayUrl,
             history: newHistory,
             historyIndex: newHistory.length - 1,
             isLoading: true
         });
         
-        setTimeout(() => updateTab(activeTabId, { isLoading: false }), 1000);
+        setTimeout(() => updateTab(activeTabId, { isLoading: false }), 1500);
     };
 
     const handleBack = () => {
         if (activeTab.historyIndex > 0) {
             const newIndex = activeTab.historyIndex - 1;
-            const newUrl = activeTab.history[newIndex];
-            updateTab(activeTabId, { historyIndex: newIndex, url: newUrl });
+            const prevUrl = activeTab.history[newIndex];
+            // Simplified back logic: treat history as display URLs, re-evaluate them
+            handleNavigate(prevUrl);
         }
     };
 
     const handleForward = () => {
         if (activeTab.historyIndex < activeTab.history.length - 1) {
             const newIndex = activeTab.historyIndex + 1;
-            const newUrl = activeTab.history[newIndex];
-            updateTab(activeTabId, { historyIndex: newIndex, url: newUrl });
+            const nextUrl = activeTab.history[newIndex];
+             handleNavigate(nextUrl);
         }
     };
 
     const handleRefresh = () => {
         updateTab(activeTabId, { isLoading: true });
-        setTimeout(() => updateTab(activeTabId, { isLoading: false }), 800);
         const current = activeTab.url;
-        updateTab(activeTabId, { url: '' });
-        setTimeout(() => updateTab(activeTabId, { url: current }), 10);
+        // Force iframe reload by toggling url
+        updateTab(activeTabId, { url: 'about:blank' });
+        setTimeout(() => {
+            updateTab(activeTabId, { url: current, isLoading: false });
+        }, 100);
     };
 
     const addTab = () => {
-        const newId = Math.max(0, ...tabs.map(t => t.id)) + 1;
-        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', history: [''], historyIndex: 0, isLoading: false };
+        const newId = Date.now();
+        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false };
         setTabs([...tabs, newTab]);
         setActiveTabId(newId);
     };
@@ -132,7 +148,7 @@ const LynixBrowserApp: React.FC = () => {
     const closeTab = (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
         if (tabs.length === 1) {
-            updateTab(id, { url: '', title: 'New Tab', history: [''], historyIndex: 0 });
+            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0 });
             return;
         }
         const newTabs = tabs.filter(t => t.id !== id);
@@ -146,7 +162,7 @@ const LynixBrowserApp: React.FC = () => {
         <div className="w-full h-full flex flex-col bg-[#dfe3e7] dark:bg-[#202124] text-black dark:text-white rounded-lg overflow-hidden font-sans select-none">
             
             {/* Top Bar (Tabs) */}
-            <div className="flex h-10 px-2 pt-2 space-x-1 overflow-x-auto no-scrollbar items-end bg-[#dfe3e7] dark:bg-[#000000]">
+            <div className="flex h-10 px-2 pt-2 space-x-1 overflow-x-auto no-scrollbar items-end bg-[#dee1e6] dark:bg-[#000000]">
                 {tabs.map(tab => (
                     <div
                         key={tab.id}
@@ -159,14 +175,14 @@ const LynixBrowserApp: React.FC = () => {
                     >
                         {activeTabId !== tab.id && <div className="absolute right-0 h-4 w-[1px] bg-gray-400 dark:bg-gray-600 top-2 group-hover:hidden"></div>}
                         
-                        <div className="flex items-center space-x-2 w-full">
+                        <div className="flex items-center space-x-2 w-full overflow-hidden">
                             {tab.isLoading ? (
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500 flex-shrink-0"></div>
                             ) : (
-                                tab.url ? <GlobeIcon /> : <div className="w-3 h-3 rounded-full bg-gray-400"></div>
+                                tab.url ? <GlobeIcon /> : <div className="w-3 h-3 rounded-full bg-gray-400 flex-shrink-0"></div>
                             )}
                             <span className="truncate flex-grow font-medium">{tab.title || 'New Tab'}</span>
-                            <button onClick={(e) => closeTab(e, tab.id)} className="p-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={(e) => closeTab(e, tab.id)} className="p-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                                 <XIcon />
                             </button>
                         </div>
@@ -188,7 +204,7 @@ const LynixBrowserApp: React.FC = () => {
                 <button onClick={() => handleNavigate('')} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors hidden sm:block"><Home /></button>
 
                 {/* Address Bar */}
-                <div className="flex-grow flex items-center bg-[#f1f3f4] dark:bg-[#202124] rounded-full px-3 h-8 border-2 border-transparent focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-black transition-all shadow-inner relative">
+                <div className="flex-grow flex items-center bg-[#f1f3f4] dark:bg-[#202124] rounded-full px-3 h-8 border-2 border-transparent focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-black transition-all shadow-inner relative group">
                     <div className="text-gray-500 mr-2">
                          {activeTab.url && activeTab.url.startsWith('https') ? <LockIcon /> : <InfoIcon />}
                     </div>
@@ -198,8 +214,8 @@ const LynixBrowserApp: React.FC = () => {
                         onChange={(e) => setAddressBarInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleNavigate((e.target as HTMLInputElement).value)}
                         onFocus={(e) => e.target.select()}
-                        className="flex-grow bg-transparent border-none outline-none text-sm text-black dark:text-white"
-                        placeholder="Search Google or type a URL"
+                        className="flex-grow bg-transparent border-none outline-none text-sm text-black dark:text-white w-full"
+                        placeholder="Search or type URL"
                     />
                     <div className="flex space-x-1">
                         <button className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-500"><StarIcon /></button>
@@ -221,13 +237,15 @@ const LynixBrowserApp: React.FC = () => {
             {/* Main Content Area */}
             <div className="flex-grow relative bg-white dark:bg-[#202124] w-full h-full overflow-hidden">
                 {activeTab.url ? (
-                    <embed 
+                    <iframe 
                         src={activeTab.url} 
-                        type="text/html" 
                         className="w-full h-full border-0"
+                        referrerPolicy="same-origin"
+                        title="browser-content"
+                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"
                     />
                 ) : (
-                     <div className="flex flex-col items-center justify-center h-full text-center">
+                     <div className="flex flex-col items-center justify-center h-full text-center pb-20">
                          <h1 className="text-6xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8 select-none">Bing</h1>
                         <div className="w-full max-w-lg px-4">
                             <div className="relative group shadow-lg rounded-full">
@@ -237,7 +255,7 @@ const LynixBrowserApp: React.FC = () => {
                                 <input 
                                     type="text" 
                                     placeholder="Search Bing or type a URL" 
-                                    className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-500 bg-white dark:bg-[#202124] focus:outline-none dark:text-white transition-shadow"
+                                    className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-500 bg-white dark:bg-[#202124] focus:outline-none dark:text-white transition-shadow shadow-sm"
                                     onKeyDown={(e) => e.key === 'Enter' && handleNavigate((e.target as HTMLInputElement).value)}
                                 />
                             </div>

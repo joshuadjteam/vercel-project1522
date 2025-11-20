@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Page } from '../../types';
 
@@ -24,18 +24,16 @@ interface BrowserTab {
     id: number;
     title: string;
     url: string;
+    displayUrl: string;
     history: string[];
     historyIndex: number;
 }
 
-const SPECIAL_REDIRECT_ENGINES = [
-    'google.com', 
-    'www.google.com', 
-    'bing.com', 
-    'www.bing.com', 
-    'yahoo.com', 
-    'search.yahoo.com',
-    'duckduckgo.com', 
+const SEARCH_ENGINES = [
+    'google.com', 'www.google.com',
+    'bing.com', 'www.bing.com',
+    'yahoo.com', 'search.yahoo.com',
+    'duckduckgo.com',
     'baidu.com',
     'ask.com',
     'aol.com',
@@ -46,7 +44,7 @@ const SPECIAL_REDIRECT_URL = 'https://lynixity.x10.bz/iframe.html';
 
 const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, initialUrl }) => {
     const { user } = useAuth();
-    const [tabs, setTabs] = useState<BrowserTab[]>([{ id: 1, title: 'New Tab', url: initialUrl || '', history: [initialUrl || ''], historyIndex: 0 }]);
+    const [tabs, setTabs] = useState<BrowserTab[]>([{ id: 1, title: 'New Tab', url: initialUrl || '', displayUrl: initialUrl || '', history: [initialUrl || ''], historyIndex: 0 }]);
     const [activeTabId, setActiveTabId] = useState(1);
     const [inputUrl, setInputUrl] = useState(initialUrl || '');
     const [showTabs, setShowTabs] = useState(false);
@@ -59,6 +57,10 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     const spoofedMachineName = `LynixWeb-Machine-${user?.id || 'Guest'}`;
     const spoofedClientID = "Firefox/115.0";
 
+    useEffect(() => {
+        setInputUrl(activeTab.displayUrl || activeTab.url);
+    }, [activeTabId, activeTab.url, activeTab.displayUrl]);
+
     const updateTab = (id: number, updates: Partial<BrowserTab>) => {
         setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
     };
@@ -69,32 +71,36 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         if (!finalUrl) return;
 
         const lowerUrl = finalUrl.toLowerCase();
-        const shouldRedirect = SPECIAL_REDIRECT_ENGINES.some(engine => lowerUrl.includes(engine));
+        const isSearch = !lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://') && (!lowerUrl.includes('.') || lowerUrl.includes(' '));
+        const isSearchEngine = SEARCH_ENGINES.some(site => lowerUrl.includes(site));
 
-        if (shouldRedirect) {
-            finalUrl = SPECIAL_REDIRECT_URL;
+        let actualUrl = finalUrl;
+        let displayUrl = finalUrl;
+
+        if (isSearch) {
+             actualUrl = SPECIAL_REDIRECT_URL;
+             displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
+        } else if (isSearchEngine) {
+             actualUrl = SPECIAL_REDIRECT_URL;
+             if (!finalUrl.startsWith('http')) displayUrl = `https://${finalUrl}`;
         } else {
             if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
-                if (finalUrl.includes('.') && !finalUrl.includes(' ')) {
-                    finalUrl = `https://${finalUrl}`;
-                } else {
-                    finalUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
-                }
+                actualUrl = `https://${finalUrl}`;
+                displayUrl = actualUrl;
             }
         }
 
         const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
-        newHistory.push(finalUrl);
-        updateTab(activeTabId, { url: finalUrl, title: finalUrl, history: newHistory, historyIndex: newHistory.length - 1 });
-        setInputUrl(finalUrl);
+        newHistory.push(displayUrl);
+        updateTab(activeTabId, { url: actualUrl, displayUrl: displayUrl, title: displayUrl, history: newHistory, historyIndex: newHistory.length - 1 });
+        setInputUrl(displayUrl);
     };
 
     const handleBack = () => {
         if (activeTab.historyIndex > 0) {
             const newIndex = activeTab.historyIndex - 1;
             const newUrl = activeTab.history[newIndex];
-            updateTab(activeTabId, { historyIndex: newIndex, url: newUrl });
-            setInputUrl(newUrl);
+            handleNavigate({ preventDefault: () => { setInputUrl(newUrl) } } as any);
         }
     };
 
@@ -102,29 +108,28 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         if (activeTab.historyIndex < activeTab.history.length - 1) {
             const newIndex = activeTab.historyIndex + 1;
             const newUrl = activeTab.history[newIndex];
-            updateTab(activeTabId, { historyIndex: newIndex, url: newUrl });
-            setInputUrl(newUrl);
+            handleNavigate({ preventDefault: () => { setInputUrl(newUrl) } } as any);
         }
     };
     
     const handleRefresh = () => {
         if(activeTab.url) {
             const current = activeTab.url;
-            updateTab(activeTabId, { url: '' });
-            setTimeout(() => updateTab(activeTabId, { url: current }), 10);
+            updateTab(activeTabId, { url: 'about:blank' });
+            setTimeout(() => updateTab(activeTabId, { url: current }), 50);
         }
     };
 
     const handleHome = () => {
         const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
         newHistory.push('');
-        updateTab(activeTabId, { url: '', title: 'New Tab', history: newHistory, historyIndex: newHistory.length - 1 });
+        updateTab(activeTabId, { url: '', displayUrl: '', title: 'New Tab', history: newHistory, historyIndex: newHistory.length - 1 });
         setInputUrl('');
     };
 
     const addNewTab = () => {
-        const newId = Math.max(0, ...tabs.map(t => t.id)) + 1;
-        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', history: [''], historyIndex: 0 };
+        const newId = Date.now();
+        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0 };
         setTabs([...tabs, newTab]);
         setActiveTabId(newId);
         setInputUrl('');
@@ -134,22 +139,23 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     const closeTab = (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
         if (tabs.length === 1) {
-            updateTab(id, { url: '', title: 'New Tab', history: [''], historyIndex: 0 });
+            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0 });
             setInputUrl('');
             return;
         }
         const newTabs = tabs.filter(t => t.id !== id);
         setTabs(newTabs);
         if (id === activeTabId) {
-            setActiveTabId(newTabs[newTabs.length - 1].id);
-            setInputUrl(newTabs[newTabs.length - 1].url);
+            const nextTab = newTabs[newTabs.length - 1];
+            setActiveTabId(nextTab.id);
+            setInputUrl(nextTab.displayUrl);
         }
     };
 
     const switchToTab = (id: number) => {
         setActiveTabId(id);
         const tab = tabs.find(t => t.id === id);
-        if (tab) setInputUrl(tab.url);
+        if (tab) setInputUrl(tab.displayUrl);
         setShowTabs(false);
     }
 
@@ -165,7 +171,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                         {tabs.map(tab => (
                             <div key={tab.id} onClick={() => switchToTab(tab.id)} className={`relative p-4 rounded-lg border ${activeTabId === tab.id ? 'border-blue-500 bg-blue-900/20' : 'border-gray-600 bg-gray-800'} flex flex-col justify-between h-32`}>
                                 <div className="text-white text-sm font-bold truncate">{tab.title}</div>
-                                <div className="text-gray-400 text-xs truncate">{tab.url || 'Empty'}</div>
+                                <div className="text-gray-400 text-xs truncate">{tab.displayUrl || 'Empty'}</div>
                                 <button onClick={(e) => closeTab(e, tab.id)} className="absolute top-2 right-2 bg-gray-700 rounded-full p-1 text-white"><XIcon/></button>
                             </div>
                         ))}
@@ -184,7 +190,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                 
                 <form onSubmit={handleNavigate} className="flex-grow relative">
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        {activeTab.url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />}
+                        {activeTab.url && activeTab.url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />}
                     </div>
                     <input
                         type="text"
@@ -210,13 +216,15 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                 </button>
             </div>
 
-            {/* Main Content - EMBEDDED */}
+            {/* Main Content - iframe */}
             <div className="flex-grow relative overflow-hidden w-full h-full bg-white dark:bg-[#1a1a1a]">
                 {activeTab.url ? (
-                    <embed 
+                    <iframe 
                         src={activeTab.url} 
-                        type="text/html" 
                         className="w-full h-full border-0"
+                        referrerPolicy="same-origin"
+                        title="browser-content"
+                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"
                     />
                 ) : (
                     // Home / New Tab Screen
@@ -235,9 +243,13 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                                         if (e.key === 'Enter') {
                                             const val = (e.target as HTMLInputElement).value;
                                             handleNavigate({ preventDefault: () => {} } as any);
+                                            // Override input to search results manually in UI
                                             setInputUrl(val);
-                                            const finalUrl = `https://www.bing.com/search?q=${encodeURIComponent(val)}`;
-                                            updateTab(activeTabId, { url: finalUrl, title: finalUrl, history: [...activeTab.history, finalUrl], historyIndex: activeTab.historyIndex + 1 });
+                                            const displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(val)}`;
+                                            const actualUrl = SPECIAL_REDIRECT_URL;
+                                            const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
+                                            newHistory.push(displayUrl);
+                                            updateTab(activeTabId, { url: actualUrl, displayUrl: displayUrl, title: 'Search Results', history: newHistory, historyIndex: newHistory.length - 1 });
                                         }
                                     }}
                                 />
