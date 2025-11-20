@@ -125,6 +125,7 @@ export type Page =
     | 'app-console-switch'
     | 'app-webly-store'
     | 'app-webview'
+    | 'app-browser'
     | 'mobi-app-webview'
     | 'auth-callback';
 

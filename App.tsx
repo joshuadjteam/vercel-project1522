@@ -6,6 +6,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
@@ -42,6 +44,7 @@ import ConsoleSwitchApp from './pages/apps/ConsoleSwitchApp';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import WeblyStoreApp from './pages/apps/WeblyStoreApp';
 import WebAppViewer from './pages/apps/WebAppViewer';
+import LynixBrowserApp from './pages/apps/LynixBrowserApp';
 
 // Mobile App Imports
 import MobiProfilePage from './pages/mobile-apps/MobiProfilePage';
@@ -90,6 +93,7 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
     'app-console-switch': { component: ConsoleSwitchApp, defaultSize: { width: 900, height: 500 } },
     'app-webly-store': { component: WeblyStoreApp },
     'app-webview': { component: WebAppViewer, defaultSize: { width: 1024, height: 768 } },
+    'app-browser': { component: LynixBrowserApp, defaultSize: { width: 1000, height: 700 } },
 };
 
 // All items that can be a "page", including full-screen apps and standalone pages
@@ -114,6 +118,7 @@ export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
     'app-console-switch': ConsoleSwitchApp,
     'app-webly-store': WeblyStoreApp,
     'app-webview': WebAppViewer,
+    'app-browser': LynixBrowserApp,
 };
 
 // All items that can be a "page" on mobile
@@ -137,6 +142,7 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-webly-store': MobiWeblyStoreApp,
     'mobi-app-webview': MobiWebAppViewer,
     'app-webview': MobiWebAppViewer, // Ensure app-webview maps to mobile viewer
+    'app-browser': MobiWebAppViewer, // Fallback for browser on mobile (uses standard viewer)
 };
 
 
