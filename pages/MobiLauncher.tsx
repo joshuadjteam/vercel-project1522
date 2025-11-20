@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useMemo } from 'react';
 import { Page, AppLaunchable } from '../types';
 
@@ -42,7 +44,8 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
 
     const handleAppClick = (app: AppLaunchable) => {
         if (app.isWebApp) {
-            navigate('mobi-app-webview', { url: app.url, title: app.label });
+            // Pass appData so App.tsx can intercept and open externally if needed
+            navigate('mobi-app-webview', { url: app.url, title: app.label, appData: app });
         } else {
             navigate(app.page, { ...app.params, appData: app });
         }

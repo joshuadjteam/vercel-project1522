@@ -1,4 +1,11 @@
 
+
+
+
+
+
+
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
@@ -177,6 +184,7 @@ const App: React.FC = () => {
                     if (!appData) return null;
 
                     const isNative = !!APPS_MAP[appData.id];
+                    
                     return {
                         id: appData.id,
                         label: appData.name,
@@ -185,7 +193,7 @@ const App: React.FC = () => {
                         isWebApp: !isNative,
                         url: appData.url,
                         load_in_console: appData.load_in_console,
-                        params: isNative ? {} : { url: appData.url, title: appData.name, isWebApp: true } 
+                        params: isNative ? {} : { url: appData.url, title: appData.name, isWebApp: true, iconSvg: appData.icon_svg } 
                     };
                 })
                 .filter((app): app is AppLaunchable => app !== null);
@@ -251,9 +259,16 @@ const App: React.FC = () => {
     }, []);
 
     const navigate = useCallback((newPage: Page, params: any = {}) => {
+        // Check if this app is configured to open in a new tab (external)
+        const appData = params?.appData as AppLaunchable | undefined;
+        
+        if (appData?.isWebApp && appData.url && appData.load_in_console === false) {
+            window.open(appData.url, '_blank');
+            return;
+        }
+
         const isWindowedConsole = isLoggedIn && !isMobileDevice && ['syno', 'fais'].includes(consoleView);
         const isApp = !!APPS_MAP[newPage as keyof typeof APPS_MAP];
-        const appData = params?.appData as AppLaunchable | undefined;
         
         const isWindowablePage = ['contact', 'profile', 'admin'].includes(newPage);
         const isFullScreenOverride = newPage === 'app-console-switch';
