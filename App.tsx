@@ -1,13 +1,4 @@
 
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
@@ -63,6 +54,7 @@ import MobiLauncher from './pages/MobiLauncher';
 import MobiConsoleSwitchApp from './pages/mobile-apps/MobiConsoleSwitchApp';
 import MobiWeblyStoreApp from './pages/mobile-apps/MobiWeblyStoreApp';
 import MobiWebAppViewer from './pages/mobile-apps/MobiWebAppViewer';
+import MobiLynixBrowserApp from './pages/mobile-apps/MobiLynixBrowserApp';
 
 
 // Call-related imports
@@ -142,7 +134,7 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-webly-store': MobiWeblyStoreApp,
     'mobi-app-webview': MobiWebAppViewer,
     'app-webview': MobiWebAppViewer, // Ensure app-webview maps to mobile viewer
-    'app-browser': MobiWebAppViewer, // Fallback for browser on mobile (uses standard viewer)
+    'app-browser': MobiLynixBrowserApp, // Use the new mobile browser component
 };
 
 
