@@ -1,7 +1,9 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Page } from '../../types';
+import BrowserLoader from '../../components/BrowserLoader';
+import { database } from '../../services/database';
 
 // --- Icons ---
 const ArrowLeft = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>;
@@ -14,8 +16,9 @@ const SearchIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.
 const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
 const Plus = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-const WarningIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>;
-const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>;
+const CookieIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const HistoryIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const ShieldCheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
 
 interface MobiLynixBrowserAppProps {
     navigate: (page: Page, params?: any) => void;
@@ -30,6 +33,8 @@ interface BrowserTab {
     history: string[];
     historyIndex: number;
     isBlocked: boolean;
+    isLoading: boolean;
+    blobUrl?: string;
 }
 
 const SEARCH_ENGINES = [
@@ -42,115 +47,119 @@ const SEARCH_ENGINES = [
     'yandex.com'
 ];
 
-const BLOCKED_DOMAINS = [
-    'x.com', 'twitter.com',
-    'facebook.com',
-    'instagram.com',
-    'reddit.com',
-    'linkedin.com',
-    'github.com',
-    'netflix.com',
-    'discord.com',
-    'whatsapp.com'
-];
-
 const SPECIAL_REDIRECT_URL = 'https://lynixity.x10.bz/iframe.html';
 
 const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, initialUrl }) => {
     const { user } = useAuth();
-    const [tabs, setTabs] = useState<BrowserTab[]>([{ id: 1, title: 'New Tab', url: initialUrl || '', displayUrl: initialUrl || '', history: [initialUrl || ''], historyIndex: 0, isBlocked: false }]);
+    const [tabs, setTabs] = useState<BrowserTab[]>([{ id: 1, title: 'New Tab', url: initialUrl || '', displayUrl: initialUrl || '', history: [initialUrl || ''], historyIndex: 0, isBlocked: false, isLoading: !!initialUrl }]);
     const [activeTabId, setActiveTabId] = useState(1);
     const [inputUrl, setInputUrl] = useState(initialUrl || '');
     const [showTabs, setShowTabs] = useState(false);
+    const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+    const [securityBypassEnabled, setSecurityBypassEnabled] = useState(true);
 
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId)!, [tabs, activeTabId]);
+    const settingsRef = useRef<HTMLDivElement>(null);
 
     // --- Spoofed Info ---
     const spoofedDevice = "Unknown Linux Device";
-    const spoofedOS = "DozianOS for Lynix v12.0";
-    const spoofedMachineName = `LynixWeb-Machine-${user?.id || 'Guest'}`;
+    const spoofedOS = "DozianOS for Lynix v15.0 (Mobile)";
     const spoofedClientID = "Firefox/115.0";
 
     useEffect(() => {
         setInputUrl(activeTab.displayUrl || activeTab.url);
     }, [activeTabId, activeTab.url, activeTab.displayUrl]);
 
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data && event.data.type === 'LYNIX_NAVIGATE' && event.data.url) {
+                console.log('MobileBrowser: Received navigation request to:', event.data.url);
+                handleNavigate({ preventDefault: () => {} } as any, event.data.url);
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [activeTabId]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) setSettingsMenuOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const updateTab = (id: number, updates: Partial<BrowserTab>) => {
         setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
     };
 
-    const handleNavigate = (e?: React.FormEvent) => {
+    const handleNavigate = (e?: React.FormEvent, overrideUrl?: string) => {
         if (e) e.preventDefault();
-        let finalUrl = inputUrl.trim();
+        let finalUrl = overrideUrl ? overrideUrl.trim() : inputUrl.trim();
         if (!finalUrl) return;
 
         const lowerUrl = finalUrl.toLowerCase();
         
         let actualUrl = finalUrl;
         let displayUrl = finalUrl;
-        let isBlocked = false;
         let specialHandled = false;
 
-        // --- Fixes for Google and YouTube ---
-        if (lowerUrl.includes('google.') && !lowerUrl.includes('googleapis')) {
-             actualUrl = 'https://www.google.com/webhp?igu=1';
-             displayUrl = actualUrl;
-             specialHandled = true;
-        } else if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
-             try {
-                 let targetUrl = actualUrl;
-                 if (!targetUrl.match(/^https?:\/\//)) targetUrl = 'https://' + targetUrl;
-                 const urlObj = new URL(targetUrl);
-                 
-                 if (urlObj.hostname.includes('youtu.be')) {
-                     // Handle short links: youtu.be/VIDEO_ID -> /watch?v=VIDEO_ID
-                     const videoId = urlObj.pathname.slice(1);
-                     actualUrl = `https://yewtu.be/watch?v=${videoId}`;
-                     if (urlObj.search) actualUrl += '&' + urlObj.search.slice(1);
-                 } else {
-                     // Handle standard links: youtube.com/path -> /youtube/path
-                     actualUrl = `https://yewtu.be${urlObj.pathname}${urlObj.search}`;
-                 }
-                 displayUrl = actualUrl;
-                 specialHandled = true;
-             } catch (e) {
-                 actualUrl = 'https://yewtu.be/';
-                 displayUrl = actualUrl;
-                 specialHandled = true;
-             }
-        }
-
-        if (!specialHandled) {
-            const isSearch = !lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://') && (!lowerUrl.includes('.') || lowerUrl.includes(' '));
-            const isSearchEngine = SEARCH_ENGINES.some(site => lowerUrl.includes(site));
-            
-            isBlocked = BLOCKED_DOMAINS.some(site => lowerUrl.includes(site));
-
-            if (isSearch) {
+        if (!lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://')) {
+             const isSearch = !lowerUrl.includes('.') || lowerUrl.includes(' ');
+             if (isSearch) {
                  actualUrl = SPECIAL_REDIRECT_URL;
                  displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
-            } else if (isSearchEngine) {
-                 actualUrl = SPECIAL_REDIRECT_URL;
-                 if (!finalUrl.startsWith('http')) displayUrl = `https://${finalUrl}`;
-            } else {
-                if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
-                    actualUrl = `https://${finalUrl}`;
-                    displayUrl = actualUrl;
-                }
-            }
+             } else {
+                 actualUrl = `https://${finalUrl}`;
+                 displayUrl = actualUrl;
+             }
+        } else {
+            displayUrl = actualUrl;
         }
 
-        const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
-        newHistory.push(displayUrl);
-        updateTab(activeTabId, { url: actualUrl, displayUrl: displayUrl, title: displayUrl, history: newHistory, historyIndex: newHistory.length - 1, isBlocked: isBlocked });
+        setTabs(currentTabs => {
+            const tab = currentTabs.find(t => t.id === activeTabId);
+            if(!tab) return currentTabs;
+
+            const newHistory = tab.history.slice(0, tab.historyIndex + 1);
+            newHistory.push(displayUrl);
+            
+            if (tab.blobUrl) URL.revokeObjectURL(tab.blobUrl);
+
+            const requiresProxy = securityBypassEnabled && !actualUrl.startsWith('internal://') && actualUrl !== SPECIAL_REDIRECT_URL;
+
+            return currentTabs.map(t => t.id === activeTabId ? { 
+                ...t,
+                url: actualUrl, 
+                displayUrl: displayUrl, 
+                title: displayUrl, 
+                history: newHistory, 
+                historyIndex: newHistory.length - 1, 
+                isBlocked: false,
+                isLoading: true,
+                blobUrl: requiresProxy ? undefined : undefined
+            } : t);
+        });
+        
         setInputUrl(displayUrl);
+    };
+
+    const handleLoaderComplete = (blobUrl?: string) => {
+        updateTab(activeTabId, { isLoading: false, blobUrl });
     };
 
     const handleBack = () => {
         if (activeTab.historyIndex > 0) {
             const newIndex = activeTab.historyIndex - 1;
             const newUrl = activeTab.history[newIndex];
-            handleNavigate({ preventDefault: () => { setInputUrl(newUrl) } } as any);
+            updateTab(activeTabId, {
+                url: newUrl,
+                displayUrl: newUrl,
+                historyIndex: newIndex,
+                isLoading: true,
+                blobUrl: undefined
+            });
+            setInputUrl(newUrl);
         }
     };
 
@@ -158,29 +167,31 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         if (activeTab.historyIndex < activeTab.history.length - 1) {
             const newIndex = activeTab.historyIndex + 1;
             const newUrl = activeTab.history[newIndex];
-            handleNavigate({ preventDefault: () => { setInputUrl(newUrl) } } as any);
+            updateTab(activeTabId, {
+                url: newUrl,
+                displayUrl: newUrl,
+                historyIndex: newIndex,
+                isLoading: true,
+                blobUrl: undefined
+            });
+            setInputUrl(newUrl);
         }
     };
     
     const handleRefresh = () => {
-        if(activeTab.isBlocked) return;
-        if(activeTab.url) {
-            const current = activeTab.url;
-            updateTab(activeTabId, { url: 'about:blank' });
-            setTimeout(() => updateTab(activeTabId, { url: current }), 50);
-        }
+        updateTab(activeTabId, { isLoading: true, blobUrl: undefined });
     };
 
     const handleHome = () => {
         const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
         newHistory.push('');
-        updateTab(activeTabId, { url: '', displayUrl: '', title: 'New Tab', history: newHistory, historyIndex: newHistory.length - 1, isBlocked: false });
+        updateTab(activeTabId, { url: '', displayUrl: '', title: 'New Tab', history: newHistory, historyIndex: newHistory.length - 1, isBlocked: false, isLoading: false, blobUrl: undefined });
         setInputUrl('');
     };
 
     const addNewTab = () => {
         const newId = Date.now();
-        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isBlocked: false };
+        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isBlocked: false, isLoading: false };
         setTabs([...tabs, newTab]);
         setActiveTabId(newId);
         setInputUrl('');
@@ -189,8 +200,11 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
 
     const closeTab = (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
+        const tabToClose = tabs.find(t => t.id === id);
+        if (tabToClose?.blobUrl) URL.revokeObjectURL(tabToClose.blobUrl);
+
         if (tabs.length === 1) {
-            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isBlocked: false });
+            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isBlocked: false, isLoading: false, blobUrl: undefined });
             setInputUrl('');
             return;
         }
@@ -210,13 +224,20 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         setShowTabs(false);
     }
     
-    const openBlockedInNewWindow = () => {
-        const url = activeTab.displayUrl.startsWith('http') ? activeTab.displayUrl : `https://${activeTab.displayUrl}`;
-        window.open(url, '_blank', 'width=1200,height=800');
+    const clearCookies = () => {
+        if (window.confirm("Clear all browser data?")) {
+            tabs.forEach(t => { if (t.blobUrl) URL.revokeObjectURL(t.blobUrl); });
+            setTabs([{ id: Date.now(), title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }]);
+            setInputUrl('');
+            setSettingsMenuOpen(false);
+        }
     };
 
+    const iframeSrc = activeTab.blobUrl || activeTab.url;
+    const shouldUseLoader = activeTab.isLoading && !!activeTab.url && securityBypassEnabled && !activeTab.url.startsWith('internal://') && activeTab.url !== SPECIAL_REDIRECT_URL;
+
     return (
-        <div className="w-full h-full flex flex-col bg-white dark:bg-[#1a1a1a] text-black dark:text-white relative">
+        <div className="w-full h-full flex flex-col bg-white dark:bg-[#1a1a1a] text-black dark:text-white relative overflow-hidden">
              {showTabs && (
                 <div className="absolute inset-0 bg-black/90 z-50 flex flex-col p-4">
                     <div className="flex justify-between items-center mb-4">
@@ -267,41 +288,37 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                     {tabs.length}
                 </button>
                 
-                <div className="relative">
-                    <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
+                <div className="relative" ref={settingsRef}>
+                    <button onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
                         <MoreVertical />
                     </button>
+                    {settingsMenuOpen && (
+                        <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-[#35363a] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-2 z-50">
+                            <div className="px-4 py-2 flex items-center justify-between">
+                                <span className="text-sm font-medium">Security Bypass</span>
+                                <button onClick={() => setSecurityBypassEnabled(!securityBypassEnabled)} className={`w-10 h-5 rounded-full relative transition-colors ${securityBypassEnabled ? 'bg-green-500' : 'bg-gray-400'}`}>
+                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${securityBypassEnabled ? 'left-6' : 'left-1'}`}></div>
+                                </button>
+                            </div>
+                            <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
+                            <button onClick={clearCookies} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><CookieIcon /><span>Clear Cookies</span></button>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Main Content Area */}
             <div className="flex-grow relative bg-white dark:bg-[#202124] w-full h-full overflow-hidden">
-                {activeTab.isBlocked ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-gray-100 dark:bg-slate-900">
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-xs">
-                            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-full inline-block">
-                                <WarningIcon />
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Website cannot be reachable using the Browser</h2>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                                {activeTab.displayUrl} has security settings that prevent it from loading here.
-                            </p>
-                            <button 
-                                onClick={openBlockedInNewWindow}
-                                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center space-x-2"
-                            >
-                                <span>Open in your browser</span>
-                                <ExternalLinkIcon />
-                            </button>
-                        </div>
-                    </div>
+                {shouldUseLoader ? (
+                    <BrowserLoader url={activeTab.displayUrl} isMobile={true} onComplete={handleLoaderComplete} />
                 ) : activeTab.url ? (
                     <iframe 
-                        src={activeTab.url} 
+                        src={iframeSrc} 
                         className="w-full h-full border-0"
-                        referrerPolicy="same-origin"
+                        referrerPolicy="no-referrer"
                         title="mobile-browser-content"
-                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"
+                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation allow-downloads"
+                        onLoad={() => updateTab(activeTabId, { isLoading: false })}
                     />
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full text-center px-6">
@@ -333,7 +350,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
             
             {/* Spoofed Status Bar */}
             <div className="h-5 bg-[#f1f3f4] dark:bg-[#292a2d] flex items-center justify-center text-[9px] text-gray-500 font-mono select-none border-t border-gray-300 dark:border-black/50">
-                <span className="mr-2">{spoofedOS}</span> | <span className="ml-2">{spoofedClientID}</span>
+                <span className="mr-2">{spoofedOS}</span>
             </div>
         </div>
     );

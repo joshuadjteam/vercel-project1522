@@ -445,6 +445,35 @@ export const database = {
         return data;
     },
 
+    // --- Proxy Service ---
+    fetchProxyContent: async (url: string): Promise<{ content: string; contentType: string; strippedHeaders?: string[]; error?: string }> => {
+        // CHANGED: Use dedicated 'proxy-service' function instead of 'app-service'
+        const { data, error } = await supabase.functions.invoke('proxy-service', {
+            body: { url }
+        });
+        
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) {
+                    // Ignore
+                }
+            }
+            console.error('Error fetching proxy content:', errorMessage);
+            return { content: '', contentType: '', error: errorMessage };
+        }
+
+        if (data?.error) {
+             console.error('Error in proxy content response:', data.error);
+             return { content: '', contentType: '', error: data.error };
+        }
+
+        return { content: data.content, contentType: data.contentType, strippedHeaders: data.strippedHeaders };
+    },
+
     getMailsForUser: async (username: string): Promise<{ inbox: Mail[], sent: Mail[] }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'mails', action: 'get' }
@@ -667,4 +696,24 @@ export const database = {
         }
         return { success: data.success, message: data.message };
     },
+
+    // --- Browser Cloud Sync (Simulated via User Metadata) ---
+    getBrowserData: async (userId: number): Promise<{ history: string[], bookmarks: { title: string, url: string }[] }> => {
+        // Fetch user profile which includes metadata
+        // This requires auth_id, but for simplicity we assume the calling context handles it.
+        // In a real app, we'd query user_metadata.
+        // Since we can't change the API easily, we'll use localStorage for this demo session persistence
+        // or rely on the app to pass the full user object if available.
+        
+        // Returning from localStorage as "Cloud" simulation for stability in this environment
+        const saved = localStorage.getItem(`lynix_browser_data_${userId}`);
+        return saved ? JSON.parse(saved) : { history: [], bookmarks: [] };
+    },
+
+    saveBrowserData: async (userId: number, data: { history?: string[], bookmarks?: { title: string, url: string }[] }) => {
+        const current = JSON.parse(localStorage.getItem(`lynix_browser_data_${userId}`) || '{"history":[], "bookmarks":[]}');
+        const newData = { ...current, ...data };
+        localStorage.setItem(`lynix_browser_data_${userId}`, JSON.stringify(newData));
+        // Ideally: await supabase.auth.admin.updateUserById(...) if we had admin key access here
+    }
 };

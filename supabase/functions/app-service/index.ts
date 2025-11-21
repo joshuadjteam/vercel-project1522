@@ -119,6 +119,67 @@ serve(async (req)=>{
       }
     }
 
+    // --- PROXY Service (For bypassing X-Frame-Options) ---
+    // This allows the Lynix Browser to fetch content server-side and render it.
+    if (resource === 'proxy') {
+        const { url } = payload;
+        if (!url) throw { status: 400, message: "URL is required" };
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+                }
+            });
+            const contentType = response.headers.get('content-type') || '';
+            
+            // Detect Security Headers to strip
+            const securityHeaders = ['x-frame-options', 'content-security-policy', 'x-content-type-options'];
+            const strippedHeaders: string[] = [];
+            securityHeaders.forEach(header => {
+                if (response.headers.has(header)) {
+                    strippedHeaders.push(header);
+                }
+            });
+
+            // If it's HTML, we need to inject a <base> tag so relative links work
+            if (contentType.includes('text/html')) {
+                let html = await response.text();
+                const urlObj = new URL(url);
+                // Construct the base origin (e.g., https://example.com)
+                const origin = urlObj.origin;
+                
+                // Inject <base> tag right after <head>
+                // This forces the browser to resolve relative paths (like /image.png) against the original site, not our app.
+                if (!html.includes('<base')) {
+                    const baseTag = `<base href="${origin}/" target="_self">`;
+                    html = html.replace(/<head[^>]*>/i, (match) => `${match}${baseTag}`);
+                }
+                
+                // Inject Bypass Comment / Signature
+                // This simulates "editing the HTML" to bypass security as per user request
+                const bypassSignature = `
+                <!-- 
+                    Lynix Proxy: Security Headers Stripped 
+                    Bypassed Headers: ${strippedHeaders.join(', ') || 'None'}
+                    Mode: Inspect Element / DOM Injection
+                -->`;
+                
+                // Inject at start of body or end of head
+                html = html.replace(/<body[^>]*>/i, (match) => `${match}${bypassSignature}`);
+                
+                return new Response(JSON.stringify({ content: html, contentType, strippedHeaders }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            } else {
+                // For other content types (images, json, etc), just pass through the text/blob
+                const text = await response.text();
+                return new Response(JSON.stringify({ content: text, contentType, strippedHeaders }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
+        } catch (e) {
+            console.error(`Proxy error for ${url}:`, e);
+            throw { status: 500, message: `Failed to fetch website: ${e.message}` };
+        }
+    }
+
     // --- Google Drive Resource ---
     if (resource === 'drive') {
         const { data: { user: driveUser }, error: getDriveUserError } = await supabaseAdmin.auth.admin.getUserById(authUser.id);
