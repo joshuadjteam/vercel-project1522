@@ -97,16 +97,23 @@ const LynixBrowserApp: React.FC = () => {
              specialHandled = true;
         } else if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
              try {
-                 const fullUrl = actualUrl.startsWith('http') ? actualUrl : `https://${actualUrl}`;
-                 const urlObj = new URL(fullUrl);
-                 // Preserve path and search query for full YouTube functionality
-                 const path = urlObj.pathname + urlObj.search;
-                 actualUrl = `https://lynixity.x10.bz/youtube${path}`;
+                 let targetUrl = actualUrl;
+                 if (!targetUrl.match(/^https?:\/\//)) targetUrl = 'https://' + targetUrl;
+                 const urlObj = new URL(targetUrl);
+                 
+                 if (urlObj.hostname.includes('youtu.be')) {
+                     // Handle short links: youtu.be/VIDEO_ID -> /watch?v=VIDEO_ID
+                     const videoId = urlObj.pathname.slice(1);
+                     actualUrl = `https://yewtu.be/watch?v=${videoId}`;
+                     if (urlObj.search) actualUrl += '&' + urlObj.search.slice(1);
+                 } else {
+                     // Handle standard links: youtube.com/path -> /youtube/path
+                     actualUrl = `https://yewtu.be${urlObj.pathname}${urlObj.search}`;
+                 }
                  displayUrl = actualUrl;
                  specialHandled = true;
              } catch (e) {
-                 // Fallback if URL parsing fails
-                 actualUrl = 'https://lynixity.x10.bz/youtube/';
+                 actualUrl = 'https://yewtu.be/';
                  displayUrl = actualUrl;
                  specialHandled = true;
              }
@@ -278,7 +285,7 @@ const LynixBrowserApp: React.FC = () => {
             {/* Bookmarks Bar */}
             <div className="h-8 bg-white dark:bg-[#35363a] flex items-center px-4 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-black/10 space-x-2">
                  <button onClick={() => handleNavigate('https://wikipedia.org')} className="hover:bg-gray-200 dark:hover:bg-white/10 px-2 py-1 rounded flex items-center space-x-1"><div className="w-3 h-3 rounded-full bg-gray-500"></div><span>Wikipedia</span></button>
-                 <button onClick={() => handleNavigate('https://lynixity.x10.bz/iframe.html')} className="hover:bg-gray-200 dark:hover:bg-white/10 px-2 py-1 rounded flex items-center space-x-1"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span>Lynix Frame</span></button>
+                 <button onClick={() => handleNavigate('https://yewtu.be')} className="hover:bg-gray-200 dark:hover:bg-white/10 px-2 py-1 rounded flex items-center space-x-1"><div className="w-3 h-3 rounded-full bg-red-500"></div><span>YouTube</span></button>
             </div>
 
             {/* Main Content Area */}

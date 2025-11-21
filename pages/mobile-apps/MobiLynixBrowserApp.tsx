@@ -98,14 +98,23 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
              specialHandled = true;
         } else if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
              try {
-                 const fullUrl = actualUrl.startsWith('http') ? actualUrl : `https://${actualUrl}`;
-                 const urlObj = new URL(fullUrl);
-                 const path = urlObj.pathname + urlObj.search;
-                 actualUrl = `https://lynixity.x10.bz/youtube${path}`;
+                 let targetUrl = actualUrl;
+                 if (!targetUrl.match(/^https?:\/\//)) targetUrl = 'https://' + targetUrl;
+                 const urlObj = new URL(targetUrl);
+                 
+                 if (urlObj.hostname.includes('youtu.be')) {
+                     // Handle short links: youtu.be/VIDEO_ID -> /watch?v=VIDEO_ID
+                     const videoId = urlObj.pathname.slice(1);
+                     actualUrl = `https://yewtu.be/watch?v=${videoId}`;
+                     if (urlObj.search) actualUrl += '&' + urlObj.search.slice(1);
+                 } else {
+                     // Handle standard links: youtube.com/path -> /youtube/path
+                     actualUrl = `https://yewtu.be${urlObj.pathname}${urlObj.search}`;
+                 }
                  displayUrl = actualUrl;
                  specialHandled = true;
              } catch (e) {
-                 actualUrl = 'https://lynixity.x10.bz/youtube/';
+                 actualUrl = 'https://yewtu.be/';
                  displayUrl = actualUrl;
                  specialHandled = true;
              }
@@ -243,39 +252,43 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                         type="text"
                         value={inputUrl}
                         onChange={(e) => setInputUrl(e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                        className="w-full bg-white dark:bg-[#1e1e1e] rounded-full py-2 pl-9 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm dark:text-white"
+                        className="w-full py-2 pl-10 pr-8 rounded-lg border-none outline-none bg-white dark:bg-[#404040] text-sm text-black dark:text-white shadow-inner"
                         placeholder="Search or type URL"
+                        onFocus={(e) => e.target.select()}
                     />
                     {inputUrl && (
-                        <button 
-                            type="button"
-                            onClick={() => setInputUrl('')}
-                            className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-gray-600"
-                        >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <button type="button" onClick={() => { setInputUrl(''); }} className="absolute inset-y-0 right-2 flex items-center text-gray-500">
+                            <XIcon />
                         </button>
                     )}
                 </form>
 
-                <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
-                    <MoreVertical />
+                <button onClick={() => setShowTabs(true)} className="w-8 h-8 rounded-lg border-2 border-gray-600 dark:border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10">
+                    {tabs.length}
                 </button>
+                
+                <div className="relative">
+                    <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
+                        <MoreVertical />
+                    </button>
+                </div>
             </div>
 
-            {/* Main Content - iframe */}
-            <div className="flex-grow relative overflow-hidden w-full h-full bg-white dark:bg-[#1a1a1a]">
+            {/* Main Content Area */}
+            <div className="flex-grow relative bg-white dark:bg-[#202124] w-full h-full overflow-hidden">
                 {activeTab.isBlocked ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                        <div className="bg-red-50 dark:bg-red-900/20 p-8 rounded-2xl border border-red-200 dark:border-red-800 shadow-xl max-w-md">
-                            <WarningIcon />
-                            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Website cannot be reachable using the Browser</h2>
-                            <p className="text-gray-600 dark:text-gray-300 mb-6">
-                                This website has security settings (X-Secure-Option) that prevent it from being displayed inside this browser frame.
+                    <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-gray-100 dark:bg-slate-900">
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-xs">
+                            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-full inline-block">
+                                <WarningIcon />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Website cannot be reachable using the Browser</h2>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                                {activeTab.displayUrl} has security settings that prevent it from loading here.
                             </p>
                             <button 
                                 onClick={openBlockedInNewWindow}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center justify-center mx-auto transition-colors"
+                                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center space-x-2"
                             >
                                 <span>Open in your browser</span>
                                 <ExternalLinkIcon />
@@ -287,70 +300,40 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                         src={activeTab.url} 
                         className="w-full h-full border-0"
                         referrerPolicy="same-origin"
-                        title="browser-content"
+                        title="mobile-browser-content"
                         sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"
                     />
                 ) : (
-                    // Home / New Tab Screen
-                    <div className="flex flex-col items-center justify-center h-full p-8 bg-white dark:bg-[#1a1a1a]">
-                        <h1 className="text-4xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8 select-none">Bing</h1>
-                        <div className="w-full max-w-md">
-                             <div className="relative shadow-md rounded-full">
+                    <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                        <h1 className="text-4xl font-bold text-gray-500 dark:text-gray-400 mb-6 select-none">Bing</h1>
+                        <div className="w-full">
+                             <div className="relative group shadow-md rounded-full">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <SearchIcon className="w-5 h-5 text-gray-400" />
                                 </div>
-                                <input
-                                    type="text"
-                                    placeholder="Search Bing"
-                                    className="w-full py-3 pl-12 pr-4 rounded-full bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:text-white"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            const val = (e.target as HTMLInputElement).value;
-                                            handleNavigate({ preventDefault: () => {} } as any);
-                                            setInputUrl(val);
-                                            const displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(val)}`;
-                                            const actualUrl = SPECIAL_REDIRECT_URL;
-                                            const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
-                                            newHistory.push(displayUrl);
-                                            updateTab(activeTabId, { url: actualUrl, displayUrl: displayUrl, title: 'Search Results', history: newHistory, historyIndex: newHistory.length - 1, isBlocked: false });
-                                        }
-                                    }}
+                                <input 
+                                    type="text" 
+                                    placeholder="Search..." 
+                                    className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#2c2c2c] focus:outline-none dark:text-white"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleNavigate({ preventDefault: () => { setInputUrl((e.target as HTMLInputElement).value); handleNavigate(); } } as any)}
                                 />
-                             </div>
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
 
             {/* Bottom Toolbar */}
-            <div className="flex-shrink-0 bg-gray-100 dark:bg-[#2c2c2c] h-12 border-t border-gray-300 dark:border-black flex justify-around items-center px-4 shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-20">
-                <button onClick={handleBack} disabled={activeTab.historyIndex <= 0} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-opacity">
-                    <ArrowLeft />
-                </button>
-                <button onClick={handleForward} disabled={activeTab.historyIndex >= activeTab.history.length - 1} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-opacity">
-                    <ArrowRight />
-                </button>
-                <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
-                    <InfoIcon />
-                </button>
-                <button onClick={handleRefresh} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10">
-                    <RefreshCw />
-                </button>
-                <button onClick={() => setShowTabs(true)} className="p-2 rounded-md border border-gray-400 dark:border-gray-500 flex items-center justify-center w-8 h-8 text-xs font-bold text-gray-600 dark:text-gray-300">
-                    {tabs.length}
-                </button>
+            <div className="flex justify-around items-center h-12 bg-gray-100 dark:bg-[#2c2c2c] border-t border-gray-300 dark:border-black/50 z-20">
+                <button onClick={handleBack} disabled={activeTab.historyIndex <= 0} className="p-3 text-gray-600 dark:text-gray-300 disabled:opacity-30"><ArrowLeft /></button>
+                <button onClick={handleForward} disabled={activeTab.historyIndex >= activeTab.history.length - 1} className="p-3 text-gray-600 dark:text-gray-300 disabled:opacity-30"><ArrowRight /></button>
+                <button onClick={handleRefresh} className="p-3 text-gray-600 dark:text-gray-300"><RefreshCw /></button>
+                <button onClick={handleHome} className="p-3 text-gray-600 dark:text-gray-300"><Home /></button>
             </div>
-
-             {/* Spoofed Status Bar */}
-            <div className="h-6 bg-[#f1f3f4] dark:bg-[#292a2d] border-t border-gray-300 dark:border-black/50 flex items-center justify-between px-3 text-[10px] text-gray-500 font-mono select-none cursor-default">
-                <div className="flex space-x-2 sm:space-x-4">
-                     <span className="flex items-center"><span className="font-bold mr-1">DEVICE:</span> <span className="truncate max-w-[80px] sm:max-w-none">{spoofedDevice}</span></span>
-                     <span className="flex items-center hidden sm:inline-flex"><span className="font-bold mr-1">OS:</span> {spoofedOS}</span>
-                </div>
-                <div className="flex space-x-2 sm:space-x-4">
-                     <span className="flex items-center hidden sm:inline-flex"><span className="font-bold mr-1">CLIENT:</span> {spoofedClientID}</span>
-                     <span className="flex items-center"><span className="font-bold mr-1">ID:</span> {spoofedMachineName}</span>
-                </div>
+            
+            {/* Spoofed Status Bar */}
+            <div className="h-5 bg-[#f1f3f4] dark:bg-[#292a2d] flex items-center justify-center text-[9px] text-gray-500 font-mono select-none border-t border-gray-300 dark:border-black/50">
+                <span className="mr-2">{spoofedOS}</span> | <span className="ml-2">{spoofedClientID}</span>
             </div>
         </div>
     );

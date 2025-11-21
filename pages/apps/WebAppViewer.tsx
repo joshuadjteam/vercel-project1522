@@ -37,16 +37,26 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title, iconSvg }) => {
             return 'https://www.google.com/webhp?igu=1';
         }
         
-        // Fix for YouTube - Preserve Path and Query
+        // Fix for YouTube - Redirect to yewtu.be to allow embedding
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
             try {
-                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                const urlObj = new URL(fullUrl);
-                const path = urlObj.pathname + urlObj.search;
-                // If path is just slash, it works. If path is /watch?v=..., it appends correctly.
-                return `https://lynixity.x10.bz/youtube${path}`;
+                let targetUrl = url;
+                if (!targetUrl.startsWith('http')) targetUrl = `https://${targetUrl}`;
+                const urlObj = new URL(targetUrl);
+                
+                if (urlObj.hostname.includes('youtu.be')) {
+                    // youtu.be/ID -> /watch?v=ID
+                    const videoId = urlObj.pathname.slice(1);
+                    let newUrl = `https://yewtu.be/watch?v=${videoId}`;
+                    if (urlObj.search) newUrl += '&' + urlObj.search.slice(1);
+                    return newUrl;
+                } else {
+                    // Standard youtube.com/path -> /youtube/path
+                    // Note: yewtu.be mirrors the path structure of YouTube
+                    return `https://yewtu.be${urlObj.pathname}${urlObj.search}`;
+                }
             } catch (e) {
-                return 'https://lynixity.x10.bz/youtube/';
+                return 'https://yewtu.be/';
             }
         }
 
@@ -74,21 +84,19 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title, iconSvg }) => {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center bg-[#f0f2f5] dark:bg-[#18191a] p-8 text-center">
                 <div className="bg-white dark:bg-[#242526] p-8 rounded-2xl shadow-lg max-w-md w-full flex flex-col items-center border border-gray-200 dark:border-gray-700">
-                    <div className="mb-6 p-4 bg-gray-50 dark:bg-[#3a3b3c] rounded-2xl">
+                    <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-full">
                         <WarningIcon />
                     </div>
-                    
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Website cannot be reachable using the Browser</h2>
+                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Website cannot be reachable using the Browser</h2>
                     <p className="text-gray-500 dark:text-gray-400 mb-8">
-                        This application requires a secure session window to function correctly.
+                        {title} uses security headers (X-Frame-Options) that prevent it from opening inside Lynix.
                     </p>
-                    
                     <button 
                         onClick={handleLaunch}
-                        className="w-full py-3 px-6 bg-[#1877f2] hover:bg-[#166fe5] text-white text-lg font-semibold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-md transform active:scale-95"
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg flex items-center space-x-2"
                     >
-                        <ExternalIcon />
                         <span>Open in your browser</span>
+                        <ExternalIcon />
                     </button>
                 </div>
             </div>
@@ -96,23 +104,18 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title, iconSvg }) => {
     }
 
     return (
-        <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900 relative">
-            {/* Fallback header in case site refuses to load later */}
-            <div className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs px-4 py-2 flex justify-between items-center flex-shrink-0">
-                <span className="flex-grow mr-2 text-gray-500 dark:text-gray-400 truncate">{safeUrl}</span>
-                <button onClick={handleLaunch} className="text-blue-600 dark:text-blue-400 hover:underline font-medium flex items-center space-x-1">
-                    <ExternalIcon />
-                    <span>Open in Window</span>
-                </button>
-            </div>
-            
-            <div className="flex-grow min-h-0 flex relative">
+        <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900">
+            <div className="flex-grow relative w-full h-full">
+                <div className="absolute inset-0 flex items-center justify-center text-gray-400 z-0">
+                    Loading {title}...
+                </div>
                 <iframe
                     src={safeUrl}
-                    className="w-full flex-grow border-0 relative z-10 bg-white"
+                    className="absolute inset-0 w-full h-full border-0 z-10 bg-white"
                     title={title}
-                    allow="camera; microphone; geolocation; payment; fullscreen; clipboard-read; clipboard-write"
-                    sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; camera; microphone; geolocation; payment"
+                    allowFullScreen
+                    referrerPolicy="no-referrer"
                 />
             </div>
         </div>

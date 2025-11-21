@@ -39,15 +39,23 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, iconSvg
             return 'https://www.google.com/webhp?igu=1';
         }
         
-        // Fix for YouTube - Preserve Path and Query
+        // Fix for YouTube - Redirect to yewtu.be
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
             try {
-                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                const urlObj = new URL(fullUrl);
-                const path = urlObj.pathname + urlObj.search;
-                return `https://lynixity.x10.bz/youtube${path}`;
+                let targetUrl = url;
+                if (!targetUrl.startsWith('http')) targetUrl = `https://${targetUrl}`;
+                const urlObj = new URL(targetUrl);
+                
+                if (urlObj.hostname.includes('youtu.be')) {
+                    const videoId = urlObj.pathname.slice(1);
+                    let newUrl = `https://yewtu.be/watch?v=${videoId}`;
+                    if (urlObj.search) newUrl += '&' + urlObj.search.slice(1);
+                    return newUrl;
+                } else {
+                    return `https://yewtu.be${urlObj.pathname}${urlObj.search}`;
+                }
             } catch (e) {
-                return 'https://lynixity.x10.bz/youtube/';
+                return 'https://yewtu.be/';
             }
         }
 
