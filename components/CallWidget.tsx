@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useCall } from '../hooks/useCall';
 
@@ -19,11 +20,15 @@ const CallWidget: React.FC = () => {
     const [pipPosition, setPipPosition] = useState({ x: 20, y: 20 });
     
     useEffect(() => {
-        if (localVideoRef.current && localStream) localVideoRef.current.srcObject = localStream;
-    }, [localStream]);
+        if (localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+        }
+    }, [localStream, isVideoCall]);
 
     useEffect(() => {
-        if (remoteVideoRef.current && remoteStream) remoteVideoRef.current.srcObject = remoteStream;
+        if (remoteVideoRef.current && remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream;
+        }
     }, [remoteStream]);
 
     const handlePipMouseDown = (e: React.MouseEvent) => {
@@ -68,30 +73,39 @@ const CallWidget: React.FC = () => {
 
     return (
         <div className="fixed inset-0 bg-black flex items-center justify-center z-[100] animate-fade-in">
-            {isVideoCall && remoteStream && (
-                <video ref={remoteVideoRef} autoPlay playsInline className="absolute top-0 left-0 w-full h-full object-cover" />
+            {/* 
+                Always render the remote video element if stream exists so audio tracks can play.
+                We hide it with CSS if it's not a video call.
+            */}
+            {remoteStream && (
+                <video 
+                    ref={remoteVideoRef} 
+                    autoPlay 
+                    playsInline 
+                    className={`absolute top-0 left-0 w-full h-full object-cover ${isVideoCall ? 'block' : 'hidden'}`} 
+                />
             )}
 
             <div className="absolute inset-0 bg-black/50 flex flex-col p-8 items-center justify-between">
                 {/* Top Info */}
-                <div className="text-center text-white">
-                    <h2 className="text-4xl font-semibold">{callee}</h2>
-                    <p className="text-lg text-green-400">{formatDuration(callDuration)}</p>
+                <div className="text-center text-white z-10">
+                    <h2 className="text-4xl font-semibold drop-shadow-md">{callee}</h2>
+                    <p className="text-lg text-green-400 drop-shadow-sm">{formatDuration(callDuration)}</p>
                 </div>
                 
                 {/* Audio-only Avatar */}
                 {!isVideoCall && (
-                    <div className="w-48 h-48 bg-blue-500 rounded-full flex items-center justify-center font-bold text-8xl text-white ring-4 ring-blue-500/30">
+                    <div className="w-48 h-48 bg-blue-500 rounded-full flex items-center justify-center font-bold text-8xl text-white ring-4 ring-blue-500/30 shadow-2xl">
                         {callee.charAt(0).toUpperCase()}
                     </div>
                 )}
                 
                 {/* Controls */}
-                <div className="flex justify-center items-center space-x-6">
+                <div className="flex justify-center items-center space-x-6 z-10">
                     <button 
                         onClick={toggleMute} 
                         title={isMuted ? "Unmute" : "Mute"}
-                        className={`h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300 text-2xl ${isMuted ? 'bg-yellow-500 text-white' : 'bg-white/20 hover:bg-white/30'}`}
+                        className={`h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300 text-2xl ${isMuted ? 'bg-yellow-500 text-white' : 'bg-white/20 hover:bg-white/30 backdrop-blur-sm'}`}
                     >
                        {isMuted ? <UnmuteIcon /> : <MuteIcon />}
                     </button>
@@ -99,7 +113,7 @@ const CallWidget: React.FC = () => {
                     <button 
                         onClick={() => endCall()} 
                         title="End Call"
-                        className="h-20 w-20 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white text-2xl font-semibold hover:scale-110"
+                        className="h-20 w-20 rounded-full flex items-center justify-center transition-transform bg-red-600 hover:bg-red-700 text-white text-2xl font-semibold hover:scale-110 shadow-lg"
                     >
                         <EndCallIcon />
                     </button>
@@ -110,7 +124,7 @@ const CallWidget: React.FC = () => {
                 <div 
                     ref={pipRef} 
                     style={{ transform: `translate(${pipPosition.x}px, ${pipPosition.y}px)` }} 
-                    className="absolute top-0 left-0 w-48 h-36 cursor-move" 
+                    className="absolute top-0 left-0 w-48 h-36 cursor-move z-20" 
                     onMouseDown={handlePipMouseDown}
                 >
                      <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full rounded-lg object-cover shadow-lg border-2 border-white/50" />
