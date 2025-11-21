@@ -6,7 +6,7 @@ import { Page } from '../../types';
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m7 7H3" /></svg>;
 const OpenExternalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>;
 const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
-const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>;
+const WarningIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>;
 
 interface MobiWebAppViewerProps {
     url: string;
@@ -24,8 +24,6 @@ const BLOCKED_DOMAINS = [
     'discord.com', 
     'discord.gg', 
     'linkedin.com', 
-    'google.com',
-    'youtube.com',
     'whatsapp.com'
 ];
 
@@ -35,6 +33,24 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, iconSvg
     // Normalize URL to ensure it has a protocol
     const safeUrl = useMemo(() => {
         if (!url) return '';
+        
+        // Fix for Google
+        if (url.includes('google.') && !url.includes('googleapis')) {
+            return 'https://www.google.com/webhp?igu=1';
+        }
+        
+        // Fix for YouTube - Preserve Path and Query
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            try {
+                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                const urlObj = new URL(fullUrl);
+                const path = urlObj.pathname + urlObj.search;
+                return `https://lynixity.x10.bz/youtube${path}`;
+            } catch (e) {
+                return 'https://lynixity.x10.bz/youtube/';
+            }
+        }
+
         if (url.startsWith('internal://') || url.startsWith('http://') || url.startsWith('https://')) return url;
         return `https://${url}`;
     }, [url]);
@@ -83,23 +99,19 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, iconSvg
                 {isBlocked ? (
                      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-gray-100 dark:bg-slate-900">
                         <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-sm flex flex-col items-center">
-                            <div className="mb-4 p-3 bg-gray-100 dark:bg-white/10 rounded-xl">
-                                {iconSvg ? (
-                                    <div className="w-16 h-16 text-gray-800 dark:text-white" dangerouslySetInnerHTML={{ __html: iconSvg }} />
-                                ) : (
-                                    <LinkIcon />
-                                )}
+                            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                                <WarningIcon />
                             </div>
-                            <h2 className="text-2xl font-bold mb-2 dark:text-white">{title}</h2>
+                            <h2 className="text-xl font-bold mb-2 dark:text-white">Website cannot be reachable using the Browser</h2>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-                                {title} requires a secure window to run properly.
+                                {title} has security settings that prevent it from loading here.
                             </p>
                             <button 
                                 onClick={handleOpenExternal}
                                 className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-md active:scale-95 transform flex items-center justify-center space-x-2"
                             >
                                 <OpenExternalIcon />
-                                <span>Launch App</span>
+                                <span>Open in your browser</span>
                             </button>
                         </div>
                      </div>

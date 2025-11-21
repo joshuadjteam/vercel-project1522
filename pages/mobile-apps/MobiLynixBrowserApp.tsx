@@ -14,6 +14,8 @@ const SearchIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.
 const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
 const Plus = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+const WarningIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>;
+const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>;
 
 interface MobiLynixBrowserAppProps {
     navigate: (page: Page, params?: any) => void;
@@ -27,10 +29,10 @@ interface BrowserTab {
     displayUrl: string;
     history: string[];
     historyIndex: number;
+    isBlocked: boolean;
 }
 
 const SEARCH_ENGINES = [
-    'google.com', 'www.google.com',
     'bing.com', 'www.bing.com',
     'yahoo.com', 'search.yahoo.com',
     'duckduckgo.com',
@@ -40,11 +42,23 @@ const SEARCH_ENGINES = [
     'yandex.com'
 ];
 
+const BLOCKED_DOMAINS = [
+    'x.com', 'twitter.com',
+    'facebook.com',
+    'instagram.com',
+    'reddit.com',
+    'linkedin.com',
+    'github.com',
+    'netflix.com',
+    'discord.com',
+    'whatsapp.com'
+];
+
 const SPECIAL_REDIRECT_URL = 'https://lynixity.x10.bz/iframe.html';
 
 const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, initialUrl }) => {
     const { user } = useAuth();
-    const [tabs, setTabs] = useState<BrowserTab[]>([{ id: 1, title: 'New Tab', url: initialUrl || '', displayUrl: initialUrl || '', history: [initialUrl || ''], historyIndex: 0 }]);
+    const [tabs, setTabs] = useState<BrowserTab[]>([{ id: 1, title: 'New Tab', url: initialUrl || '', displayUrl: initialUrl || '', history: [initialUrl || ''], historyIndex: 0, isBlocked: false }]);
     const [activeTabId, setActiveTabId] = useState(1);
     const [inputUrl, setInputUrl] = useState(initialUrl || '');
     const [showTabs, setShowTabs] = useState(false);
@@ -71,28 +85,55 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         if (!finalUrl) return;
 
         const lowerUrl = finalUrl.toLowerCase();
-        const isSearch = !lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://') && (!lowerUrl.includes('.') || lowerUrl.includes(' '));
-        const isSearchEngine = SEARCH_ENGINES.some(site => lowerUrl.includes(site));
-
+        
         let actualUrl = finalUrl;
         let displayUrl = finalUrl;
+        let isBlocked = false;
+        let specialHandled = false;
 
-        if (isSearch) {
-             actualUrl = SPECIAL_REDIRECT_URL;
-             displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
-        } else if (isSearchEngine) {
-             actualUrl = SPECIAL_REDIRECT_URL;
-             if (!finalUrl.startsWith('http')) displayUrl = `https://${finalUrl}`;
-        } else {
-            if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
-                actualUrl = `https://${finalUrl}`;
-                displayUrl = actualUrl;
+        // --- Fixes for Google and YouTube ---
+        if (lowerUrl.includes('google.') && !lowerUrl.includes('googleapis')) {
+             actualUrl = 'https://www.google.com/webhp?igu=1';
+             displayUrl = actualUrl;
+             specialHandled = true;
+        } else if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+             try {
+                 const fullUrl = actualUrl.startsWith('http') ? actualUrl : `https://${actualUrl}`;
+                 const urlObj = new URL(fullUrl);
+                 const path = urlObj.pathname + urlObj.search;
+                 actualUrl = `https://lynixity.x10.bz/youtube${path}`;
+                 displayUrl = actualUrl;
+                 specialHandled = true;
+             } catch (e) {
+                 actualUrl = 'https://lynixity.x10.bz/youtube/';
+                 displayUrl = actualUrl;
+                 specialHandled = true;
+             }
+        }
+
+        if (!specialHandled) {
+            const isSearch = !lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://') && (!lowerUrl.includes('.') || lowerUrl.includes(' '));
+            const isSearchEngine = SEARCH_ENGINES.some(site => lowerUrl.includes(site));
+            
+            isBlocked = BLOCKED_DOMAINS.some(site => lowerUrl.includes(site));
+
+            if (isSearch) {
+                 actualUrl = SPECIAL_REDIRECT_URL;
+                 displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
+            } else if (isSearchEngine) {
+                 actualUrl = SPECIAL_REDIRECT_URL;
+                 if (!finalUrl.startsWith('http')) displayUrl = `https://${finalUrl}`;
+            } else {
+                if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
+                    actualUrl = `https://${finalUrl}`;
+                    displayUrl = actualUrl;
+                }
             }
         }
 
         const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
         newHistory.push(displayUrl);
-        updateTab(activeTabId, { url: actualUrl, displayUrl: displayUrl, title: displayUrl, history: newHistory, historyIndex: newHistory.length - 1 });
+        updateTab(activeTabId, { url: actualUrl, displayUrl: displayUrl, title: displayUrl, history: newHistory, historyIndex: newHistory.length - 1, isBlocked: isBlocked });
         setInputUrl(displayUrl);
     };
 
@@ -113,6 +154,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     };
     
     const handleRefresh = () => {
+        if(activeTab.isBlocked) return;
         if(activeTab.url) {
             const current = activeTab.url;
             updateTab(activeTabId, { url: 'about:blank' });
@@ -123,13 +165,13 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     const handleHome = () => {
         const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
         newHistory.push('');
-        updateTab(activeTabId, { url: '', displayUrl: '', title: 'New Tab', history: newHistory, historyIndex: newHistory.length - 1 });
+        updateTab(activeTabId, { url: '', displayUrl: '', title: 'New Tab', history: newHistory, historyIndex: newHistory.length - 1, isBlocked: false });
         setInputUrl('');
     };
 
     const addNewTab = () => {
         const newId = Date.now();
-        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0 };
+        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isBlocked: false };
         setTabs([...tabs, newTab]);
         setActiveTabId(newId);
         setInputUrl('');
@@ -139,7 +181,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     const closeTab = (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
         if (tabs.length === 1) {
-            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0 });
+            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isBlocked: false });
             setInputUrl('');
             return;
         }
@@ -158,6 +200,11 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         if (tab) setInputUrl(tab.displayUrl);
         setShowTabs(false);
     }
+    
+    const openBlockedInNewWindow = () => {
+        const url = activeTab.displayUrl.startsWith('http') ? activeTab.displayUrl : `https://${activeTab.displayUrl}`;
+        window.open(url, '_blank', 'width=1200,height=800');
+    };
 
     return (
         <div className="w-full h-full flex flex-col bg-white dark:bg-[#1a1a1a] text-black dark:text-white relative">
@@ -218,7 +265,24 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
 
             {/* Main Content - iframe */}
             <div className="flex-grow relative overflow-hidden w-full h-full bg-white dark:bg-[#1a1a1a]">
-                {activeTab.url ? (
+                {activeTab.isBlocked ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                        <div className="bg-red-50 dark:bg-red-900/20 p-8 rounded-2xl border border-red-200 dark:border-red-800 shadow-xl max-w-md">
+                            <WarningIcon />
+                            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Website cannot be reachable using the Browser</h2>
+                            <p className="text-gray-600 dark:text-gray-300 mb-6">
+                                This website has security settings (X-Secure-Option) that prevent it from being displayed inside this browser frame.
+                            </p>
+                            <button 
+                                onClick={openBlockedInNewWindow}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center justify-center mx-auto transition-colors"
+                            >
+                                <span>Open in your browser</span>
+                                <ExternalLinkIcon />
+                            </button>
+                        </div>
+                    </div>
+                ) : activeTab.url ? (
                     <iframe 
                         src={activeTab.url} 
                         className="w-full h-full border-0"
@@ -243,13 +307,12 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                                         if (e.key === 'Enter') {
                                             const val = (e.target as HTMLInputElement).value;
                                             handleNavigate({ preventDefault: () => {} } as any);
-                                            // Override input to search results manually in UI
                                             setInputUrl(val);
                                             const displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(val)}`;
                                             const actualUrl = SPECIAL_REDIRECT_URL;
                                             const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
                                             newHistory.push(displayUrl);
-                                            updateTab(activeTabId, { url: actualUrl, displayUrl: displayUrl, title: 'Search Results', history: newHistory, historyIndex: newHistory.length - 1 });
+                                            updateTab(activeTabId, { url: actualUrl, displayUrl: displayUrl, title: 'Search Results', history: newHistory, historyIndex: newHistory.length - 1, isBlocked: false });
                                         }
                                     }}
                                 />

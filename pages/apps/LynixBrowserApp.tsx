@@ -30,9 +30,7 @@ interface BrowserTab {
 }
 
 // Search engines that should be redirected to the iframe.html page.
-// Other sites (YouTube, etc.) will attempt to load directly.
 const SEARCH_ENGINES = [
-    'google.com', 'www.google.com',
     'bing.com', 'www.bing.com',
     'yahoo.com', 'search.yahoo.com',
     'duckduckgo.com',
@@ -87,28 +85,54 @@ const LynixBrowserApp: React.FC = () => {
 
         const lowerUrl = finalUrl.toLowerCase();
         
-        // Check for search query
-        const isSearch = !lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://') && (!lowerUrl.includes('.') || lowerUrl.includes(' '));
-        
-        // Check for search engines
-        const isSearchEngine = SEARCH_ENGINES.some(site => lowerUrl.includes(site));
-        
-        // Check for blocked domains
-        const isBlocked = BLOCKED_DOMAINS.some(site => lowerUrl.includes(site));
-
         let actualUrl = finalUrl;
         let displayUrl = finalUrl;
+        let isBlocked = false;
+        let specialHandled = false;
 
-        if (isSearch) {
-            actualUrl = SPECIAL_REDIRECT_URL;
-            displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
-        } else if (isSearchEngine) {
-            actualUrl = SPECIAL_REDIRECT_URL;
-            if (!finalUrl.startsWith('http')) displayUrl = `https://${finalUrl}`;
-        } else {
-            if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
-                actualUrl = `https://${finalUrl}`;
-                displayUrl = actualUrl;
+        // --- Fixes for Google and YouTube ---
+        if (lowerUrl.includes('google.') && !lowerUrl.includes('googleapis')) {
+             actualUrl = 'https://www.google.com/webhp?igu=1';
+             displayUrl = actualUrl;
+             specialHandled = true;
+        } else if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+             try {
+                 const fullUrl = actualUrl.startsWith('http') ? actualUrl : `https://${actualUrl}`;
+                 const urlObj = new URL(fullUrl);
+                 // Preserve path and search query for full YouTube functionality
+                 const path = urlObj.pathname + urlObj.search;
+                 actualUrl = `https://lynixity.x10.bz/youtube${path}`;
+                 displayUrl = actualUrl;
+                 specialHandled = true;
+             } catch (e) {
+                 // Fallback if URL parsing fails
+                 actualUrl = 'https://lynixity.x10.bz/youtube/';
+                 displayUrl = actualUrl;
+                 specialHandled = true;
+             }
+        }
+
+        if (!specialHandled) {
+            // Check for search query
+            const isSearch = !lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://') && (!lowerUrl.includes('.') || lowerUrl.includes(' '));
+            
+            // Check for search engines
+            const isSearchEngine = SEARCH_ENGINES.some(site => lowerUrl.includes(site));
+            
+            // Check for blocked domains
+            isBlocked = BLOCKED_DOMAINS.some(site => lowerUrl.includes(site));
+
+            if (isSearch) {
+                actualUrl = SPECIAL_REDIRECT_URL;
+                displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
+            } else if (isSearchEngine) {
+                actualUrl = SPECIAL_REDIRECT_URL;
+                if (!finalUrl.startsWith('http')) displayUrl = `https://${finalUrl}`;
+            } else {
+                if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
+                    actualUrl = `https://${finalUrl}`;
+                    displayUrl = actualUrl;
+                }
             }
         }
         
