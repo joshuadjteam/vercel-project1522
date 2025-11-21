@@ -83,7 +83,7 @@ const COSLaunch: React.FC<COSLaunchProps> = ({ navigate, appsList }) => {
                         {ALL_APPS.map(app => (
                             <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center space-y-2 group">
                                 <div className="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                                    {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8" })}
+                                    {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8" })}
                                 </div>
                                 <span className="text-xs text-center font-medium text-gray-200 group-hover:text-white">{app.label}</span>
                             </button>
@@ -142,7 +142,7 @@ const COSLaunch: React.FC<COSLaunchProps> = ({ navigate, appsList }) => {
                     
                     {SHELF_APPS.map(app => (
                         <button key={app.id} onClick={() => handleAppClick(app)} className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors">
-                            {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-6 h-6" })}
+                            {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-6 h-6" })}
                         </button>
                     ))}
                 </div>

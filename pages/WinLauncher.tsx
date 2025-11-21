@@ -61,7 +61,7 @@ const WinLauncher: React.FC<WinLauncherProps> = ({ navigate, appsList }) => {
                 {ALL_APPS.map(app => (
                     <button key={app.id} onClick={() => handleAppClick(app)} className="w-24 h-24 flex flex-col items-center justify-center hover:bg-white/10 rounded-md space-y-2 group">
                         <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-                             {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8" })}
+                             {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8" })}
                         </div>
                         <span className="text-xs text-center text-shadow px-1 truncate w-full" style={{textShadow: '1px 1px 2px rgba(0,0,0,0.8)'}}>{app.label}</span>
                     </button>
@@ -83,7 +83,7 @@ const WinLauncher: React.FC<WinLauncherProps> = ({ navigate, appsList }) => {
                         <div className="grid grid-cols-6 gap-4 mb-8">
                             {ALL_APPS.slice(0, 18).map(app => (
                                 <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center space-y-2 hover:bg-white/5 p-2 rounded transition-colors">
-                                    {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8" })}
+                                    {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8" })}
                                     <span className="text-xs text-center truncate w-full">{app.label}</span>
                                 </button>
                             ))}
