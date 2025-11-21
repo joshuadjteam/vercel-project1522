@@ -16,6 +16,9 @@ import ConsolePage from './pages/ConsolePage';
 import FaisConsole from './pages/FaisConsole';
 import LegaLauncher from './pages/LegaLauncher';
 import ConConsole from './pages/ConConsole';
+import WinLauncher from './pages/WinLauncher';
+import MacLaunch from './pages/MacLaunch';
+import COSLaunch from './pages/COSLaunch';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
 import ProfilePage from './pages/ProfilePage';
@@ -265,7 +268,7 @@ const App: React.FC = () => {
             return;
         }
 
-        const isWindowedConsole = isLoggedIn && !isMobileDevice && ['syno', 'fais'].includes(consoleView);
+        const isWindowedConsole = isLoggedIn && !isMobileDevice && ['syno', 'fais', 'win', 'mac', 'cos'].includes(consoleView);
         const isApp = !!APPS_MAP[newPage as keyof typeof APPS_MAP];
         
         const isWindowablePage = ['contact', 'profile', 'admin'].includes(newPage);
@@ -370,10 +373,14 @@ const App: React.FC = () => {
                 case 'fais': ConsoleComponent = FaisConsole; break;
                 case 'lega': ConsoleComponent = LegaLauncher; break;
                 case 'con': ConsoleComponent = ConConsole; break;
+                case 'win': ConsoleComponent = WinLauncher; break;
+                case 'mac': ConsoleComponent = MacLaunch; break;
+                case 'cos': ConsoleComponent = COSLaunch; break;
                 default: ConsoleComponent = ConsolePage; // 'syno'
             }
 
-            const windowedConsoles = ['syno', 'fais'];
+            // Consoles that support windowed mode
+            const windowedConsoles = ['syno', 'fais', 'win', 'mac', 'cos'];
             const isWindowedEnvironment = windowedConsoles.includes(consoleView);
 
             const isFullScreenOverride = page === 'app-console-switch';
@@ -398,7 +405,7 @@ const App: React.FC = () => {
                 <div className="relative flex-grow overflow-hidden">
                     <ConsoleComponent navigate={navigate} appsList={dynamicAppsList} />
                     {isWindowedEnvironment && (
-                        <div className="absolute inset-0 top-12 pointer-events-none">
+                        <div className="absolute inset-0 top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden">
                             {windows.map(win => {
                                 const WindowContent = APPS_MAP[win.appId]?.component || FULL_PAGE_MAP[win.appId];
                                 if (!WindowContent) return null;

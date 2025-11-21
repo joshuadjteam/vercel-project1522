@@ -15,6 +15,8 @@ const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-
 const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
 const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
 const GlobeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>;
+const WarningIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>;
+const ExternalLinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>;
 
 interface BrowserTab {
     id: number;
@@ -24,6 +26,7 @@ interface BrowserTab {
     history: string[];
     historyIndex: number;
     isLoading: boolean;
+    isBlocked: boolean;
 }
 
 // Search engines that should be redirected to the iframe.html page.
@@ -39,12 +42,25 @@ const SEARCH_ENGINES = [
     'yandex.com'
 ];
 
+// Blocked domains that are known to use X-Frame-Options or similar headers
+const BLOCKED_DOMAINS = [
+    'x.com', 'twitter.com',
+    'facebook.com',
+    'instagram.com',
+    'reddit.com',
+    'linkedin.com',
+    'github.com',
+    'netflix.com',
+    'discord.com',
+    'whatsapp.com'
+];
+
 const SPECIAL_REDIRECT_URL = 'https://lynixity.x10.bz/iframe.html';
 
 const LynixBrowserApp: React.FC = () => {
     const { user } = useAuth();
     const [tabs, setTabs] = useState<BrowserTab[]>([
-        { id: 1, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false }
+        { id: 1, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }
     ]);
     const [activeTabId, setActiveTabId] = useState(1);
     const [addressBarInput, setAddressBarInput] = useState('');
@@ -53,7 +69,7 @@ const LynixBrowserApp: React.FC = () => {
     const spoofedDevice = "Unknown Linux Device";
     const spoofedOS = "DozianOS for Lynix v12.0";
     const spoofedMachineName = `LynixWeb-Machine-${user?.id || 'Guest'}`;
-    const spoofedClientID = "Firefox/115.0"; // Simplified as requested
+    const spoofedClientID = "Firefox/115.0"; 
 
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId)!, [tabs, activeTabId]);
 
@@ -71,25 +87,25 @@ const LynixBrowserApp: React.FC = () => {
 
         const lowerUrl = finalUrl.toLowerCase();
         
-        // Check for search query (no protocol, no dot, or explicit search intention)
+        // Check for search query
         const isSearch = !lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://') && (!lowerUrl.includes('.') || lowerUrl.includes(' '));
         
-        // Check if the target is a search engine
+        // Check for search engines
         const isSearchEngine = SEARCH_ENGINES.some(site => lowerUrl.includes(site));
+        
+        // Check for blocked domains
+        const isBlocked = BLOCKED_DOMAINS.some(site => lowerUrl.includes(site));
 
         let actualUrl = finalUrl;
         let displayUrl = finalUrl;
 
         if (isSearch) {
-            // Search queries use Bing, which is a search engine, so redirect to iframe.html
             actualUrl = SPECIAL_REDIRECT_URL;
             displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
         } else if (isSearchEngine) {
-            // Known search engines redirect to iframe.html
             actualUrl = SPECIAL_REDIRECT_URL;
             if (!finalUrl.startsWith('http')) displayUrl = `https://${finalUrl}`;
         } else {
-            // All other sites (YouTube, etc.) load directly
             if (!finalUrl.startsWith('http') && !finalUrl.startsWith('internal://')) {
                 actualUrl = `https://${finalUrl}`;
                 displayUrl = actualUrl;
@@ -105,17 +121,19 @@ const LynixBrowserApp: React.FC = () => {
             title: displayUrl,
             history: newHistory,
             historyIndex: newHistory.length - 1,
-            isLoading: true
+            isLoading: !isBlocked, // Don't show loading spinner for blocked screen
+            isBlocked: isBlocked
         });
         
-        setTimeout(() => updateTab(activeTabId, { isLoading: false }), 1500);
+        if (!isBlocked) {
+            setTimeout(() => updateTab(activeTabId, { isLoading: false }), 1500);
+        }
     };
 
     const handleBack = () => {
         if (activeTab.historyIndex > 0) {
             const newIndex = activeTab.historyIndex - 1;
             const prevUrl = activeTab.history[newIndex];
-            // Simplified back logic: treat history as display URLs, re-evaluate them
             handleNavigate(prevUrl);
         }
     };
@@ -129,9 +147,9 @@ const LynixBrowserApp: React.FC = () => {
     };
 
     const handleRefresh = () => {
+        if (activeTab.isBlocked) return;
         updateTab(activeTabId, { isLoading: true });
         const current = activeTab.url;
-        // Force iframe reload by toggling url
         updateTab(activeTabId, { url: 'about:blank' });
         setTimeout(() => {
             updateTab(activeTabId, { url: current, isLoading: false });
@@ -140,7 +158,7 @@ const LynixBrowserApp: React.FC = () => {
 
     const addTab = () => {
         const newId = Date.now();
-        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false };
+        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false };
         setTabs([...tabs, newTab]);
         setActiveTabId(newId);
     };
@@ -148,7 +166,7 @@ const LynixBrowserApp: React.FC = () => {
     const closeTab = (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
         if (tabs.length === 1) {
-            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0 });
+            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isBlocked: false });
             return;
         }
         const newTabs = tabs.filter(t => t.id !== id);
@@ -156,6 +174,11 @@ const LynixBrowserApp: React.FC = () => {
         if (id === activeTabId) {
             setActiveTabId(newTabs[newTabs.length - 1].id);
         }
+    };
+
+    const openBlockedInNewWindow = () => {
+        const url = activeTab.displayUrl.startsWith('http') ? activeTab.displayUrl : `https://${activeTab.displayUrl}`;
+        window.open(url, '_blank', 'width=1200,height=800');
     };
 
     return (
@@ -236,7 +259,24 @@ const LynixBrowserApp: React.FC = () => {
 
             {/* Main Content Area */}
             <div className="flex-grow relative bg-white dark:bg-[#202124] w-full h-full overflow-hidden">
-                {activeTab.url ? (
+                {activeTab.isBlocked ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                        <div className="bg-red-50 dark:bg-red-900/20 p-8 rounded-2xl border border-red-200 dark:border-red-800 shadow-xl max-w-md">
+                            <WarningIcon />
+                            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Website cannot be reachable using the Browser</h2>
+                            <p className="text-gray-600 dark:text-gray-300 mb-6">
+                                This website has security settings (X-Secure-Option) that prevent it from being displayed inside this browser frame.
+                            </p>
+                            <button 
+                                onClick={openBlockedInNewWindow}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center justify-center mx-auto transition-colors"
+                            >
+                                <span>Open in your browser</span>
+                                <ExternalLinkIcon />
+                            </button>
+                        </div>
+                    </div>
+                ) : activeTab.url ? (
                     <iframe 
                         src={activeTab.url} 
                         className="w-full h-full border-0"

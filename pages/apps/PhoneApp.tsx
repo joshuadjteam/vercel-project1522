@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useCall } from '../../hooks/useCall';
 import VoiceAssistantWidget from '../../components/VoiceAssistantWidget';
@@ -8,6 +9,46 @@ const AssistantIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h
 const VideoCallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>;
 
 type PhoneView = 'dialer' | 'assistant';
+
+// Extracted components to maintain focus stability
+const DialerTab: React.FC<{ targetUser: string; setTargetUser: (s: string) => void; handleCall: (video: boolean) => void }> = ({ targetUser, setTargetUser, handleCall }) => (
+    <div className="flex flex-col items-center justify-center h-full text-center">
+        <h2 className="text-2xl font-semibold mb-2">P2P Call</h2>
+        <p className="text-sm text-gray-400 mb-6">Enter a username to start a peer-to-peer call.</p>
+        <input
+            type="text"
+            value={targetUser}
+            onChange={(e) => setTargetUser(e.target.value)}
+            placeholder="Enter username"
+            className="w-full max-w-xs bg-gray-100 dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg px-4 py-3 text-lg mb-4 text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+            autoFocus
+        />
+        <div className="flex space-x-4">
+            <button onClick={() => handleCall(false)} className="w-32 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2">
+                <DialpadIcon />
+                <span>Audio</span>
+            </button>
+            <button onClick={() => handleCall(true)} className="w-32 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2">
+                <VideoCallIcon />
+                <span>Video</span>
+            </button>
+        </div>
+    </div>
+);
+
+const AssistantTab: React.FC<{ openAssistant: () => void }> = ({ openAssistant }) => (
+    <div className="flex flex-col items-center justify-center h-full text-center">
+        <h2 className="text-2xl font-semibold mb-2">AI Voice Assistant</h2>
+        <p className="text-sm text-gray-400 mb-6">Start a hands-free conversation with your AI assistant.</p>
+        <button 
+            onClick={openAssistant} 
+            className="w-full max-w-xs bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-700 flex items-center justify-center space-x-2"
+        >
+            <AssistantIcon />
+            <span>Launch Assistant</span>
+        </button>
+    </div>
+);
 
 const PhoneApp: React.FC = () => {
     const [view, setView] = useState<PhoneView>('dialer');
@@ -21,44 +62,6 @@ const PhoneApp: React.FC = () => {
         }
     };
 
-    const DialerTab = () => (
-        <div className="flex flex-col items-center justify-center h-full text-center">
-             <h2 className="text-2xl font-semibold mb-2">P2P Call</h2>
-             <p className="text-sm text-gray-400 mb-6">Enter a username to start a peer-to-peer call.</p>
-             <input
-                type="text"
-                value={targetUser}
-                onChange={(e) => setTargetUser(e.target.value)}
-                placeholder="Enter username"
-                className="w-full max-w-xs bg-gray-100 dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg px-4 py-3 text-lg mb-4 text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <div className="flex space-x-4">
-                <button onClick={() => handleCall(false)} className="w-32 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2">
-                    <DialpadIcon />
-                    <span>Audio</span>
-                </button>
-                <button onClick={() => handleCall(true)} className="w-32 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2">
-                    <VideoCallIcon />
-                    <span>Video</span>
-                </button>
-            </div>
-        </div>
-    );
-    
-    const AssistantTab = () => (
-         <div className="flex flex-col items-center justify-center h-full text-center">
-            <h2 className="text-2xl font-semibold mb-2">AI Voice Assistant</h2>
-            <p className="text-sm text-gray-400 mb-6">Start a hands-free conversation with your AI assistant.</p>
-            <button 
-                onClick={() => setIsVoiceAssistantOpen(true)} 
-                className="w-full max-w-xs bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-cyan-700 flex items-center justify-center space-x-2"
-            >
-                <AssistantIcon />
-                <span>Launch Assistant</span>
-            </button>
-        </div>
-    );
-
     return (
         <>
             <div className="w-full h-full flex flex-col p-6 bg-dark-bg text-light-text dark:text-white">
@@ -69,7 +72,11 @@ const PhoneApp: React.FC = () => {
                     </div>
                 </header>
                 <main className="flex-grow">
-                    {view === 'dialer' ? <DialerTab /> : <AssistantTab />}
+                    {view === 'dialer' ? (
+                        <DialerTab targetUser={targetUser} setTargetUser={setTargetUser} handleCall={handleCall} />
+                    ) : (
+                        <AssistantTab openAssistant={() => setIsVoiceAssistantOpen(true)} />
+                    )}
                 </main>
             </div>
             <VoiceAssistantWidget isOpen={isVoiceAssistantOpen} onClose={() => setIsVoiceAssistantOpen(false)} />

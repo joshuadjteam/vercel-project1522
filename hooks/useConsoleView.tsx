@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
-type ConsoleViewType = 'syno' | 'fais' | 'lega' | 'con';
+type ConsoleViewType = 'syno' | 'fais' | 'lega' | 'con' | 'win' | 'mac' | 'cos';
 
 interface ConsoleViewContextType {
     view: ConsoleViewType;
@@ -17,7 +17,7 @@ export const ConsoleViewProvider: React.FC<{ children: ReactNode }> = ({ childre
 
     useEffect(() => {
         const savedView = localStorage.getItem('consoleView') as ConsoleViewType | null;
-        if (savedView && ['syno', 'fais', 'lega', 'con'].includes(savedView)) {
+        if (savedView && ['syno', 'fais', 'lega', 'con', 'win', 'mac', 'cos'].includes(savedView)) {
             setView(savedView);
         } else {
             setIsInitialChoice(true);

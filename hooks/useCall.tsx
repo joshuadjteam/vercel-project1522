@@ -1,8 +1,8 @@
-
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
 import { database } from '../services/database';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface CallContextType {
     isCalling: boolean;
@@ -50,90 +50,74 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [callDuration, setCallDuration] = useState(0);
 
     const pc = useRef<RTCPeerConnection | null>(null);
-    const ws = useRef<WebSocket | null>(null);
+    const channelRef = useRef<RealtimeChannel | null>(null);
     const offerForIncomingCall = useRef<RTCSessionDescriptionInit | null>(null);
     const callTimeoutRef = useRef<number | null>(null);
     const callDurationIntervalRef = useRef<number | null>(null);
-    const reconnectTimeoutRef = useRef<number | null>(null);
     
-    const stateRef = useRef({ user, isCalling, callee, callStatus, incomingCall, localStream });
-    stateRef.current = { user, isCalling, callee, callStatus, incomingCall, localStream };
+    // Keep a ref to current state for event handlers/callbacks to access latest values
+    const stateRef = useRef({ user, isCalling, callee, callStatus, incomingCall, localStream, isLoggedIn });
+    stateRef.current = { user, isCalling, callee, callStatus, incomingCall, localStream, isLoggedIn };
 
-    const connectWebSocket = useCallback(() => {
-         if (!user || !isLoggedIn) return;
-
-        // Get session token for auth
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                const token = session.access_token;
-                const wsUrl = `wss://jnnpxifvsrlzfpaisdhy.supabase.co/functions/v1/webrtc-signaling-server?token=${token}`;
-                console.log("Connecting to WS...");
-                const socket = new WebSocket(wsUrl);
-                
-                socket.onopen = () => {
-                    console.log('Connected to Signaling Server');
-                };
-
-                socket.onmessage = (event) => {
-                    try {
-                        const msg = JSON.parse(event.data);
-                        handleSignal(msg);
-                    } catch (e) {
-                        console.error("Failed to parse WS message:", e);
-                    }
-                };
-
-                socket.onclose = () => {
-                    console.log('Disconnected from Signaling Server');
-                    // Reconnect logic
-                     if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-                     reconnectTimeoutRef.current = window.setTimeout(() => {
-                         if (isLoggedIn) connectWebSocket();
-                     }, 3000);
-                };
-                
-                socket.onerror = (e) => {
-                     console.error('WebSocket Error:', e);
-                }
-
-                ws.current = socket;
-            }
-        });
-    }, [isLoggedIn, user?.id]);
-
-    // Establish WebSocket connection
+    // --- Signaling Setup (Supabase Realtime Broadcast) ---
     useEffect(() => {
-        if (isLoggedIn && user) {
-            connectWebSocket();
-        }
-        return () => {
-             if (ws.current) {
-                ws.current.close();
-                ws.current = null;
-            }
-            if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-        };
-    }, [isLoggedIn, user?.id, connectWebSocket]);
+        if (!isLoggedIn || !user) return;
 
-    const stableSendMessage = useCallback((target: string, type: string, payload: any) => {
-        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            ws.current.send(JSON.stringify({
-                target,
-                type,
-                payload
-            }));
+        console.log("Initializing P2P Signaling...");
+        
+        // Join a global signaling channel. 
+        // In a scaled app, you would likely use `user-signaling:${user.username}` and have callers join that temporarily.
+        // For this app, a global channel filtering messages client-side is sufficient and fastest.
+        const channel = supabase.channel('lynix-global-signaling');
+
+        channel
+            .on('broadcast', { event: 'signal' }, ({ payload }) => {
+                // Filter: Only process messages strictly intended for me
+                if (payload.target === user.username) {
+                    console.log(`[Signaling] Received ${payload.type} from ${payload.from}`);
+                    handleSignal({
+                        type: payload.type,
+                        payload: payload.data, // Map 'data' from broadcast back to 'payload' for internal handler
+                        from: payload.from
+                    });
+                }
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('Connected to Signaling Network');
+                }
+            });
+
+        channelRef.current = channel;
+
+        return () => {
+            console.log("Disconnecting Signaling...");
+            supabase.removeChannel(channel);
+            channelRef.current = null;
+        };
+    }, [isLoggedIn, user?.username]);
+
+    const sendSignal = useCallback(async (target: string, type: string, data: any) => {
+        if (channelRef.current) {
+            await channelRef.current.send({
+                type: 'broadcast',
+                event: 'signal',
+                payload: {
+                    target: target, // Who is this for?
+                    from: stateRef.current.user?.username, // Who is it from?
+                    type: type,
+                    data: data
+                }
+            });
         } else {
-            console.error("WebSocket is not open. Cannot send message. State:", ws.current?.readyState);
-            if (type !== 'call-ended') { // Don't show error for end call cleanup
-                setCallStatus("Connection Error");
-            }
+            console.warn("Signaling channel not ready, cannot send message.");
         }
     }, []);
 
     const stableEndCall = useCallback((targetOverride?: string) => {
         const target = targetOverride || stateRef.current.callee || stateRef.current.incomingCall?.from;
         if (target && stateRef.current.user && (stateRef.current.isCalling || stateRef.current.incomingCall)) {
-            stableSendMessage(target, 'call-ended', { from: stateRef.current.user.username });
+            sendSignal(target, 'call-ended', { from: stateRef.current.user.username });
         }
         
         if (pc.current) { 
@@ -153,7 +137,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         setRemoteStream(null); setIsVideoCall(false); setIsCalling(false); setCallee(''); setCallStatus(''); setCallDuration(0); setIncomingCall(null);
         offerForIncomingCall.current = null;
-    }, [stableSendMessage]);
+    }, [sendSignal]);
     
     const createPeerConnection = useCallback(async (targetUsername: string, stream: MediaStream): Promise<RTCPeerConnection> => {
         const peer = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS });
@@ -161,7 +145,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         stream.getTracks().forEach(track => peer.addTrack(track, stream));
         
         peer.onicecandidate = e => { 
-            if (e.candidate) stableSendMessage(targetUsername, 'ice-candidate', { candidate: e.candidate }); 
+            if (e.candidate) sendSignal(targetUsername, 'ice-candidate', { candidate: e.candidate }); 
         };
         
         peer.ontrack = e => {
@@ -185,24 +169,18 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         pc.current = peer;
         return peer;
-    }, [stableSendMessage, stableEndCall]);
+    }, [sendSignal, stableEndCall]);
 
     const handleSignal = async (msg: any) => {
         const { type, payload, from } = msg;
         
-        // Handle user-unavailable error
-        if (type === 'user-unavailable') {
-             setCallStatus('User Unavailable');
-             setTimeout(() => stableEndCall(), 3000);
-             return;
-        }
-
-        console.log(`Received signal: ${type} from ${from}`);
+        // Basic presence check simulation using call-declined if busy/unavailable logic
+        // Real presence would require Supabase Presence, but for now we rely on active response.
 
         switch (type) {
             case 'incoming-call': 
                 if (stateRef.current.isCalling) {
-                        stableSendMessage(from, 'call-declined', { from: stateRef.current.user?.username, reason: 'busy' });
+                        sendSignal(from, 'call-declined', { reason: 'busy' });
                 } else {
                     setIncomingCall({ from: from, isVideoCall: payload.isVideoCall }); 
                     offerForIncomingCall.current = payload.offer; 
@@ -247,19 +225,17 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 return;
             }
             
-            if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
-                setCallStatus('Connecting to server...');
-                // Allow a small delay for socket to open if it was just connecting, otherwise fail
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
-                     setCallStatus('Connection failed');
-                     setTimeout(() => setCallStatus(''), 2000);
+            if (!channelRef.current) {
+                setCallStatus('Signaling offline. Retrying...');
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                if (!channelRef.current) {
+                     setCallStatus('Offline');
                      return;
                 }
             }
 
+            // Verify user exists first
             setCallStatus('Checking user...');
-            // Quick DB check to ensure user exists before trying P2P
             const targetUser = await database.getUserByUsername(calleeUsername);
             if (!targetUser) {
                 setCallStatus('User not found');
@@ -279,23 +255,24 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
             
-            stableSendMessage(calleeUsername, 'incoming-call', { from: stateRef.current.user.username, isVideoCall: withVideo, offer });
+            sendSignal(calleeUsername, 'incoming-call', { isVideoCall: withVideo, offer });
             setCallStatus('Ringing...');
             
+            // Timeout if user is offline/doesn't answer
             callTimeoutRef.current = window.setTimeout(() => { 
                 if(stateRef.current.isCalling && stateRef.current.callStatus.startsWith('Ringing')) { 
                     setCallStatus('No answer'); 
                     setTimeout(() => stableEndCall(calleeUsername), 3000); 
                 } 
-            }, 45000); // 45s timeout
+            }, 45000); 
             
         } catch (error: any) { 
             console.error('Error starting P2P call:', error); 
-            setCallStatus(`Error: ${error.message}`); 
+            setCallStatus(`Error: ${error.message || 'Failed to start'}`); 
             setIsCalling(false);
             setLocalStream(null);
         }
-    }, [createPeerConnection, stableSendMessage, stableEndCall]);
+    }, [createPeerConnection, sendSignal, stableEndCall]);
 
     const acceptCall = useCallback(async () => {
         if (!stateRef.current.incomingCall || !stateRef.current.user || !offerForIncomingCall.current) return;
@@ -311,19 +288,19 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
             
-            stableSendMessage(caller, 'call-accepted', { answer });
+            sendSignal(caller, 'call-accepted', { answer });
             setIncomingCall(null); offerForIncomingCall.current = null;
         } catch (error: any) { 
             console.error("Error accepting call:", error); 
             stableEndCall(caller); 
         }
-    }, [createPeerConnection, stableSendMessage, stableEndCall]);
+    }, [createPeerConnection, sendSignal, stableEndCall]);
 
     const declineCall = useCallback(() => {
         if (!stateRef.current.incomingCall || !stateRef.current.user) return;
-        stableSendMessage(stateRef.current.incomingCall.from, 'call-declined', { from: stateRef.current.user.username });
+        sendSignal(stateRef.current.incomingCall.from, 'call-declined', { from: stateRef.current.user.username });
         setIncomingCall(null); offerForIncomingCall.current = null;
-    }, [stableSendMessage]);
+    }, [sendSignal]);
 
     const toggleMute = useCallback(() => {
         if (stateRef.current.localStream) {
@@ -331,7 +308,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (audioTracks.length > 0) {
                 const newMutedState = !audioTracks[0].enabled;
                 audioTracks.forEach(track => { track.enabled = newMutedState; });
-                setIsMuted(!newMutedState); // If enabled is true, muted is false
+                setIsMuted(!newMutedState);
             }
         }
     }, []);
