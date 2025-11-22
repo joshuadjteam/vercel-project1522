@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import BrowserLoader from '../../components/BrowserLoader';
@@ -32,6 +32,7 @@ interface BrowserTab {
     isLoading: boolean;
     isBlocked: boolean;
     blobUrl?: string; 
+    navigationId: number; // Added to force loader remount
 }
 
 interface SearchResult {
@@ -95,7 +96,7 @@ const DEFAULT_YOUTUBE_API_KEY = 'AIzaSyBHN9YqjsgbgAikzvi_PTghK4VxBf7hmvM';
 const LynixBrowserApp: React.FC = () => {
     const { user } = useAuth();
     const [tabs, setTabs] = useState<BrowserTab[]>([
-        { id: 1, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }
+        { id: 1, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false, navigationId: 0 }
     ]);
     const [activeTabId, setActiveTabId] = useState(1);
     const [addressBarInput, setAddressBarInput] = useState('');
@@ -132,7 +133,6 @@ const LynixBrowserApp: React.FC = () => {
         }
     }, [user]);
 
-    // PROXY MESSAGE LISTENER
     useEffect(() => {
         const handleMessage = async (event: MessageEvent) => {
             if (!event.data) return;
@@ -213,6 +213,10 @@ const LynixBrowserApp: React.FC = () => {
         let finalUrl = input.trim();
         if (!finalUrl) return;
 
+        if (finalUrl.startsWith('https://internal.local/')) {
+            finalUrl = finalUrl.replace('https://internal.local/', 'internal://');
+        }
+
         const lowerUrl = finalUrl.toLowerCase();
         let actualUrl = finalUrl;
         let displayUrl = finalUrl;
@@ -220,18 +224,21 @@ const LynixBrowserApp: React.FC = () => {
         if (!lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://')) {
              const isSearch = !lowerUrl.includes('.') || lowerUrl.includes(' ');
              if (isSearch) {
-                 actualUrl = SPECIAL_REDIRECT_URL;
-                 displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
+                 actualUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
+                 displayUrl = actualUrl;
              } else {
                  actualUrl = `https://${finalUrl}`;
                  displayUrl = actualUrl;
              }
         } else {
-            displayUrl = actualUrl;
+            actualUrl = finalUrl;
         }
 
-        // Handle YouTube
-        if (actualUrl.includes('youtube.com/watch') || actualUrl.includes('youtu.be/')) {
+        const youtubeWatchRegex = /(?:www\.)?youtube\.[a-z.]+\/watch/;
+        const youtubeShortRegex = /youtu\.be\//;
+        const youtubeGeneralRegex = /(?:www\.)?youtube\.[a-z.]+/;
+
+        if (youtubeWatchRegex.test(actualUrl) || youtubeShortRegex.test(actualUrl)) {
             try {
                 let videoId = '';
                 const urlObj = new URL(actualUrl.startsWith('http') ? actualUrl : `https://${actualUrl}`);
@@ -242,12 +249,23 @@ const LynixBrowserApp: React.FC = () => {
                 }
                 if (videoId) {
                     actualUrl = `${YOUTUBE_WATCH_URL_PREFIX}?v=${videoId}`;
-                    displayUrl = actualUrl;
                 }
             } catch (e) { }
-        } else if (actualUrl.includes('youtube.com')) {
+        } else if (youtubeGeneralRegex.test(actualUrl)) {
              actualUrl = YOUTUBE_SEARCH_URL;
-             displayUrl = YOUTUBE_SEARCH_URL;
+        }
+
+        if (actualUrl.startsWith('internal://')) {
+            if (actualUrl === YOUTUBE_SEARCH_URL) {
+                displayUrl = 'YouTube Search';
+            } else if (actualUrl.startsWith(YOUTUBE_WATCH_URL_PREFIX)) {
+                displayUrl = 'YouTube Player';
+            } else {
+                const appName = actualUrl.replace('internal://', '');
+                displayUrl = `https://internal.local/${appName}`;
+            }
+        } else {
+            displayUrl = actualUrl;
         }
 
         addToHistory(displayUrl);
@@ -267,12 +285,13 @@ const LynixBrowserApp: React.FC = () => {
                 ...t,
                 url: actualUrl,
                 displayUrl: displayUrl,
-                title: displayUrl.startsWith(YOUTUBE_WATCH_URL_PREFIX) ? 'YouTube Player' : (displayUrl === YOUTUBE_SEARCH_URL ? 'YouTube Search' : displayUrl),
+                title: displayUrl === 'YouTube Player' ? 'YouTube Player' : (displayUrl === 'YouTube Search' ? 'YouTube Search' : displayUrl),
                 history: newHistory,
                 historyIndex: newHistory.length - 1,
                 isLoading: true, 
                 isBlocked: false, 
-                blobUrl: undefined 
+                blobUrl: undefined,
+                navigationId: t.navigationId + 1 // Force component reset
             } : t);
         });
     };
@@ -290,7 +309,8 @@ const LynixBrowserApp: React.FC = () => {
                 displayUrl: prevUrl,
                 historyIndex: newIndex,
                 isLoading: true,
-                blobUrl: undefined
+                blobUrl: undefined,
+                navigationId: activeTab.navigationId + 1
             });
         }
     };
@@ -304,18 +324,19 @@ const LynixBrowserApp: React.FC = () => {
                 displayUrl: nextUrl,
                 historyIndex: newIndex,
                 isLoading: true,
-                blobUrl: undefined
+                blobUrl: undefined,
+                navigationId: activeTab.navigationId + 1
             });
         }
     };
 
     const handleRefresh = () => {
-        updateTab(activeTabId, { isLoading: true, blobUrl: undefined });
+        updateTab(activeTabId, { isLoading: true, blobUrl: undefined, navigationId: activeTab.navigationId + 1 });
     };
 
     const addTab = () => {
         const newId = Date.now();
-        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false };
+        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false, navigationId: 0 };
         setTabs([...tabs, newTab]);
         setActiveTabId(newId);
         setView('browser');
@@ -327,7 +348,7 @@ const LynixBrowserApp: React.FC = () => {
         if (tabToClose?.blobUrl) URL.revokeObjectURL(tabToClose.blobUrl);
 
         if (tabs.length === 1) {
-            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isBlocked: false, blobUrl: undefined });
+            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isBlocked: false, blobUrl: undefined, navigationId: 0 });
             return;
         }
         const newTabs = tabs.filter(t => t.id !== id);
@@ -340,7 +361,7 @@ const LynixBrowserApp: React.FC = () => {
     const clearCookies = () => {
         if (window.confirm("Clear all session data?")) {
             tabs.forEach(t => { if (t.blobUrl) URL.revokeObjectURL(t.blobUrl); });
-            setTabs([{ id: Date.now(), title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }]);
+            setTabs([{ id: Date.now(), title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false, navigationId: 0 }]);
             alert("Cleared.");
             setView('browser');
         }
@@ -357,8 +378,8 @@ const LynixBrowserApp: React.FC = () => {
     const shouldUseLoader = activeTab.isLoading && isExternal && securityBypassEnabled;
     
     const iframeSrc = (securityBypassEnabled && isExternal)
-        ? activeTab.blobUrl 
-        : (activeTab.blobUrl || activeTab.url);
+        ? (activeTab.blobUrl || 'about:blank')
+        : activeTab.url;
 
     return (
         <div className="w-full h-full flex flex-col bg-[#dfe3e7] dark:bg-[#202124] text-black dark:text-white rounded-lg overflow-hidden font-sans select-none relative">
@@ -449,9 +470,9 @@ const LynixBrowserApp: React.FC = () => {
                             <YouTubeWatchView apiKey={youtubeApiKey} videoId={new URL(activeTab.url.replace('internal://', 'https://')).searchParams.get('v') || ''} onNavigate={(url) => handleNavigate(url)} />
                         ) : (
                             <>
-                                {shouldUseLoader && <BrowserLoader url={activeTab.displayUrl} onComplete={handleLoaderComplete} />}
-                                {activeTab.url && iframeSrc ? (
-                                    <iframe ref={iframeRef} src={iframeSrc} className="w-full h-full border-0" referrerPolicy="no-referrer" title="browser-content" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" onLoad={() => updateTab(activeTabId, { isLoading: false })} />
+                                {shouldUseLoader && <BrowserLoader key={`${activeTabId}-${activeTab.url}-${activeTab.navigationId}`} url={activeTab.displayUrl} onComplete={handleLoaderComplete} />}
+                                {activeTab.url && iframeSrc && iframeSrc !== 'about:blank' ? (
+                                    <iframe ref={iframeRef} key={iframeSrc} src={iframeSrc} className="w-full h-full border-0" referrerPolicy="no-referrer" title="browser-content" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" onLoad={() => updateTab(activeTabId, { isLoading: false })} />
                                 ) : (
                                      !shouldUseLoader && <div className="flex flex-col items-center justify-center h-full text-center pb-20">
                                          <h1 className="text-6xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8 select-none">Bing</h1>
@@ -507,7 +528,7 @@ const YouTubeSearchView: React.FC<{ apiKey: string; onNavigate: (url: string) =>
         <div className="h-full flex flex-col bg-white dark:bg-[#0f0f0f] overflow-hidden">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center space-x-4">
                 <YoutubeIcon />
-                <input type="text" className="flex-grow bg-gray-100 dark:bg-[#121212] border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-black dark:text-white" placeholder="Search YouTube..." value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}/>
+                <input type="text" className="flex-grow bg-gray-100 dark:bg-[#121212] border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-black dark:text-white text-sm" placeholder="Search YouTube..." value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}/>
                 <button onClick={handleSearch} disabled={loading} className="bg-red-600 text-white px-4 py-2 rounded-full">{loading ? '...' : 'Search'}</button>
             </div>
             <div className="flex-grow overflow-y-auto p-4">
@@ -533,21 +554,13 @@ const YouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNavigate: 
     const [recommendations, setRecommendations] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [embedBlob, setEmbedBlob] = useState('');
 
     useEffect(() => {
         if (!videoId || !apiKey) return;
         const fetchData = async () => {
             setLoading(true); setError('');
             try {
-                // 1. Prepare Proxy Embed Blob
-                // This bypasses Error 153 by fetching the embed HTML server-side with Referer spoofing
-                const proxyUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-                const { content, contentType } = await database.fetchProxyContent(proxyUrl);
-                const blob = new Blob([content], { type: contentType });
-                setEmbedBlob(URL.createObjectURL(blob));
-
-                // 2. Fetch Metadata
+                // 1. Fetch Metadata
                 const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${apiKey}`);
                 const vidData = await vidRes.json();
                 if (!vidData.items?.length) throw new Error("Video not found");
@@ -583,6 +596,8 @@ const YouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNavigate: 
     if (error) return <div className="flex items-center justify-center h-full text-red-500">{error}</div>;
     if (!video) return null;
 
+    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
+
     return (
         <div className="flex flex-col h-full bg-[#0f0f0f] text-white font-sans overflow-hidden">
             <div className="flex-grow overflow-y-auto custom-scrollbar p-6 flex flex-row gap-6">
@@ -593,7 +608,7 @@ const YouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNavigate: 
                 </div>
                 <div className="flex-grow max-w-5xl mx-auto">
                     <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-2xl mb-4 relative group">
-                        {embedBlob && <iframe src={embedBlob} title={video.snippet.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="w-full h-full"></iframe>}
+                        <iframe src={embedUrl} title={video.snippet.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="w-full h-full"></iframe>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div className="bg-white text-black p-4 rounded-xl flex flex-col justify-center items-center text-center shadow-lg border-l-8 border-green-500"><div className="text-3xl font-bold">{formatNumber(video.statistics.likeCount)}</div><div className="text-sm font-semibold text-gray-600">Likes</div></div>

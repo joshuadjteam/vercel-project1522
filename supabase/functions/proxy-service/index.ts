@@ -1,461 +1,387 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { GoogleGenAI } from 'npm:@google/genai';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-proxy-cookie',
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+const PROXY_BYPASS_API_KEY = 'AIzaSyDlYwTByP5X9LzybRoVk8rhQSTIHxitkBM';
 
-  try {
-    const body = await req.json();
-    const { url, method, headers, body: requestBody } = body;
-
-    if (!url) {
-      return new Response(JSON.stringify({ error: 'URL is required' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
-    }
-
-    let targetOrigin = '';
+// Raw Stealth JS logic without <script> tags, for injection into JS files
+const RAW_STEALTH_JS = `
+(function() {
     try {
-        targetOrigin = new URL(url).origin;
-    } catch (e) {
-        targetOrigin = 'https://www.google.com';
-    }
+        // 1. Mask WebDriver
+        Object.defineProperty(navigator, 'webdriver', { get: () => false });
 
-    // Mimic Chrome 124 on Windows
-    const chromeUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-    
-    const fetchHeaders: Record<string, string> = {
-        'User-Agent': chromeUserAgent,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache',
-        'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1',
-        'Referer': targetOrigin + '/',
-    };
-
-    // Handle Client Cookies
-    if (headers && headers['x-proxy-cookie']) {
-        fetchHeaders['Cookie'] = headers['x-proxy-cookie'];
-    }
-
-    // Merge allowed headers
-    if (headers) {
-        const allowedHeaders = ['content-type', 'authorization', 'accept', 'range', 'x-requested-with', 'x-csrf-token', 'x-guest-token', 'x-twitter-active-user', 'x-twitter-client-language'];
-        for (const key in headers) {
-            if (allowedHeaders.includes(key.toLowerCase())) {
-                fetchHeaders[key] = headers[key];
-            }
+        // 2. Mask Plugins
+        if (!navigator.plugins || navigator.plugins.length === 0) {
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5]
+            });
         }
-    }
 
-    // Manual Redirect Handling
-    let currentUrl = url;
-    let response: Response;
-    let redirectCount = 0;
-    const maxRedirects = 10;
-    const accumulatedCookies: string[] = [];
-    
-    const targetMethod = (method || 'GET').toUpperCase();
+        // 3. Mock window.chrome
+        if (!window.chrome) {
+            window.chrome = { runtime: {} };
+        }
 
-    // Initial request loop
-    while (true) {
+        // 4. Fix broken permissions API
+        if (window.navigator.permissions) {
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                Promise.resolve({ state: Notification.permission }) :
+                originalQuery(parameters)
+            );
+        }
+
+        // 5. Mock Top/Parent to bypass framebusters
         try {
-            const fetchOptions: any = {
-                method: targetMethod,
-                headers: fetchHeaders,
-                redirect: 'manual'
-            };
-
-            // STRICT body check: only attach if method allows body AND body exists
-            if (requestBody && targetMethod !== 'GET' && targetMethod !== 'HEAD') {
-                fetchOptions.body = requestBody;
+            if (window.top !== window.self) {
+                Object.defineProperties(window, {
+                    'top': { get: function() { return window.self; }, configurable: true },
+                    'parent': { get: function() { return window.self; }, configurable: true }
+                });
             }
+        } catch(e) {}
+    } catch(err) {}
+})();
+`;
 
-            response = await fetch(currentUrl, fetchOptions);
-        } catch (e) {
-            throw { status: 502, message: `Upstream connection failed: ${e.message}` };
-        }
+// Wrapped in script tags for HTML injection
+const STEALTH_SCRIPTS_HTML = `<script>${RAW_STEALTH_JS}</script>`;
 
-        // Capture cookies
-        let cookies: string[] = [];
-        if (typeof (response.headers as any).getSetCookie === 'function') {
-             cookies = (response.headers as any).getSetCookie();
-        } else {
-             const c = response.headers.get('set-cookie');
-             if (c) cookies = c.split(/,(?=\s*[a-zA-Z0-9_-]+=)/); 
-        }
-        
-        if (cookies.length > 0) {
-            accumulatedCookies.push(...cookies);
-            const newCookies = cookies.map(c => c.split(';')[0]).join('; ');
-            const existing = fetchHeaders['Cookie'] || '';
-            fetchHeaders['Cookie'] = existing ? `${existing}; ${newCookies}` : newCookies;
-        }
+serve(async (req) => {
+  // Global Error Handler to prevent "Failed to send request" (Function Crash)
+  try {
+      if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders });
+      }
 
-        if ([301, 302, 303, 307, 308].includes(response.status)) {
-            if (redirectCount >= maxRedirects) break;
-            const location = response.headers.get('location');
-            if (!location) break;
-            
-            try {
-                currentUrl = new URL(location, currentUrl).href;
-            } catch (e) {
-                currentUrl = location;
-            }
-            redirectCount++;
-        } else {
-            break;
-        }
-    }
+      const body = await req.json().catch(() => null);
+      if (!body) {
+         return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+      }
+      const { url, method, headers, body: requestBody } = body;
 
-    const contentType = response.headers.get('content-type') || 'application/octet-stream';
-    
-    const responseHeaders: Record<string, string> = {};
-    ['content-type', 'content-length', 'content-range', 'accept-ranges', 'date', 'last-modified', 'etag'].forEach(k => {
-        const v = response.headers.get(k);
-        if (v) responseHeaders[k] = v;
-    });
+      if (!url) {
+        return new Response(JSON.stringify({ error: 'URL is required' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+      }
 
-    const isHTML = contentType.includes('text/html');
+      let targetOrigin = '';
+      try { targetOrigin = new URL(url).origin; } catch (e) { targetOrigin = 'https://www.google.com'; }
 
-    if (isHTML) {
-        let html = await response.text();
-        const urlObj = new URL(currentUrl);
-        const origin = urlObj.origin;
-        const pathname = urlObj.pathname + urlObj.search;
+      // Define profiles LOCALLY to ensure no state pollution between requests
+      const requestProfiles = [
+          {
+              ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+              secChUa: '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+              platform: '"Windows"',
+              mobile: '?0'
+          },
+          {
+              ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+              platform: '"macOS"',
+              mobile: '?0'
+          },
+          {
+              ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+              platform: '"iOS"',
+              mobile: '?1'
+          },
+          {
+              ua: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36',
+              secChUa: '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+              platform: '"Android"',
+              mobile: '?1'
+          }
+      ];
 
-        // Inject Base Tag
-        if (!html.includes('<base')) {
-            const baseTag = `<base href="${origin}/" target="_self">`;
-            html = html.replace(/<head[^>]*>/i, (match) => `${match}${baseTag}`);
-        }
+      // Special handling for X/Twitter
+      if (url.includes('twitter.com') || url.includes('x.com')) {
+          requestProfiles.unshift({
+              ua: 'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.122 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+              platform: '"Linux"',
+              mobile: '?1'
+          });
+      }
 
-        // Strip Security Headers from Meta
-        html = html.replace(/<meta[^>]*http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi, '<!-- CSP Stripped by Lynix -->');
-        html = html.replace(/integrity="[^"]*"/gi, '');
+      let response: Response | null = null;
+      let responseBodyBuffer: ArrayBuffer | null = null;
+      let responseBodyText = '';
+      let usedContentType = '';
+      let status = 0;
+      let accumulatedCookies: string[] = [];
+      let lastResponse: Response | null = null;
 
-        // Advanced Stealth Script v6
-        const stealthScript = `
-        <script>
-            (function() {
-                console.log('[Lynix] RTU v6 (Anti-Loop) Active');
+      // Loop through profiles
+      for (const profile of requestProfiles) {
+          const fetchHeaders: Record<string, string> = {
+              'User-Agent': profile.ua,
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Accept-Encoding': 'gzip, deflate, br',
+              'Cache-Control': 'no-cache',
+              'Upgrade-Insecure-Requests': '1',
+              'Referer': targetOrigin + '/',
+              'Origin': targetOrigin
+          };
 
-                // 1. Service Worker Mock (Robust)
-                if (navigator.serviceWorker) {
-                    const dummyRegistration = {
-                        active: { state: 'activated', scriptURL: '', postMessage: () => {} },
-                        waiting: null,
-                        installing: null,
-                        scope: '/',
-                        unregister: () => Promise.resolve(true),
-                        update: () => Promise.resolve(),
-                        onupdatefound: null,
-                        pushManager: {
-                            getSubscription: () => Promise.resolve(null),
-                            subscribe: () => Promise.resolve({ endpoint: '' }),
-                            permissionState: () => Promise.resolve('granted')
-                        }
-                    };
-                    
-                    Object.defineProperty(navigator, 'serviceWorker', {
-                        get: function() {
-                            return {
-                                register: (script, options) => {
-                                    console.log('[Lynix] Mock SW Register:', script);
-                                    return Promise.resolve(dummyRegistration);
-                                },
-                                getRegistration: () => Promise.resolve(dummyRegistration),
-                                getRegistrations: () => Promise.resolve([dummyRegistration]),
-                                ready: Promise.resolve(dummyRegistration),
-                                addEventListener: () => {},
-                                removeEventListener: () => {},
-                                controller: dummyRegistration.active,
-                                startMessages: () => {}
-                            };
-                        }
-                    });
-                }
+          if (profile.secChUa) {
+              fetchHeaders['Sec-Ch-Ua'] = profile.secChUa;
+              fetchHeaders['Sec-Ch-Ua-Mobile'] = profile.mobile;
+              fetchHeaders['Sec-Ch-Ua-Platform'] = profile.platform;
+              fetchHeaders['Sec-Fetch-Dest'] = 'document';
+              fetchHeaders['Sec-Fetch-Mode'] = 'navigate';
+              fetchHeaders['Sec-Fetch-Site'] = 'none';
+              fetchHeaders['Sec-Fetch-User'] = '?1';
+          }
 
-                // 2. History API Spoofing
-                const targetPath = "${pathname}";
-                try {
-                    window.history.replaceState(null, '', targetPath);
-                } catch(e) {}
+          if (headers && headers['x-proxy-cookie']) {
+              fetchHeaders['Cookie'] = headers['x-proxy-cookie'];
+          }
 
-                // 3. Cookie Jar
-                const CookieJar = {
-                    store: new Map(),
-                    parse: function(cookieStr) {
-                        if(!cookieStr) return;
-                        const list = Array.isArray(cookieStr) ? cookieStr : [cookieStr];
-                        list.forEach(str => {
-                            const parts = str.split(';');
-                            const [pair] = parts;
-                            if(pair) {
-                                const idx = pair.indexOf('=');
-                                if(idx > -1) {
-                                    const key = pair.substring(0, idx).trim();
-                                    const val = pair.substring(idx+1).trim();
-                                    this.store.set(key, val);
-                                }
-                            }
-                        });
-                    },
-                    toString: function() {
-                        const arr = [];
-                        for(const [k,v] of this.store) arr.push(k+'='+v);
-                        return arr.join('; ');
-                    }
-                };
+          try {
+              const fetchOptions: any = {
+                  method: (method || 'GET').toUpperCase(),
+                  headers: fetchHeaders,
+                  redirect: 'follow'
+              };
 
-                const seed = ${JSON.stringify(accumulatedCookies)};
-                CookieJar.parse(seed);
+              if (requestBody && fetchOptions.method !== 'GET' && fetchOptions.method !== 'HEAD') {
+                  fetchOptions.body = requestBody;
+              }
 
-                try {
-                    Object.defineProperty(document, 'cookie', {
-                        get: function() { return CookieJar.toString(); },
-                        set: function(val) { CookieJar.parse(val); return val; },
-                        configurable: true
-                    });
-                } catch(e) {}
+              // SAFETY TIMEOUT: 10 seconds. 
+              // This prevents the Edge Function from being killed by the platform (usually 10-60s limit)
+              // allowing us to catch the timeout and try another profile or fallback.
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 10000); 
+              fetchOptions.signal = controller.signal;
 
-                // 4. Navigator Spoofing
-                const navMocks = {
-                    userAgent: "${chromeUserAgent}",
-                    appVersion: "${chromeUserAgent.replace('Mozilla/', '')}",
-                    platform: "Win32",
-                    vendor: "Google Inc.",
-                    language: "en-US",
-                    hardwareConcurrency: 8,
-                    deviceMemory: 8,
-                    webdriver: false,
-                    permissions: { query: () => Promise.resolve({ state: 'granted' }) }
-                };
-                for (const k in navMocks) {
-                    try { Object.defineProperty(navigator, k, { get: () => navMocks[k] }); } catch(e) {}
-                }
+              const res = await fetch(url, fetchOptions);
+              clearTimeout(timeoutId);
 
-                // 5. Fetch Interception
-                const originalFetch = window.fetch;
-                const uuid = () => Math.random().toString(36).substring(2);
+              lastResponse = res;
+              status = res.status;
+              
+              const setCookie = res.headers.get('set-cookie');
+              if (setCookie) accumulatedCookies.push(setCookie);
 
-                function resolveUrl(u) {
-                    try { return new URL(u, document.baseURI).href; } catch(e) { return u; }
-                }
+              if (status === 403 || status === 429 || status === 406) {
+                  continue; 
+              }
 
-                window.fetch = async function(input, init) {
-                    let url, method, headers = {}, body;
+              const contentType = res.headers.get('content-type') || '';
+              usedContentType = contentType;
 
-                    if (input instanceof Request) {
-                        url = input.url;
-                        method = input.method;
-                        input.headers.forEach((v, k) => headers[k] = v);
-                        if (init) {
-                            if (init.method) method = init.method;
-                            if (init.headers) {
-                                if (init.headers instanceof Headers) init.headers.forEach((v, k) => headers[k] = v);
-                                else Object.assign(headers, init.headers);
-                            }
-                            if (init.body) body = init.body;
-                        }
-                    } else {
-                        url = input;
-                        method = init?.method || 'GET';
-                        if (init?.headers) {
-                            if (init.headers instanceof Headers) init.headers.forEach((v, k) => headers[k] = v);
-                            else Object.assign(headers, init.headers);
-                        }
-                        body = init?.body;
-                    }
+              const isText = contentType.includes('text/') || 
+                             contentType.includes('json') || 
+                             contentType.includes('xml') || 
+                             contentType.includes('javascript') || 
+                             contentType.includes('ecmascript') ||
+                             contentType.includes('css');
 
-                    url = resolveUrl(url);
+              if (!isText) {
+                  response = res;
+                  responseBodyBuffer = await res.arrayBuffer();
+                  break;
+              }
 
-                    if (url.startsWith('data:') || url.startsWith('blob:')) {
-                        return originalFetch(input, init);
-                    }
+              const text = await res.text();
+              const lowerText = text.toLowerCase();
 
-                    headers['X-Proxy-Cookie'] = CookieJar.toString();
-                    headers['X-Requested-With'] = 'XMLHttpRequest';
+              if (lowerText.includes('captcha') || 
+                  lowerText.includes('access denied') || 
+                  lowerText.includes('security check') || 
+                  lowerText.includes('blocked using a security service')) {
+                  responseBodyText = text;
+                  continue;
+              }
 
-                    const reqId = uuid();
-                    window.parent.postMessage({
-                        type: 'PROXY_REQUEST',
-                        id: reqId,
-                        payload: { url, method, headers, body }
-                    }, '*');
+              response = res;
+              responseBodyText = text;
+              break;
 
-                    return new Promise((resolve, reject) => {
-                        const handler = (e) => {
-                            if (e.data?.type === 'PROXY_RESPONSE' && e.data.id === reqId) {
-                                window.removeEventListener('message', handler);
-                                const { content, contentType, setCookies, error, status } = e.data.response;
-                                if(setCookies) CookieJar.parse(setCookies);
+          } catch (e) {
+              console.error("Fetch attempt failed:", e);
+          }
+      }
 
-                                if (error) reject(new TypeError(error));
-                                else {
-                                    let respBody = content;
-                                    if(typeof content === 'string' && content.startsWith('data:')) {
-                                        try {
-                                            const bin = atob(content.split(',')[1]);
-                                            const arr = new Uint8Array(bin.length);
-                                            for(let i=0; i<bin.length; i++) arr[i] = bin.charCodeAt(i);
-                                            respBody = arr;
-                                        } catch(e) { console.warn('Decode failed', e); }
-                                    }
-                                    const res = new Response(new Blob([respBody], {type: contentType}), {
-                                        status: status || 200,
-                                        statusText: 'OK',
-                                        headers: { 'Content-Type': contentType }
-                                    });
-                                    Object.defineProperty(res, 'url', { value: url });
-                                    resolve(res);
-                                }
-                            }
-                        };
-                        window.addEventListener('message', handler);
-                    });
-                };
+      // --- Fallback: Google Cache ---
+      if ((!response && lastResponse) || (response && (status === 403 || status === 429))) {
+          if (url.includes('reddit.com') || url.includes('twitter.com') || url.includes('quora.com') || status === 403) {
+               try {
+                   const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
+                   const cacheController = new AbortController();
+                   const cacheTimeout = setTimeout(() => cacheController.abort(), 5000); // 5s timeout for cache
+                   
+                   const cacheRes = await fetch(cacheUrl, {
+                       headers: { 
+                           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+                       },
+                       signal: cacheController.signal
+                   });
+                   clearTimeout(cacheTimeout);
+                   
+                   if (cacheRes.ok) {
+                       const cacheText = await cacheRes.text();
+                       if (!cacheText.includes('404. That’s an error')) {
+                           response = cacheRes;
+                           usedContentType = 'text/html';
+                           responseBodyText = cacheText;
+                           status = 200;
+                       }
+                   }
+               } catch(e) {}
+          }
 
-                // 6. XHR Interception
-                const originalXHR = window.XMLHttpRequest;
-                window.XMLHttpRequest = function() {
-                    const xhr = new originalXHR();
-                    const id = uuid();
-                    let rHeaders = {};
-                    let rUrl = '';
-                    let rMethod = 'GET';
+          if (!response || (response === lastResponse && !responseBodyText && !responseBodyBuffer)) {
+              response = lastResponse;
+              if (response) {
+                  usedContentType = response.headers.get('content-type') || '';
+                  status = response.status;
+                  if (!responseBodyText && !responseBodyBuffer) {
+                       try {
+                          const isText = usedContentType.includes('text/') || usedContentType.includes('json') || usedContentType.includes('xml') || usedContentType.includes('javascript');
+                          if (!isText) {
+                              responseBodyBuffer = await response.arrayBuffer();
+                          } else {
+                              responseBodyText = await response.text();
+                          }
+                       } catch(readErr) { }
+                  }
+              }
+          }
+      }
 
-                    xhr.open = function(m, u) { rMethod = m; rUrl = resolveUrl(u); };
-                    xhr.setRequestHeader = function(h, v) { rHeaders[h] = v; };
-                    xhr.send = function(body) {
-                        if(rUrl.startsWith('data:') || rUrl.startsWith('blob:')) return;
-                        
-                        rHeaders['X-Proxy-Cookie'] = CookieJar.toString();
-                        rHeaders['X-Requested-With'] = 'XMLHttpRequest';
+      if (!response) {
+          return new Response(JSON.stringify({ error: "Unable to connect to website. Access denied by target server or connection timed out." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+      }
 
-                        window.parent.postMessage({
-                            type: 'PROXY_REQUEST',
-                            id: id,
-                            payload: { url: rUrl, method: rMethod, headers: rHeaders, body }
-                        }, '*');
+      // --- Binary Response Handling ---
+      if (responseBodyBuffer) {
+          const bytes = new Uint8Array(responseBodyBuffer);
+          let binary = '';
+          const len = bytes.byteLength;
+          const CHUNK_SIZE = 0x8000; 
+          for (let i = 0; i < len; i += CHUNK_SIZE) {
+              binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + CHUNK_SIZE, len)) as any);
+          }
+          const base64 = btoa(binary);
+          const content = `data:${usedContentType};base64,${base64}`;
+          return new Response(JSON.stringify({ content, contentType: usedContentType, isMedia: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+      }
 
-                        const handler = (e) => {
-                            if (e.data?.type === 'PROXY_RESPONSE' && e.data.id === id) {
-                                window.removeEventListener('message', handler);
-                                const { content, contentType, setCookies, error, status } = e.data.response;
-                                if(setCookies) CookieJar.parse(setCookies);
+      // --- Text Content Processing ---
+      let content = responseBodyText;
 
-                                if(!error) {
-                                    Object.defineProperty(xhr, 'readyState', { value: 4 });
-                                    Object.defineProperty(xhr, 'status', { value: status || 200 });
-                                    Object.defineProperty(xhr, 'responseText', { value: typeof content === 'string' && !content.startsWith('data:') ? content : '' });
-                                    Object.defineProperty(xhr, 'responseURL', { value: rUrl });
-                                    xhr.dispatchEvent(new Event('readystatechange'));
-                                    xhr.dispatchEvent(new Event('load'));
-                                    if(xhr.onload) xhr.onload();
-                                } else {
-                                    xhr.dispatchEvent(new Event('error'));
-                                    if(xhr.onerror) xhr.onerror();
-                                }
-                            }
-                        };
-                        window.addEventListener('message', handler);
-                    };
-                    return xhr;
-                };
+      // 1. Regex Cleanup
+      content = content.replace(/<meta[^>]*http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi, '');
+      content = content.replace(/<meta[^>]*http-equiv=["']?Content-Security-Policy-Report-Only["']?[^>]*>/gi, '');
+      content = content.replace(/<meta[^>]*http-equiv=["']?X-Frame-Options["']?[^>]*>/gi, '');
+      content = content.replace(/<meta[^>]*http-equiv=["']?X-Security-Options["']?[^>]*>/gi, '');
+      content = content.replace(/<meta[^>]*http-equiv=["']?refresh["']?[^>]*>/gi, '');
+      
+      content = content.replace(/integrity="[^"]*"/gi, '');
+      content = content.replace(/nonce="[^"]*"/gi, '');
 
-                // 7. Link Click Interception
-                document.addEventListener('click', (e) => {
-                    const link = e.target.closest('a');
-                    if (link && link.href) {
-                        e.preventDefault();
-                        window.parent.postMessage({
-                            type: 'LYNIX_NAVIGATE',
-                            url: link.href
-                        }, '*');
-                    }
-                }, true);
+      const isHtml = usedContentType.includes('html');
+      const isJs = usedContentType.includes('javascript') || usedContentType.includes('ecmascript');
 
-                // 8. Reload Loop Prevention
-                const lastReload = sessionStorage.getItem('lynix_last_reload');
-                if (lastReload && (Date.now() - parseInt(lastReload)) < 2000) {
-                    console.warn('[Lynix] Loop detected. Preventing reload.');
-                    window.stop();
-                    throw new Error('Loop detected');
-                }
-                window.location.reload = function() {
-                    sessionStorage.setItem('lynix_last_reload', Date.now().toString());
-                    window.parent.postMessage({ type: 'LYNIX_NAVIGATE', url: window.location.href }, '*');
-                };
+      // 2. Inject Base Tag (HTML only)
+      if (isHtml && !content.includes('<base')) {
+          const baseTag = `<base href="${targetOrigin}/" target="_self">`;
+          content = content.replace(/<head[^>]*>/i, (match) => `${match}${baseTag}`);
+      }
 
-            })();
-        </script>`;
+      // 3. Gemini Analysis (Race Condition Protected)
+      // Only process if text is of reasonable size to avoid timeouts on massive files
+      if (content.length > 50 && content.length < 100000 && (isHtml || isJs)) {
+          try {
+              const processWithGemini = async () => {
+                  const ai = new GoogleGenAI({ apiKey: PROXY_BYPASS_API_KEY });
+                  const chunkLimit = 15000; // Reduced chunk size for speed
+                  const snippet = content.substring(0, chunkLimit); 
+                  const prompt = `
+                  You are a specialized proxy service expert. Your task is to "sanitize" web code (${isHtml ? 'HTML' : 'JavaScript'}).
+                  
+                  YOUR GOAL:
+                  Rewrite the provided code snippet to neutralize client-side security checks like "X-Security-Options", "Frame Busters", "Integrity Checks" while keeping the core application logic intact.
+                  
+                  SPECIFIC ACTIONS:
+                  1. Neutralize 'window.top !== window.self' or 'top.location' redirects.
+                  2. Neutralize 'navigator.webdriver' checks.
+                  3. If the file appears to be purely a security blocker script, replace its content with a benign no-op.
+                  
+                  OUTPUT FORMAT:
+                  Return ONLY the sanitized code. Do not use Markdown. If the code is safe as-is, return "NO_CHANGE".
+                  
+                  CODE:
+                  ${snippet}
+                  `;
+                  
+                  const result = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+                  return result.text;
+              };
 
-        if (html.match(/<head[^>]*>/i)) {
-            html = html.replace(/<head[^>]*>/i, (match) => `${match}${stealthScript}`);
-        } else {
-            html = `${stealthScript}${html}`;
-        }
+              // Strict Timeout for Gemini: 3.5 seconds. 
+              // If AI is slow, we skip it rather than hanging the browser.
+              const timeout = new Promise((resolve) => setTimeout(() => resolve("TIMEOUT"), 3500));
+              const text = await Promise.race([processWithGemini(), timeout]);
 
-        // Security headers removal in response
-        const strippedHeaders = ['x-frame-options', 'content-security-policy', 'x-content-type-options', 'cross-origin-opener-policy', 'cross-origin-embedder-policy', 'cross-origin-resource-policy'];
+              if (text && text !== "TIMEOUT" && !text.includes("NO_CHANGE") && text.length > 10 && !text.includes("I cannot")) {
+                  let cleanText = (text as string).replace(/```(html|javascript|js|css)?/g, '').replace(/```/g, '');
+                  if (content.length <= 15000) {
+                      content = cleanText;
+                  } else {
+                      content = cleanText + content.substring(15000);
+                  }
+              }
+          } catch (e) {
+              // Silently fail AI sanitization on error to keep loading
+              console.error("Gemini sanitization skipped:", e);
+          }
+      }
 
-        return new Response(JSON.stringify({ 
-            content: html, 
-            contentType, 
-            headers: responseHeaders,
-            setCookies: accumulatedCookies,
-            status: response.status,
-            strippedHeaders
-        }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        });
+      // 4. Inject Stealth Scripts
+      if (isHtml) {
+          if (content.match(/<body[^>]*>/i)) {
+              content = content.replace(/<body[^>]*>/i, (match) => `${match}${STEALTH_SCRIPTS_HTML}`);
+          } else {
+              content = `${STEALTH_SCRIPTS_HTML}${content}`;
+          }
+      } else if (isJs) {
+          content = RAW_STEALTH_JS + '\n' + content;
+      }
 
-    } else {
-        // Binary content
-        const buffer = await response.arrayBuffer();
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        const len = bytes.byteLength;
-        const CHUNK_SIZE = 0x8000;
-        for (let i = 0; i < len; i += CHUNK_SIZE) {
-            binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + CHUNK_SIZE, len)) as any);
-        }
-        const base64 = btoa(binary);
-        const content = `data:${contentType};base64,${base64}`;
+      // 5. Regex Fallbacks
+      content = content.replace(/if\s*\(top\s*!==\s*self\)/gi, 'if(false)');
+      content = content.replace(/top\.location\.href/gi, 'self.location.href');
+      content = content.replace(/window\.top/gi, 'window.self');
 
-        return new Response(JSON.stringify({ 
-            content, 
-            contentType, 
-            headers: responseHeaders,
-            setCookies: accumulatedCookies,
-            status: response.status
-        }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        });
-    }
+      return new Response(JSON.stringify({ 
+          content, 
+          contentType: usedContentType, 
+          status, 
+          setCookies: accumulatedCookies 
+      }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+      });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: (error.status || 500),
+    // This CATCH block prevents "Failed to send request to Edge Function" errors on the client
+    // by ensuring we always return a valid HTTP 200 response with error details.
+    console.error("Unhandled Proxy Service Error:", error);
+    return new Response(JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown internal error in proxy service.' 
+    }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+        status: 200 
     });
   }
 });

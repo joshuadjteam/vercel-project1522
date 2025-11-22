@@ -461,12 +461,14 @@ export const database = {
             if (error.context && typeof error.context.json === 'function') {
                 try {
                     const body = await error.context.json();
-                    errorMessage = body.error || errorMessage;
+                    // If the error is from the function itself (e.g., 500), use it.
+                    // If it's a client-side failure (e.g. network), body might be empty or different.
+                    if (body && body.error) errorMessage = body.error;
                 } catch (e) {
-                    // Ignore
+                    // Ignore parse errors for the error body
                 }
             }
-            console.error('Error fetching proxy content:', errorMessage);
+            console.error('Error fetching proxy content (invoke failed):', errorMessage);
             return { content: '', contentType: '', error: errorMessage };
         }
 

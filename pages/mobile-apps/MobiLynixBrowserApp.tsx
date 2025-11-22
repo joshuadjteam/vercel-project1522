@@ -34,6 +34,7 @@ interface BrowserTab {
     isLoading: boolean;
     isBlocked: boolean;
     blobUrl?: string; 
+    navigationId: number; // Added to force loader remount
 }
 
 interface SearchResult {
@@ -101,7 +102,7 @@ const DEFAULT_YOUTUBE_API_KEY = 'AIzaSyBHN9YqjsgbgAikzvi_PTghK4VxBf7hmvM';
 
 const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, initialUrl }) => {
     const { user } = useAuth();
-    const [tabs, setTabs] = useState<BrowserTab[]>([{ id: 1, title: 'New Tab', url: initialUrl || '', displayUrl: initialUrl || '', history: [initialUrl || ''], historyIndex: 0, isBlocked: false, isLoading: !!initialUrl }]);
+    const [tabs, setTabs] = useState<BrowserTab[]>([{ id: 1, title: 'New Tab', url: initialUrl || '', displayUrl: initialUrl || '', history: [initialUrl || ''], historyIndex: 0, isBlocked: false, isLoading: !!initialUrl, navigationId: 0 }]);
     const [activeTabId, setActiveTabId] = useState(1);
     const [inputUrl, setInputUrl] = useState(initialUrl || '');
     const [showTabs, setShowTabs] = useState(false);
@@ -122,6 +123,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     const spoofedDevice = "Unknown Linux Device";
     const spoofedOS = "DozianOS for Lynix v15.0 (Mobile)";
     const spoofedClientID = "Firefox/115.0";
+    const spoofedMachineName = `LynixWeb-Machine-${user?.id || 'Guest'}`;
 
     useEffect(() => {
         setInputUrl(activeTab.displayUrl || activeTab.url);
@@ -142,7 +144,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
             if (!event.data) return;
 
             if (event.data.type === 'LYNIX_NAVIGATE' && event.data.url) {
-                handleNavigate({ preventDefault: () => {} } as any, event.data.url);
+                handleNavigate(undefined, event.data.url);
             }
 
             if (event.data.type === 'PROXY_REQUEST') {
@@ -182,10 +184,36 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         if (user) database.saveBrowserData(user.id, { history: newHistory });
     };
 
+    const saveYoutubeKey = (key: string) => {
+        setYoutubeApiKey(key);
+        if (user) {
+            database.getBrowserData(user.id).then(data => {
+                database.saveBrowserData(user.id, { ...data, youtubeApiKey: key } as any);
+            });
+        }
+    };
+
+    const toggleBookmark = () => {
+        if (!activeTab.displayUrl) return;
+        const isBookmarked = bookmarks.some(b => b.url === activeTab.displayUrl);
+        let newBookmarks;
+        if (isBookmarked) {
+            newBookmarks = bookmarks.filter(b => b.url !== activeTab.displayUrl);
+        } else {
+            newBookmarks = [...bookmarks, { title: activeTab.title || activeTab.displayUrl, url: activeTab.displayUrl }];
+        }
+        setBookmarks(newBookmarks);
+        if (user) database.saveBrowserData(user.id, { bookmarks: newBookmarks });
+    };
+
     const handleNavigate = (e?: React.FormEvent, overrideUrl?: string) => {
         if (e) e.preventDefault();
         let finalUrl = overrideUrl ? overrideUrl.trim() : inputUrl.trim();
         if (!finalUrl) return;
+
+        if (finalUrl.startsWith('https://internal.local/')) {
+            finalUrl = finalUrl.replace('https://internal.local/', 'internal://');
+        }
 
         const lowerUrl = finalUrl.toLowerCase();
         let actualUrl = finalUrl;
@@ -194,18 +222,22 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         if (!lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://')) {
              const isSearch = !lowerUrl.includes('.') || lowerUrl.includes(' ');
              if (isSearch) {
-                 actualUrl = SPECIAL_REDIRECT_URL;
-                 displayUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
+                 actualUrl = `https://www.bing.com/search?q=${encodeURIComponent(finalUrl)}`;
+                 displayUrl = actualUrl;
              } else {
                  actualUrl = `https://${finalUrl}`;
                  displayUrl = actualUrl;
              }
         } else {
-            displayUrl = actualUrl;
+            actualUrl = finalUrl;
         }
 
-        // Handle YouTube
-        if (actualUrl.includes('youtube.com/watch') || actualUrl.includes('youtu.be/')) {
+        // Updated regex to capture all regional domains like youtube.ca
+        const youtubeWatchRegex = /(?:www\.)?youtube\.[a-z.]+\/watch/;
+        const youtubeShortRegex = /youtu\.be\//;
+        const youtubeGeneralRegex = /(?:www\.)?youtube\.[a-z.]+/;
+
+        if (youtubeWatchRegex.test(actualUrl) || youtubeShortRegex.test(actualUrl)) {
             try {
                 let videoId = '';
                 const urlObj = new URL(actualUrl.startsWith('http') ? actualUrl : `https://${actualUrl}`);
@@ -216,12 +248,24 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                 }
                 if (videoId) {
                     actualUrl = `${YOUTUBE_WATCH_URL_PREFIX}?v=${videoId}`;
-                    displayUrl = actualUrl;
                 }
             } catch (e) { }
-        } else if (actualUrl.includes('youtube.com')) {
+        } else if (youtubeGeneralRegex.test(actualUrl)) {
+             // Redirect general Youtube hits to internal search
              actualUrl = YOUTUBE_SEARCH_URL;
-             displayUrl = YOUTUBE_SEARCH_URL;
+        }
+
+        if (actualUrl.startsWith('internal://')) {
+            if (actualUrl === YOUTUBE_SEARCH_URL) {
+                displayUrl = 'YouTube Search';
+            } else if (actualUrl.startsWith(YOUTUBE_WATCH_URL_PREFIX)) {
+                displayUrl = 'YouTube Player';
+            } else {
+                const appName = actualUrl.replace('internal://', '');
+                displayUrl = `https://internal.local/${appName}`;
+            }
+        } else {
+            displayUrl = actualUrl;
         }
 
         addToHistory(displayUrl);
@@ -239,39 +283,36 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                 ...t,
                 url: actualUrl, 
                 displayUrl: displayUrl, 
-                title: displayUrl.startsWith(YOUTUBE_WATCH_URL_PREFIX) ? 'YouTube Player' : (displayUrl === YOUTUBE_SEARCH_URL ? 'YouTube Search' : displayUrl),
+                title: displayUrl === 'YouTube Player' ? 'YouTube Player' : (displayUrl === 'YouTube Search' ? 'YouTube Search' : displayUrl),
                 history: newHistory, 
                 historyIndex: newHistory.length - 1, 
                 isBlocked: false,
                 isLoading: true,
-                blobUrl: undefined
+                blobUrl: undefined,
+                navigationId: t.navigationId + 1 // Force remount
             } : t);
         });
-        
-        setInputUrl(displayUrl);
-        setView('browser');
     };
 
     const handleLoaderComplete = (blobUrl?: string) => {
         updateTab(activeTabId, { isLoading: false, blobUrl });
     };
 
-    // ... other handlers (Back, Forward, Refresh, Home, AddTab, CloseTab, ClearCookies, etc.) omitted for brevity but are same as desktop ...
-    const handleBack = () => { if(activeTab.historyIndex > 0) { const newIdx = activeTab.historyIndex - 1; const u = activeTab.history[newIdx]; updateTab(activeTabId, { url: u, displayUrl: u, historyIndex: newIdx, isLoading: true, blobUrl: undefined }); setInputUrl(u); }};
-    const handleForward = () => { if(activeTab.historyIndex < activeTab.history.length - 1) { const newIdx = activeTab.historyIndex + 1; const u = activeTab.history[newIdx]; updateTab(activeTabId, { url: u, displayUrl: u, historyIndex: newIdx, isLoading: true, blobUrl: undefined }); setInputUrl(u); }};
-    const handleRefresh = () => updateTab(activeTabId, { isLoading: true, blobUrl: undefined });
-    const handleHome = () => { const nh = [...activeTab.history, '']; updateTab(activeTabId, { url: '', displayUrl: '', history: nh, historyIndex: nh.length - 1, isLoading: false, blobUrl: undefined }); setInputUrl(''); };
-    const addNewTab = () => { const id = Date.now(); setTabs([...tabs, { id, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }]); setActiveTabId(id); setInputUrl(''); setShowTabs(false); setView('browser'); };
-    const closeTab = (e: any, id: number) => { e.stopPropagation(); const t = tabs.find(x => x.id === id); if(t?.blobUrl) URL.revokeObjectURL(t.blobUrl); if(tabs.length === 1) { updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isLoading: false, blobUrl: undefined }); setInputUrl(''); return; } const nt = tabs.filter(x => x.id !== id); setTabs(nt); if(id === activeTabId) { setActiveTabId(nt[nt.length - 1].id); setInputUrl(nt[nt.length - 1].displayUrl); }};
+    const handleBack = () => { if(activeTab.historyIndex > 0) { const newIdx = activeTab.historyIndex - 1; const u = activeTab.history[newIdx]; updateTab(activeTabId, { url: u, displayUrl: u, historyIndex: newIdx, isLoading: true, blobUrl: undefined, navigationId: activeTab.navigationId + 1 }); setInputUrl(u); }};
+    const handleForward = () => { if(activeTab.historyIndex < activeTab.history.length - 1) { const newIdx = activeTab.historyIndex + 1; const u = activeTab.history[newIdx]; updateTab(activeTabId, { url: u, displayUrl: u, historyIndex: newIdx, isLoading: true, blobUrl: undefined, navigationId: activeTab.navigationId + 1 }); setInputUrl(u); }};
+    const handleRefresh = () => updateTab(activeTabId, { isLoading: true, blobUrl: undefined, navigationId: activeTab.navigationId + 1 });
+    const addNewTab = () => { const id = Date.now(); setTabs([...tabs, { id, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false, navigationId: 0 }]); setActiveTabId(id); setInputUrl(''); setShowTabs(false); setView('browser'); };
+    const closeTab = (e: any, id: number) => { e.stopPropagation(); const t = tabs.find(x => x.id === id); if(t?.blobUrl) URL.revokeObjectURL(t.blobUrl); if(tabs.length === 1) { updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isLoading: false, blobUrl: undefined, navigationId: 0 }); setInputUrl(''); return; } const nt = tabs.filter(x => x.id !== id); setTabs(nt); if(id === activeTabId) { setActiveTabId(nt[nt.length - 1].id); setInputUrl(nt[nt.length - 1].displayUrl); }};
     const switchToTab = (id: number) => { setActiveTabId(id); const t = tabs.find(x => x.id === id); if(t) setInputUrl(t.displayUrl); setShowTabs(false); setView('browser'); };
-    const clearCookies = () => { if(window.confirm("Clear all session data?")) { tabs.forEach(t => { if(t.blobUrl) URL.revokeObjectURL(t.blobUrl); }); setTabs([{ id: Date.now(), title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }]); setView('browser'); alert("Cleared."); }};
+    const clearCookies = () => { if(window.confirm("Clear all session data?")) { tabs.forEach(t => { if(t.blobUrl) URL.revokeObjectURL(t.blobUrl); }); setTabs([{ id: Date.now(), title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false, navigationId: 0 }]); setView('browser'); alert("Cleared."); }};
     const clearHistory = () => { if(window.confirm("Delete history?")) { setCloudHistory([]); if(user) database.saveBrowserData(user.id, { history: [] }); }};
-    const saveYoutubeKey = (k: string) => { setYoutubeApiKey(k); if(user) database.getBrowserData(user.id).then(d => database.saveBrowserData(user.id, { ...d, youtubeApiKey: k } as any)); };
-    const toggleBookmark = () => { if(!activeTab.displayUrl) return; const ex = bookmarks.some(b => b.url === activeTab.displayUrl); const nb = ex ? bookmarks.filter(b => b.url !== activeTab.displayUrl) : [...bookmarks, { title: activeTab.title || activeTab.displayUrl, url: activeTab.displayUrl }]; setBookmarks(nb); if(user) database.saveBrowserData(user.id, { bookmarks: nb }); };
 
     const isExternal = activeTab.url && !activeTab.url.startsWith('internal://') && activeTab.url !== SPECIAL_REDIRECT_URL;
     const shouldUseLoader = activeTab.isLoading && isExternal && securityBypassEnabled;
-    const iframeSrc = (securityBypassEnabled && isExternal) ? activeTab.blobUrl : (activeTab.blobUrl || activeTab.url);
+    
+    const iframeSrc = (securityBypassEnabled && isExternal)
+        ? (activeTab.blobUrl || 'about:blank')
+        : activeTab.url;
 
     return (
         <div className="w-full h-full flex flex-col bg-[#dfe3e7] dark:bg-[#202124] text-black dark:text-white rounded-lg overflow-hidden font-sans select-none relative">
@@ -285,39 +326,49 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
 
             <div className="flex-shrink-0 bg-gray-100 dark:bg-[#2c2c2c] p-2 border-b border-gray-300 dark:border-black flex items-center space-x-2 shadow-sm z-20">
                 <div className="relative" ref={accountRef}><button onClick={() => setAccountMenuOpen(!accountMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300"><UserIcon /></button>{accountMenuOpen && (<div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-[#35363a] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-2 z-50"><button onClick={() => { setView('history'); setAccountMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><GlobeIcon /><span>Cloud History</span></button><button onClick={() => { setView('bookmarks'); setAccountMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><StarIcon /><span>Bookmarks</span></button></div>)}</div>
-                <form onSubmit={handleNavigate} className="flex-grow relative"><div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">{isNetworkActive ? <ActivityIcon /> : (activeTab.url && activeTab.url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />)}</div><input type="text" value={inputUrl} onChange={(e) => setInputUrl(e.target.value)} className="w-full py-2 pl-10 pr-8 rounded-lg border-none outline-none bg-white dark:bg-[#404040] text-sm text-black dark:text-white shadow-inner" placeholder="Search or type URL" onFocus={(e) => e.target.select()} />{inputUrl && (<button type="button" onClick={() => { setInputUrl(''); }} className="absolute inset-y-0 right-2 flex items-center text-gray-500"><XIcon /></button>)}</form>
+                <form onSubmit={handleNavigate} className="flex-grow relative"><div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">{isNetworkActive ? <ActivityIcon /> : (activeTab.url && activeTab.url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />)}</div><input type="text" value={inputUrl} onChange={(e) => setInputUrl(e.target.value)} className="w-full py-2 pl-10 pr-8 rounded-lg border-none outline-none bg-white dark:bg-[#404040] text-sm text-black dark:text-white shadow-inner" placeholder="Search or type URL" onFocus={(e) => e.target.select()} onKeyDown={(e) => e.key === 'Enter' && handleNavigate(undefined, (e.target as HTMLInputElement).value)} />{inputUrl && (<button type="button" onClick={() => { setInputUrl(''); }} className="absolute inset-y-0 right-2 flex items-center text-gray-500"><XIcon /></button>)}</form>
                 <button onClick={() => setShowTabs(true)} className="w-8 h-8 rounded-lg border-2 border-gray-600 dark:border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10">{tabs.length}</button>
-                <div className="relative" ref={settingsRef}><button onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300"><MoreVertical /></button>{settingsMenuOpen && (<div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-[#35363a] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-2 z-50"><div className="px-4 py-2 flex items-center justify-between"><span className="text-sm font-medium">Security Bypass</span><button onClick={() => setSecurityBypassEnabled(!securityBypassEnabled)} className={`w-10 h-5 rounded-full relative transition-colors ${securityBypassEnabled ? 'bg-green-500' : 'bg-gray-400'}`}><div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${securityBypassEnabled ? 'left-6' : 'left-1'}`}></div></button></div><div className="px-4 py-2"><label className="text-xs text-gray-500 block mb-1">YouTube Key</label><input type="password" value={youtubeApiKey} onChange={(e) => saveYoutubeKey(e.target.value)} placeholder="Paste..." className="w-full bg-gray-100 dark:bg-black/20 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs"/></div><button onClick={clearCookies} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><CookieIcon /><span>Clear Cookies</span></button></div>)}</div>
+                <div className="relative" ref={settingsRef}><button onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300"><MoreVertical /></button>{settingsMenuOpen && (<div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-[#35363a] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-2 z-50"><div className="px-4 py-2 flex items-center justify-between"><span className="text-sm font-medium">Security Bypass</span><button onClick={() => setSecurityBypassEnabled(!securityBypassEnabled)} className={`w-10 h-5 rounded-full relative transition-colors ${securityBypassEnabled ? 'bg-green-500' : 'bg-gray-400'}`}><div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${securityBypassEnabled ? 'left-6' : 'left-1'}`}></div></button></div><div className="px-4 py-2"><label className="text-xs text-gray-500 block mb-1">YouTube API Key</label><input type="password" value={youtubeApiKey} onChange={(e) => saveYoutubeKey(e.target.value)} placeholder="Paste key..." className="w-full bg-gray-100 dark:bg-black/20 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs"/></div><div className="border-t border-gray-200 dark:border-gray-600 my-1"></div><button onClick={clearCookies} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><CookieIcon /><span>Clear Cookies</span></button><button onClick={() => { setView('history'); setSettingsMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><HistoryIcon /><span>History</span></button></div>)}</div>
             </div>
             
             <div className="flex-grow relative bg-white dark:bg-[#202124] w-full h-full overflow-hidden">
                 {view === 'browser' ? (
                     <>
-                        {activeTab.url === YOUTUBE_SEARCH_URL ? (<YouTubeSearchView apiKey={youtubeApiKey} onNavigate={(url) => handleNavigate({} as any, url)} />) : activeTab.url.startsWith(YOUTUBE_WATCH_URL_PREFIX) ? (<MobiYouTubeWatchView apiKey={youtubeApiKey} videoId={new URL(activeTab.url.replace('internal://', 'https://')).searchParams.get('v') || ''} onNavigate={(url) => handleNavigate({} as any, url)} />) : (
+                        {activeTab.url === YOUTUBE_SEARCH_URL ? (
+                            <YouTubeSearchView apiKey={youtubeApiKey} onNavigate={(url) => handleNavigate(undefined, url)} />
+                        ) : activeTab.url.startsWith(YOUTUBE_WATCH_URL_PREFIX) ? (
+                            <MobiYouTubeWatchView apiKey={youtubeApiKey} videoId={new URL(activeTab.url.replace('internal://', 'https://')).searchParams.get('v') || ''} onNavigate={(url) => handleNavigate(undefined, url)} />
+                        ) : (
                             <>
-                                {shouldUseLoader && <BrowserLoader url={activeTab.displayUrl} isMobile={true} onComplete={handleLoaderComplete} />}
-                                {activeTab.url && iframeSrc ? (
-                                    <iframe ref={iframeRef} src={iframeSrc} className="w-full h-full border-0" referrerPolicy="no-referrer" title="browser-content" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" onLoad={() => updateTab(activeTabId, { isLoading: false })} />
-                                ) : ( !shouldUseLoader && <div className="flex flex-col items-center justify-center h-full text-center px-6"><h1 className="text-4xl font-bold text-gray-500 dark:text-gray-400 mb-6 select-none">Bing</h1><div className="w-full"><div className="relative group shadow-md rounded-full"><input type="text" placeholder="Search..." className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#2c2c2c] focus:outline-none dark:text-white" onKeyDown={(e) => e.key === 'Enter' && handleNavigate({ preventDefault: () => { setInputUrl((e.target as HTMLInputElement).value); handleNavigate(); } } as any)} /></div></div></div>)}
+                                {shouldUseLoader && <BrowserLoader key={`${activeTabId}-${activeTab.url}-${activeTab.navigationId}`} url={activeTab.displayUrl} isMobile={true} onComplete={handleLoaderComplete} />}
+                                {activeTab.url && iframeSrc && iframeSrc !== 'about:blank' ? (
+                                    <iframe ref={iframeRef} key={iframeSrc} src={iframeSrc} className="w-full h-full border-0" referrerPolicy="no-referrer" title="browser-content" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" onLoad={() => updateTab(activeTabId, { isLoading: false })} />
+                                ) : (
+                                     !shouldUseLoader && <div className="flex flex-col items-center justify-center h-full text-center pb-20">
+                                         <h1 className="text-6xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8 select-none">Bing</h1>
+                                        <div className="w-full max-w-lg px-4">
+                                            <div className="relative group shadow-lg rounded-full">
+                                                <input type="text" placeholder="Search Bing or type a URL" className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-500 bg-white dark:bg-[#202124] focus:outline-none dark:text-white transition-shadow shadow-sm" onKeyDown={(e) => e.key === 'Enter' && handleNavigate(undefined, (e.target as HTMLInputElement).value)} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
                     </>
                 ) : (
-                    <div className="p-4 overflow-y-auto h-full">
-                        {view === 'history' && (<div><h2 className="text-xl font-bold mb-4">History</h2><ul className="space-y-2">{cloudHistory.map((h, i) => <li key={i} className="truncate border-b py-2 text-sm" onClick={() => { handleNavigate({} as any, h); setView('browser'); }}>{h}</li>)}</ul></div>)}
-                        {view === 'bookmarks' && (<div><h2 className="text-xl font-bold mb-4">Bookmarks</h2><ul className="space-y-2">{bookmarks.map((b, i) => <li key={i} className="truncate border-b py-2 text-sm" onClick={() => { handleNavigate({} as any, b.url); setView('browser'); }}>{b.title}</li>)}</ul></div>)}
-                        {view === 'cookies' && (<div className="text-center"><h2 className="text-xl font-bold mb-4">Cookies</h2><button onClick={clearCookies} className="px-6 py-3 bg-red-600 text-white rounded-lg">Clear All</button></div>)}
+                    <div className="p-8 overflow-y-auto h-full">
+                        {view === 'history' && (<div><h2 className="text-2xl font-bold mb-4">History</h2><button onClick={clearHistory} className="mb-4 px-3 py-2 bg-red-600 text-white rounded text-sm">Clear History</button><ul className="space-y-2">{cloudHistory.map((h, i) => <li key={i} className="truncate border-b py-2 cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate(undefined, h); setView('browser'); }}>{h}</li>)}</ul></div>)}
+                        {view === 'bookmarks' && (<div><h2 className="text-2xl font-bold mb-4">Bookmarks</h2><ul className="space-y-2">{bookmarks.map((b, i) => <li key={i} className="truncate border-b py-2 cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate(undefined, b.url); setView('browser'); }}>{b.title}</li>)}</ul></div>)}
+                        {view === 'cookies' && (<div className="text-center"><h2 className="text-2xl font-bold mb-4">Cookie Manager</h2><button onClick={clearCookies} className="px-6 py-3 bg-red-600 text-white rounded-lg font-bold">Clear All Session Data</button></div>)}
                     </div>
                 )}
             </div>
 
-            <div className="flex justify-around items-center h-12 bg-gray-100 dark:bg-[#2c2c2c] border-t border-gray-300 dark:border-black/50 z-20">
-                <button onClick={handleBack} disabled={activeTab.historyIndex <= 0} className="p-3 text-gray-600 dark:text-gray-300 disabled:opacity-30"><ArrowLeft /></button>
-                <button onClick={handleForward} disabled={activeTab.historyIndex >= activeTab.history.length - 1} className="p-3 text-gray-600 dark:text-gray-300 disabled:opacity-30"><ArrowRight /></button>
-                <button onClick={handleRefresh} className="p-3 text-gray-600 dark:text-gray-300"><RefreshCw /></button>
-                <button onClick={handleHome} className="p-3 text-gray-600 dark:text-gray-300"><Home /></button>
+            <div className="h-6 bg-[#f1f3f4] dark:bg-[#292a2d] border-t border-gray-300 dark:border-black/50 flex items-center justify-between px-3 text-[10px] text-gray-500 font-mono select-none cursor-default">
+                <div className="flex space-x-4"><span>{spoofedOS}</span></div>
+                <div className="flex space-x-4"><span>{spoofedClientID}</span><span>{spoofedMachineName}</span></div>
             </div>
-            <div className="h-5 bg-[#f1f3f4] dark:bg-[#292a2d] flex items-center justify-center text-[9px] text-gray-500 font-mono select-none border-t border-gray-300 dark:border-black/50"><span className="mr-2">{spoofedOS}</span></div>
         </div>
     );
 };
@@ -347,8 +398,8 @@ const YouTubeSearchView: React.FC<{ apiKey: string; onNavigate: (url: string) =>
         <div className="h-full flex flex-col bg-white dark:bg-[#0f0f0f] overflow-hidden">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center space-x-4">
                 <YoutubeIcon />
-                <input type="text" className="flex-grow bg-gray-100 dark:bg-[#121212] border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-black dark:text-white text-sm" placeholder="Search..." value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}/>
-                <button onClick={handleSearch} disabled={loading} className="bg-red-600 text-white p-2 rounded-full">{loading ? <RefreshCw /> : <SearchIcon />}</button>
+                <input type="text" className="flex-grow bg-gray-100 dark:bg-[#121212] border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-black dark:text-white text-sm" placeholder="Search YouTube..." value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}/>
+                <button onClick={handleSearch} disabled={loading} className="bg-red-600 text-white px-4 py-2 rounded-full">{loading ? '...' : 'Search'}</button>
             </div>
             <div className="flex-grow overflow-y-auto p-4">
                 {error && <div className="text-red-500 text-center p-4">{error}</div>}
@@ -373,19 +424,12 @@ const MobiYouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNaviga
     const [recommendations, setRecommendations] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [embedBlob, setEmbedBlob] = useState('');
 
     useEffect(() => {
         if (!videoId || !apiKey) return;
         const fetchData = async () => {
             setLoading(true); setError('');
             try {
-                // Fetch Proxy Embed
-                const proxyUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-                const { content, contentType } = await database.fetchProxyContent(proxyUrl);
-                const blob = new Blob([content], { type: contentType });
-                setEmbedBlob(URL.createObjectURL(blob));
-
                 const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${apiKey}`);
                 const vidData = await vidRes.json();
                 if (!vidData.items?.length) throw new Error("Video not found");
@@ -421,11 +465,13 @@ const MobiYouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNaviga
     if (error) return <div className="flex items-center justify-center h-full text-red-500">{error}</div>;
     if (!video) return null;
 
+    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
+
     return (
         <div className="flex flex-col h-full bg-[#0f0f0f] text-white font-sans overflow-y-auto custom-scrollbar">
             <div className="bg-[#7c3aed] p-3 text-center shadow-lg flex-shrink-0"><h1 className="text-xl font-bold mb-0 text-white">Parsoley</h1><p className="text-[10px] text-purple-200">Lynix Player</p></div>
             <div className="aspect-video w-full bg-black shadow-2xl relative group flex-shrink-0">
-                {embedBlob && <iframe src={embedBlob} title={video.snippet.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="w-full h-full"></iframe>}
+                <iframe src={embedUrl} title={video.snippet.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="w-full h-full"></iframe>
             </div>
             <div className="p-4 space-y-4">
                 <div className="space-y-2">

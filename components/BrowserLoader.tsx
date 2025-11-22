@@ -47,31 +47,32 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
         let timeoutId: any;
         let longWaitTimeoutId: any;
 
-        const fetchData = async () => {
+        const fetchData = async (attempt = 1) => {
             try {
-                setStatusText('Connecting to Proxy...');
-                setPercent(10);
+                setStatusText(attempt > 1 ? `Retrying connection (${attempt}/3)...` : 'Connecting to Proxy...');
+                setPercent(attempt > 1 ? 15 : 10);
                 
-                // Timeout race (10 minutes now, to account for slow server response)
+                // Timeout race (10 minutes)
                 const timeoutPromise = new Promise<any>((_, reject) => {
                     timeoutId = setTimeout(() => {
                         reject(new Error("Connection timed out (10m). The destination server is not responding."));
-                    }, 600000); // 10 minutes
+                    }, 600000); 
                 });
 
                 // Long wait message timer (1 minute)
                 longWaitTimeoutId = setTimeout(() => {
                     if (isMounted) setShowLongWait(true);
-                }, 60000); // 1 minute
+                }, 60000); 
 
-                // Small delay for visual smoothness
                 await new Promise(resolve => setTimeout(resolve, 200));
                 if (!isMounted) return;
                 
-                setStatusText('Analyzing Security Headers...');
-                setPercent(30);
+                if (attempt === 1) {
+                    setStatusText('Analyzing Security Headers...');
+                    setPercent(30);
+                }
                 
-                // Real Fetch via Edge Function Proxy, racing against timeout
+                // Race Fetch
                 const result = await Promise.race([
                     database.fetchProxyContent(url),
                     timeoutPromise
@@ -105,7 +106,6 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
                 // Create Blob
                 let blob: Blob;
                 
-                // Check if content is a Base64 Data URI (Binary)
                 if (typeof content === 'string' && content.startsWith('data:')) {
                     try {
                         const base64 = content.split(',')[1];
@@ -118,11 +118,9 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
                         blob = new Blob([bytes], { type: contentType });
                     } catch (e) {
                         console.error("Failed to decode binary content in loader:", e);
-                        // Fallback to treating as text if decoding fails, though it will likely be broken
                         blob = new Blob([content], { type: contentType });
                     }
                 } else {
-                    // Treat as standard text/html
                     blob = new Blob([content], { type: contentType.includes('html') ? 'text/html' : contentType || 'text/plain' });
                 }
 
@@ -138,12 +136,26 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
             } catch (e: any) {
                 clearTimeout(timeoutId);
                 clearTimeout(longWaitTimeoutId);
-                if (isMounted) {
-                    console.error("BrowserLoader Error:", e);
-                    setStatusText('Generating Error Report...');
-                    const errorUrl = createErrorBlob(e.message || "Unknown error occurred");
-                    setTimeout(() => { if(isMounted) onComplete(errorUrl); }, 500);
+                
+                if (!isMounted) return;
+
+                // Auto-retry logic for specific edge function errors
+                const msg = e.message || "";
+                const isRetryable = msg.includes("Failed to send") || msg.includes("timed out") || msg.includes("Proxy Error");
+                
+                if (attempt < 3 && isRetryable) {
+                    console.warn(`Proxy attempt ${attempt} failed. Retrying...`, e);
+                    setStatusText(`Connection failed. Retrying (${attempt}/3)...`);
+                    // Wait 2 seconds before retrying
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    if (isMounted) fetchData(attempt + 1);
+                    return;
                 }
+
+                console.error("BrowserLoader Error:", e);
+                setStatusText('Generating Error Report...');
+                const errorUrl = createErrorBlob(msg || "Unknown error occurred");
+                setTimeout(() => { if(isMounted) onComplete(errorUrl); }, 500);
             }
         };
 
