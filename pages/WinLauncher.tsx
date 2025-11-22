@@ -11,7 +11,7 @@ const WifiIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-
 const VolumeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>;
 const BatteryIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>;
 const PowerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
-const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 
 interface WinLauncherProps {
     navigate: (page: Page, params?: any) => void;
@@ -61,7 +61,7 @@ const WinLauncher: React.FC<WinLauncherProps> = ({ navigate, appsList }) => {
                 {ALL_APPS.map(app => (
                     <button key={app.id} onClick={() => handleAppClick(app)} className="w-24 h-24 flex flex-col items-center justify-center hover:bg-white/10 rounded-md space-y-2 group">
                         <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-                             {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8" })}
+                             {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8" })}
                         </div>
                         <span className="text-xs text-center text-shadow px-1 truncate w-full" style={{textShadow: '1px 1px 2px rgba(0,0,0,0.8)'}}>{app.label}</span>
                     </button>
@@ -83,7 +83,7 @@ const WinLauncher: React.FC<WinLauncherProps> = ({ navigate, appsList }) => {
                         <div className="grid grid-cols-6 gap-4 mb-8">
                             {ALL_APPS.slice(0, 18).map(app => (
                                 <button key={app.id} onClick={() => handleAppClick(app)} className="flex flex-col items-center space-y-2 hover:bg-white/5 p-2 rounded transition-colors">
-                                    {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8" })}
+                                    {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8" })}
                                     <span className="text-xs text-center truncate w-full">{app.label}</span>
                                 </button>
                             ))}
@@ -166,7 +166,7 @@ const WinLauncher: React.FC<WinLauncherProps> = ({ navigate, appsList }) => {
                     </button>
                     {PINNED_APPS.map(app => (
                         <button key={app.id} onClick={() => handleAppClick(app)} className="p-2 rounded hover:bg-white/10 transition-colors group relative">
-                            {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-6 h-6" })}
+                            {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-6 h-6" })}
                             <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">{app.label}</span>
                         </button>
                     ))}

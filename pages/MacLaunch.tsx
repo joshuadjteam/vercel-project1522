@@ -93,7 +93,7 @@ const MacLaunch: React.FC<MacLaunchProps> = ({ navigate, appsList }) => {
                  {desktopApps.map(app => (
                     <button key={app.id} onClick={() => handleAppClick(app)} className="w-20 flex flex-col items-center group">
                         <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center shadow-lg border border-white/10 mb-1 group-active:bg-black/20">
-                             {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-9 h-9" })}
+                             {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-9 h-9" })}
                         </div>
                         <span className="text-xs text-center font-medium text-white drop-shadow-md bg-black/0 group-hover:bg-black/20 rounded px-1">{app.label}</span>
                     </button>
@@ -152,7 +152,7 @@ const MacLaunch: React.FC<MacLaunchProps> = ({ navigate, appsList }) => {
                                     className="flex flex-col items-center group w-28 transition-transform duration-200 active:scale-95"
                                 >
                                     <div className="w-20 h-20 bg-transparent rounded-[1.5rem] flex items-center justify-center transition-transform duration-300 group-hover:scale-110 mb-3">
-                                        {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-20 h-20 drop-shadow-2xl" })}
+                                        {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-20 h-20 drop-shadow-2xl" })}
                                     </div>
                                     <span className="text-sm font-medium text-white text-center leading-tight drop-shadow-md">{app.label}</span>
                                 </button>
@@ -184,7 +184,7 @@ const MacLaunch: React.FC<MacLaunchProps> = ({ navigate, appsList }) => {
                             onClick={() => handleAppClick(app)} 
                             className="w-12 h-12 bg-white/10 hover:bg-white/30 rounded-xl flex items-center justify-center transition-all duration-200 hover:-translate-y-2 hover:scale-110 relative group"
                         >
-                            {React.cloneElement(app.icon as React.ReactElement<{ className?: string }>, { className: "w-9 h-9" })}
+                            {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-9 h-9" })}
                             <span className="absolute -top-10 bg-gray-200/90 backdrop-blur text-black/80 text-xs font-semibold px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-sm border border-white/20">{app.label}</span>
                         </button>
                     ))}

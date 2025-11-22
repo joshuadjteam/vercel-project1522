@@ -35,7 +35,7 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title, iconSvg }) => {
             return 'https://www.google.com/webhp?igu=1';
         }
         
-        // Fix for YouTube - Redirect to inv.nadeko.net to allow embedding
+        // Fix for YouTube - Use privacy-enhanced embed
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
             try {
                 let targetUrl = url;
@@ -43,17 +43,22 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title, iconSvg }) => {
                 const urlObj = new URL(targetUrl);
                 
                 if (urlObj.hostname.includes('youtu.be')) {
-                    // youtu.be/ID -> /watch?v=ID
+                    // youtu.be/ID -> /embed/ID
                     const videoId = urlObj.pathname.slice(1);
-                    let newUrl = `https://inv.nadeko.net/watch?v=${videoId}`;
-                    if (urlObj.search) newUrl += '&' + urlObj.search.slice(1);
+                    let newUrl = `https://www.youtube-nocookie.com/embed/${videoId}`;
+                    // Preserve query params if possible, though embed usually only takes specific ones
                     return newUrl;
-                } else {
-                    // Standard youtube.com/path -> /youtube/path
-                    return `https://inv.nadeko.net${urlObj.pathname}${urlObj.search}`;
+                } else if (urlObj.pathname.startsWith('/watch')) {
+                    // youtube.com/watch?v=ID -> /embed/ID
+                    const videoId = urlObj.searchParams.get('v');
+                    if (videoId) {
+                        return `https://www.youtube-nocookie.com/embed/${videoId}`;
+                    }
                 }
+                // If it's just youtube.com or a channel page, standard embedding might fail due to X-Frame-Options.
+                // We'll let it pass through, but it likely won't load in iframe unless it's /embed.
             } catch (e) {
-                return 'https://inv.nadeko.net/';
+                // Fallback
             }
         }
 
@@ -112,7 +117,7 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title, iconSvg }) => {
                     title={title}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; camera; microphone; geolocation; payment"
                     allowFullScreen
-                    referrerPolicy="no-referrer"
+                    referrerPolicy="strict-origin-when-cross-origin"
                 />
             </div>
         </div>

@@ -99,24 +99,15 @@ const LynixBrowserApp: React.FC = () => {
     ]);
     const [activeTabId, setActiveTabId] = useState(1);
     const [addressBarInput, setAddressBarInput] = useState('');
-    
-    // State for Menus
     const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-    
-    // User Settings
     const [securityBypassEnabled, setSecurityBypassEnabled] = useState(true);
     const [cloudHistory, setCloudHistory] = useState<string[]>([]);
     const [bookmarks, setBookmarks] = useState<{title: string, url: string}[]>([]);
     const [youtubeApiKey, setYoutubeApiKey] = useState(DEFAULT_YOUTUBE_API_KEY);
-    
-    // Real-Time Update Visuals
     const [isNetworkActive, setIsNetworkActive] = useState(false);
-    
-    // View States
     const [view, setView] = useState<'browser' | 'history' | 'bookmarks' | 'cookies'>('browser');
 
-    // --- Spoofed Info ---
     const spoofedDevice = "Unknown Linux Device";
     const spoofedOS = "DozianOS for Lynix v15.0";
     const spoofedMachineName = `LynixWeb-Machine-${user?.id || 'Guest'}`;
@@ -141,27 +132,23 @@ const LynixBrowserApp: React.FC = () => {
         }
     }, [user]);
 
-    // Message Listener for Proxy & Navigation
+    // PROXY MESSAGE LISTENER
     useEffect(() => {
         const handleMessage = async (event: MessageEvent) => {
             if (!event.data) return;
 
-            // Handle Navigation
             if (event.data.type === 'LYNIX_NAVIGATE' && event.data.url) {
                 handleNavigate(event.data.url);
             }
 
-            // Handle Proxy Fetch Requests (Real Time Updates)
             if (event.data.type === 'PROXY_REQUEST') {
                 const { id, payload } = event.data;
                 const { url, method, headers, body } = payload;
                 
-                setIsNetworkActive(true); // Show visual indicator
+                setIsNetworkActive(true);
 
                 try {
                     const result = await database.fetchProxyContent(url, { method, headers, body });
-                    
-                    // Send response back to iframe
                     if (iframeRef.current && iframeRef.current.contentWindow) {
                         iframeRef.current.contentWindow.postMessage({
                             type: 'PROXY_RESPONSE',
@@ -172,7 +159,6 @@ const LynixBrowserApp: React.FC = () => {
                 } catch (e) {
                     console.error("Proxy Request Failed:", e);
                 } finally {
-                    // Small delay to let the pulse animate
                     setTimeout(() => setIsNetworkActive(false), 500);
                 }
             }
@@ -244,7 +230,7 @@ const LynixBrowserApp: React.FC = () => {
             displayUrl = actualUrl;
         }
 
-        // Special handling for YouTube
+        // Handle YouTube
         if (actualUrl.includes('youtube.com/watch') || actualUrl.includes('youtu.be/')) {
             try {
                 let videoId = '';
@@ -258,9 +244,7 @@ const LynixBrowserApp: React.FC = () => {
                     actualUrl = `${YOUTUBE_WATCH_URL_PREFIX}?v=${videoId}`;
                     displayUrl = actualUrl;
                 }
-            } catch (e) {
-                // Fallback if parsing fails
-            }
+            } catch (e) { }
         } else if (actualUrl.includes('youtube.com')) {
              actualUrl = YOUTUBE_SEARCH_URL;
              displayUrl = YOUTUBE_SEARCH_URL;
@@ -354,10 +338,10 @@ const LynixBrowserApp: React.FC = () => {
     };
 
     const clearCookies = () => {
-        if (window.confirm("Are you sure you want to clear all site data and cookies for the browser session?")) {
+        if (window.confirm("Clear all session data?")) {
             tabs.forEach(t => { if (t.blobUrl) URL.revokeObjectURL(t.blobUrl); });
             setTabs([{ id: Date.now(), title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }]);
-            alert("Browser session data cleared.");
+            alert("Cleared.");
             setView('browser');
         }
     };
@@ -378,19 +362,13 @@ const LynixBrowserApp: React.FC = () => {
 
     return (
         <div className="w-full h-full flex flex-col bg-[#dfe3e7] dark:bg-[#202124] text-black dark:text-white rounded-lg overflow-hidden font-sans select-none relative">
-            {/* Top Bar (Tabs) */}
             <div className="flex h-10 px-2 pt-2 space-x-1 overflow-x-auto no-scrollbar items-end bg-[#dee1e6] dark:bg-[#000000]">
                 {tabs.map(tab => (
                     <div
                         key={tab.id}
                         onClick={() => { setActiveTabId(tab.id); setView('browser'); }}
-                        className={`group relative flex items-center min-w-[140px] max-w-[220px] h-8 px-3 text-xs rounded-t-xl cursor-pointer transition-all
-                            ${activeTabId === tab.id && view === 'browser'
-                                ? 'bg-white dark:bg-[#35363a] text-black dark:text-white shadow-sm z-10' 
-                                : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-white/40 dark:hover:bg-white/10'
-                            }`}
+                        className={`group relative flex items-center min-w-[140px] max-w-[220px] h-8 px-3 text-xs rounded-t-xl cursor-pointer transition-all ${activeTabId === tab.id && view === 'browser' ? 'bg-white dark:bg-[#35363a] text-black dark:text-white shadow-sm z-10' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-white/40 dark:hover:bg-white/10'}`}
                     >
-                        {activeTabId !== tab.id && <div className="absolute right-0 h-4 w-[1px] bg-gray-400 dark:bg-gray-600 top-2 group-hover:hidden"></div>}
                         <div className="flex items-center space-x-2 w-full overflow-hidden">
                             {tab.isLoading ? <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500 flex-shrink-0"></div> : (tab.url ? <GlobeIcon /> : <div className="w-3 h-3 rounded-full bg-gray-400 flex-shrink-0"></div>)}
                             <span className="truncate flex-grow font-medium">{tab.title || 'New Tab'}</span>
@@ -401,17 +379,15 @@ const LynixBrowserApp: React.FC = () => {
                 <button onClick={addTab} className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-white/10 transition-colors ml-1"><Plus /></button>
             </div>
 
-            {/* Navigation Toolbar */}
             <div className="flex items-center h-12 px-2 bg-white dark:bg-[#35363a] shadow-sm z-20 space-x-2 border-b border-gray-200 dark:border-black/20">
                 <div className="flex space-x-1">
-                    <button onClick={handleBack} disabled={activeTab.historyIndex <= 0} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-colors"><ArrowLeft /></button>
-                    <button onClick={handleForward} disabled={activeTab.historyIndex >= activeTab.history.length - 1} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-colors"><ArrowRight /></button>
-                    <button onClick={handleRefresh} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"><RefreshCw /></button>
+                    <button onClick={handleBack} disabled={activeTab.historyIndex <= 0} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30"><ArrowLeft /></button>
+                    <button onClick={handleForward} disabled={activeTab.historyIndex >= activeTab.history.length - 1} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30"><ArrowRight /></button>
+                    <button onClick={handleRefresh} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"><RefreshCw /></button>
                 </div>
-                <button onClick={() => { handleNavigate(''); setView('browser'); }} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors hidden sm:block"><Home /></button>
+                <button onClick={() => { handleNavigate(''); setView('browser'); }} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 hidden sm:block"><Home /></button>
 
-                {/* Address Bar */}
-                <div className="flex-grow flex items-center bg-[#f1f3f4] dark:bg-[#202124] rounded-full px-3 h-8 border-2 border-transparent focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-black transition-all shadow-inner relative group">
+                <div className="flex-grow flex items-center bg-[#f1f3f4] dark:bg-[#202124] rounded-full px-3 h-8 border-2 border-transparent focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-black transition-all shadow-inner relative">
                     <div className="text-gray-500 mr-2 flex items-center space-x-1">
                         {isNetworkActive ? <ActivityIcon /> : (activeTab.url && activeTab.url.startsWith('https') ? <LockIcon /> : <InfoIcon />)}
                     </div>
@@ -424,15 +400,10 @@ const LynixBrowserApp: React.FC = () => {
                         className="flex-grow bg-transparent border-none outline-none text-sm text-black dark:text-white w-full"
                         placeholder="Search or type URL"
                     />
-                    <div className="flex space-x-1">
-                        <button onClick={toggleBookmark} className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700">
-                            <StarIcon filled={bookmarks.some(b => b.url === activeTab.displayUrl)} />
-                        </button>
-                    </div>
+                    <button onClick={toggleBookmark} className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700"><StarIcon filled={bookmarks.some(b => b.url === activeTab.displayUrl)} /></button>
                 </div>
 
                 <div className="flex space-x-1 items-center pl-2">
-                    {/* Account Menu */}
                     <div className="relative" ref={accountRef}>
                         <button onClick={() => setAccountMenuOpen(!accountMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300"><UserIcon /></button>
                         {accountMenuOpen && (
@@ -446,8 +417,6 @@ const LynixBrowserApp: React.FC = () => {
                             </div>
                         )}
                     </div>
-
-                    {/* Settings Menu */}
                     <div className="relative" ref={settingsRef}>
                         <button onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300"><MoreVertical /></button>
                         {settingsMenuOpen && (
@@ -458,16 +427,9 @@ const LynixBrowserApp: React.FC = () => {
                                         <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${securityBypassEnabled ? 'left-6' : 'left-1'}`}></div>
                                     </button>
                                 </div>
-                                <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
                                 <div className="px-4 py-2">
                                     <label className="text-xs text-gray-500 block mb-1">YouTube API Key</label>
-                                    <input 
-                                        type="password" 
-                                        value={youtubeApiKey} 
-                                        onChange={(e) => saveYoutubeKey(e.target.value)}
-                                        placeholder="Paste key here..."
-                                        className="w-full bg-gray-100 dark:bg-black/20 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs"
-                                    />
+                                    <input type="password" value={youtubeApiKey} onChange={(e) => saveYoutubeKey(e.target.value)} placeholder="Paste key..." className="w-full bg-gray-100 dark:bg-black/20 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs"/>
                                 </div>
                                 <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
                                 <button onClick={() => { setView('cookies'); setSettingsMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><CookieIcon /><span>Cookie Manager</span></button>
@@ -478,47 +440,24 @@ const LynixBrowserApp: React.FC = () => {
                 </div>
             </div>
             
-            {/* Main Content Area */}
             <div className="flex-grow relative bg-white dark:bg-[#202124] w-full h-full overflow-hidden">
                 {view === 'browser' ? (
                     <>
                         {activeTab.url === YOUTUBE_SEARCH_URL ? (
                             <YouTubeSearchView apiKey={youtubeApiKey} onNavigate={(url) => handleNavigate(url)} />
                         ) : activeTab.url.startsWith(YOUTUBE_WATCH_URL_PREFIX) ? (
-                            <YouTubeWatchView 
-                                apiKey={youtubeApiKey} 
-                                videoId={new URL(activeTab.url.replace('internal://', 'https://')).searchParams.get('v') || ''} 
-                                onNavigate={(url) => handleNavigate(url)} 
-                            />
+                            <YouTubeWatchView apiKey={youtubeApiKey} videoId={new URL(activeTab.url.replace('internal://', 'https://')).searchParams.get('v') || ''} onNavigate={(url) => handleNavigate(url)} />
                         ) : (
                             <>
-                                {shouldUseLoader && (
-                                    <BrowserLoader url={activeTab.displayUrl} onComplete={handleLoaderComplete} />
-                                )}
+                                {shouldUseLoader && <BrowserLoader url={activeTab.displayUrl} onComplete={handleLoaderComplete} />}
                                 {activeTab.url && iframeSrc ? (
-                                    <iframe 
-                                        ref={iframeRef}
-                                        src={iframeSrc} 
-                                        className="w-full h-full border-0"
-                                        referrerPolicy="no-referrer"
-                                        title="browser-content"
-                                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation allow-downloads"
-                                        onLoad={() => updateTab(activeTabId, { isLoading: false })}
-                                    />
+                                    <iframe ref={iframeRef} src={iframeSrc} className="w-full h-full border-0" referrerPolicy="no-referrer" title="browser-content" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" onLoad={() => updateTab(activeTabId, { isLoading: false })} />
                                 ) : (
                                      !shouldUseLoader && <div className="flex flex-col items-center justify-center h-full text-center pb-20">
                                          <h1 className="text-6xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8 select-none">Bing</h1>
                                         <div className="w-full max-w-lg px-4">
                                             <div className="relative group shadow-lg rounded-full">
-                                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                                </div>
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Search Bing or type a URL" 
-                                                    className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-500 bg-white dark:bg-[#202124] focus:outline-none dark:text-white transition-shadow shadow-sm"
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleNavigate((e.target as HTMLInputElement).value)}
-                                                />
+                                                <input type="text" placeholder="Search Bing or type a URL" className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-500 bg-white dark:bg-[#202124] focus:outline-none dark:text-white transition-shadow shadow-sm" onKeyDown={(e) => e.key === 'Enter' && handleNavigate((e.target as HTMLInputElement).value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -528,39 +467,16 @@ const LynixBrowserApp: React.FC = () => {
                     </>
                 ) : (
                     <div className="p-8 overflow-y-auto h-full">
-                        {view === 'history' && (
-                            <div>
-                                <h2 className="text-2xl font-bold mb-4">History</h2>
-                                <button onClick={clearHistory} className="mb-4 px-3 py-2 bg-red-600 text-white rounded text-sm">Clear History</button>
-                                <ul className="space-y-2">{cloudHistory.map((h, i) => <li key={i} className="truncate border-b py-2 cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate(h); setView('browser'); }}>{h}</li>)}</ul>
-                            </div>
-                        )}
-                        {view === 'bookmarks' && (
-                            <div>
-                                <h2 className="text-2xl font-bold mb-4">Bookmarks</h2>
-                                <ul className="space-y-2">{bookmarks.map((b, i) => <li key={i} className="truncate border-b py-2 cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate(b.url); setView('browser'); }}>{b.title}</li>)}</ul>
-                            </div>
-                        )}
-                        {view === 'cookies' && (
-                            <div className="text-center">
-                                <h2 className="text-2xl font-bold mb-4">Cookie Manager</h2>
-                                <button onClick={clearCookies} className="px-6 py-3 bg-red-600 text-white rounded-lg font-bold">Clear All Session Data</button>
-                            </div>
-                        )}
+                        {view === 'history' && (<div><h2 className="text-2xl font-bold mb-4">History</h2><button onClick={clearHistory} className="mb-4 px-3 py-2 bg-red-600 text-white rounded text-sm">Clear History</button><ul className="space-y-2">{cloudHistory.map((h, i) => <li key={i} className="truncate border-b py-2 cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate(h); setView('browser'); }}>{h}</li>)}</ul></div>)}
+                        {view === 'bookmarks' && (<div><h2 className="text-2xl font-bold mb-4">Bookmarks</h2><ul className="space-y-2">{bookmarks.map((b, i) => <li key={i} className="truncate border-b py-2 cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate(b.url); setView('browser'); }}>{b.title}</li>)}</ul></div>)}
+                        {view === 'cookies' && (<div className="text-center"><h2 className="text-2xl font-bold mb-4">Cookie Manager</h2><button onClick={clearCookies} className="px-6 py-3 bg-red-600 text-white rounded-lg font-bold">Clear All Session Data</button></div>)}
                     </div>
                 )}
             </div>
 
-            {/* Spoofed Status Bar */}
             <div className="h-6 bg-[#f1f3f4] dark:bg-[#292a2d] border-t border-gray-300 dark:border-black/50 flex items-center justify-between px-3 text-[10px] text-gray-500 font-mono select-none cursor-default">
-                <div className="flex space-x-4">
-                     <span className="flex items-center"><span className="font-bold mr-1">DEVICE:</span> {spoofedDevice}</span>
-                     <span className="flex items-center hidden sm:inline-flex"><span className="font-bold mr-1">OS:</span> {spoofedOS}</span>
-                </div>
-                <div className="flex space-x-4">
-                     <span className="flex items-center hidden sm:inline-flex"><span className="font-bold mr-1">CLIENT:</span> {spoofedClientID}</span>
-                     <span className="flex items-center"><span className="font-bold mr-1">ID:</span> {spoofedMachineName}</span>
-                </div>
+                <div className="flex space-x-4"><span>{spoofedOS}</span></div>
+                <div className="flex space-x-4"><span>{spoofedClientID}</span><span>{spoofedMachineName}</span></div>
             </div>
         </div>
     );
@@ -575,77 +491,33 @@ const YouTubeSearchView: React.FC<{ apiKey: string; onNavigate: (url: string) =>
     const handleSearch = async () => {
         if (!apiKey) { setError("API Key Missing"); return; }
         if (!query) return;
-        
-        setLoading(true);
-        setError('');
+        setLoading(true); setError('');
         try {
             const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
             const res = await fetch(url);
             const data = await res.json();
-            
-            if (data.error) {
-                throw new Error(data.error.message);
-            }
-            
+            if (data.error) throw new Error(data.error.message);
             setResults(data.items || []);
-        } catch (e: any) {
-            setError(e.message || 'Search failed');
-        } finally {
-            setLoading(false);
-        }
+        } catch (e: any) { setError(e.message || 'Search failed'); } finally { setLoading(false); }
     };
 
-    if (!apiKey) {
-        return (
-            <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
-                <YoutubeIcon />
-                <h2 className="text-2xl font-bold">YouTube Data API Key Required</h2>
-                <p className="text-gray-500 max-w-md">
-                    To search YouTube, you need to provide your own API Key.
-                    Go to the Browser Settings menu (top right) to enter it.
-                </p>
-            </div>
-        );
-    }
+    if (!apiKey) return <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-4"><YoutubeIcon /><h2 className="text-2xl font-bold">API Key Required</h2></div>;
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-[#0f0f0f] overflow-hidden">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center space-x-4">
                 <YoutubeIcon />
-                <div className="flex-grow relative">
-                    <input 
-                        type="text" 
-                        className="w-full bg-gray-100 dark:bg-[#121212] border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-black dark:text-white focus:outline-none focus:border-blue-500"
-                        placeholder="Search YouTube..."
-                        value={query}
-                        onChange={e => setQuery(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                    />
-                </div>
-                <button onClick={handleSearch} disabled={loading} className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-red-700 disabled:opacity-50">
-                    {loading ? '...' : 'Search'}
-                </button>
+                <input type="text" className="flex-grow bg-gray-100 dark:bg-[#121212] border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-black dark:text-white" placeholder="Search YouTube..." value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}/>
+                <button onClick={handleSearch} disabled={loading} className="bg-red-600 text-white px-4 py-2 rounded-full">{loading ? '...' : 'Search'}</button>
             </div>
-            
             <div className="flex-grow overflow-y-auto p-4">
                 {error && <div className="text-red-500 text-center p-4">{error}</div>}
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {results.map(item => (
-                        <div 
-                            key={item.id.videoId} 
-                            className="cursor-pointer group"
-                            onClick={() => onNavigate(`https://youtube.com/watch?v=${item.id.videoId}`)}
-                        >
-                            <div className="aspect-video bg-gray-200 dark:bg-gray-800 rounded-xl overflow-hidden mb-2 relative">
-                                <img src={item.snippet.thumbnails.high.url} alt={item.snippet.title} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex space-x-3">
-                                <div className="flex-grow">
-                                    <h3 className="font-bold text-sm text-black dark:text-white line-clamp-2 group-hover:text-blue-400" dangerouslySetInnerHTML={{__html: item.snippet.title}}></h3>
-                                    <p className="text-xs text-gray-500 mt-1">{item.snippet.channelTitle}</p>
-                                </div>
-                            </div>
+                        <div key={item.id.videoId} className="cursor-pointer group" onClick={() => onNavigate(`https://youtube.com/watch?v=${item.id.videoId}`)}>
+                            <div className="aspect-video bg-gray-200 dark:bg-gray-800 rounded-xl overflow-hidden mb-2"><img src={item.snippet.thumbnails.high.url} className="w-full h-full object-cover" /></div>
+                            <h3 className="font-bold text-sm text-black dark:text-white line-clamp-2">{item.snippet.title}</h3>
+                            <p className="text-xs text-gray-500">{item.snippet.channelTitle}</p>
                         </div>
                     ))}
                 </div>
@@ -661,44 +533,41 @@ const YouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNavigate: 
     const [recommendations, setRecommendations] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [embedBlob, setEmbedBlob] = useState('');
 
     useEffect(() => {
         if (!videoId || !apiKey) return;
-
         const fetchData = async () => {
-            setLoading(true);
-            setError('');
+            setLoading(true); setError('');
             try {
-                // Fetch Video Details
+                // 1. Prepare Proxy Embed Blob
+                // This bypasses Error 153 by fetching the embed HTML server-side with Referer spoofing
+                const proxyUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+                const { content, contentType } = await database.fetchProxyContent(proxyUrl);
+                const blob = new Blob([content], { type: contentType });
+                setEmbedBlob(URL.createObjectURL(blob));
+
+                // 2. Fetch Metadata
                 const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${apiKey}`);
                 const vidData = await vidRes.json();
-                if (!vidData.items || vidData.items.length === 0) throw new Error("Video not found");
+                if (!vidData.items?.length) throw new Error("Video not found");
                 const videoDetails = vidData.items[0];
                 setVideo(videoDetails);
 
-                // Fetch Channel Details
                 const channelRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${videoDetails.snippet.channelId}&key=${apiKey}`);
                 const channelData = await channelRes.json();
-                if (channelData.items && channelData.items.length > 0) setChannel(channelData.items[0]);
+                if (channelData.items?.length) setChannel(channelData.items[0]);
 
-                // Fetch Comments
                 const commentsRes = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=10&key=${apiKey}`);
                 const commentsData = await commentsRes.json();
                 if (commentsData.items) setComments(commentsData.items);
 
-                // Fetch Recommendations (Search by title as relatedToVideoId is deprecated)
                 const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(videoDetails.snippet.title)}&type=video&maxResults=10&key=${apiKey}`);
                 const searchData = await searchRes.json();
                 if (searchData.items) setRecommendations(searchData.items.filter((item: any) => item.id.videoId !== videoId));
 
-            } catch (e: any) {
-                console.error(e);
-                setError(e.message || "Failed to load video data");
-            } finally {
-                setLoading(false);
-            }
+            } catch (e: any) { console.error(e); setError(e.message); } finally { setLoading(false); }
         };
-
         fetchData();
     }, [videoId, apiKey]);
 
@@ -716,115 +585,23 @@ const YouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNavigate: 
 
     return (
         <div className="flex flex-col h-full bg-[#0f0f0f] text-white font-sans overflow-hidden">
-            {/* Top Content: Video & Sidebar */}
-            <div className="flex flex-col h-full">
-                {/* Main Content */}
-                <div className="flex-grow overflow-y-auto custom-scrollbar p-6 flex flex-row gap-6">
-                    
-                    {/* Left Sidebar (Parsoley Style) */}
-                    <div className="w-64 flex-shrink-0 hidden lg:block space-y-2">
-                        <div className="bg-[#7c3aed] rounded-xl p-4 mb-4 text-center shadow-lg">
-                            <h1 className="text-2xl font-bold mb-1 text-white">Parsoley</h1>
-                            <p className="text-xs text-purple-200">A Lynix YouTube Player</p>
-                        </div>
-                        <button onClick={() => onNavigate(YOUTUBE_SEARCH_URL)} className="w-full text-left px-4 py-3 bg-[#272727] hover:bg-[#3f3f3f] rounded-xl font-semibold">Home</button>
-                        <button onClick={() => onNavigate(YOUTUBE_SEARCH_URL)} className="w-full text-left px-4 py-3 bg-[#272727] hover:bg-[#3f3f3f] rounded-xl font-semibold">Search</button>
-                        
-                        <div className="mt-6">
-                            <h3 className="text-sm font-bold text-gray-400 mb-3 px-2">Now Playing...</h3>
-                            <div className="bg-[#272727] p-3 rounded-xl">
-                                <p className="text-sm font-bold line-clamp-2">{video.snippet.title}</p>
-                                <p className="text-xs text-gray-400 mt-1">{video.snippet.channelTitle}</p>
-                            </div>
-                        </div>
-
-                        <div className="mt-6">
-                             <h3 className="text-sm font-bold text-gray-400 mb-3 px-2">Recommendations</h3>
-                             <div className="space-y-3">
-                                {recommendations.slice(0, 5).map(rec => (
-                                    <div key={rec.id.videoId} className="cursor-pointer group" onClick={() => onNavigate(`https://youtube.com/watch?v=${rec.id.videoId}`)}>
-                                        <div className="aspect-video bg-black rounded-lg overflow-hidden mb-1">
-                                            <img src={rec.snippet.thumbnails.high.url} className="w-full h-full object-cover" alt="" />
-                                        </div>
-                                        <p className="text-xs font-semibold line-clamp-2 group-hover:text-blue-400">{rec.snippet.title}</p>
-                                    </div>
-                                ))}
-                             </div>
-                        </div>
+            <div className="flex-grow overflow-y-auto custom-scrollbar p-6 flex flex-row gap-6">
+                <div className="w-64 flex-shrink-0 hidden lg:block space-y-2">
+                    <div className="bg-[#7c3aed] rounded-xl p-4 mb-4 text-center shadow-lg"><h1 className="text-2xl font-bold mb-1 text-white">Parsoley</h1><p className="text-xs text-purple-200">A Lynix YouTube Player</p></div>
+                    <button onClick={() => onNavigate(YOUTUBE_SEARCH_URL)} className="w-full text-left px-4 py-3 bg-[#272727] hover:bg-[#3f3f3f] rounded-xl font-semibold">Home</button>
+                    <div className="mt-6"><h3 className="text-sm font-bold text-gray-400 mb-3 px-2">Recommendations</h3><div className="space-y-3">{recommendations.slice(0, 5).map(rec => (<div key={rec.id.videoId} className="cursor-pointer group" onClick={() => onNavigate(`https://youtube.com/watch?v=${rec.id.videoId}`)}><div className="aspect-video bg-black rounded-lg overflow-hidden mb-1"><img src={rec.snippet.thumbnails.high.url} className="w-full h-full object-cover" /></div><p className="text-xs font-semibold line-clamp-2 group-hover:text-blue-400">{rec.snippet.title}</p></div>))}</div></div>
+                </div>
+                <div className="flex-grow max-w-5xl mx-auto">
+                    <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-2xl mb-4 relative group">
+                        {embedBlob && <iframe src={embedBlob} title={video.snippet.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="w-full h-full"></iframe>}
                     </div>
-
-                    {/* Center Video Area */}
-                    <div className="flex-grow max-w-5xl mx-auto">
-                        {/* Video Player - Using inv.nadeko.net to bypass blocking */}
-                        <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-2xl mb-4 relative group">
-                            <iframe 
-                                src={`https://inv.nadeko.net/embed/${videoId}?autoplay=1`} 
-                                title={video.snippet.title} 
-                                frameBorder="0" 
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                                referrerPolicy="strict-origin-when-cross-origin"
-                                allowFullScreen
-                                className="w-full h-full"
-                            ></iframe>
-                        </div>
-
-                        {/* Info Grid (Parsoley Style) */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            {/* Likes Box */}
-                            <div className="bg-white text-black p-4 rounded-xl flex flex-col justify-center items-center text-center shadow-lg border-l-8 border-green-500">
-                                <div className="text-3xl font-bold">{formatNumber(video.statistics.likeCount)}</div>
-                                <div className="text-sm font-semibold text-gray-600">Likes</div>
-                                <div className="text-xs text-gray-400 mt-1">Dislikes: N/A</div>
-                            </div>
-
-                            {/* Creator Box */}
-                            <div className="bg-white text-black p-4 rounded-xl flex flex-col justify-center items-center text-center shadow-lg border-t-8 border-blue-500">
-                                <div className="font-bold text-lg">@{channel?.snippet.customUrl || video.snippet.channelTitle}</div>
-                                <div className="text-sm text-gray-600">{video.snippet.channelTitle}</div>
-                                {channel && <img src={channel.snippet.thumbnails.default.url} className="w-10 h-10 rounded-full mt-2" alt="avatar" />}
-                            </div>
-
-                            {/* Views Box */}
-                            <div className="bg-white text-black p-4 rounded-xl flex flex-col justify-center items-center text-center shadow-lg border-r-8 border-purple-500">
-                                <div className="text-lg font-bold">Comments: {formatNumber(video.statistics.commentCount)}</div>
-                                <div className="text-lg font-bold">Views: {formatNumber(video.statistics.viewCount)}</div>
-                            </div>
-                        </div>
-
-                        {/* Description Box (Purple) */}
-                        <div className="bg-[#7c3aed] text-white p-6 rounded-xl shadow-lg mb-4">
-                            <div className="font-bold mb-2">Made on: {new Date(video.snippet.publishedAt).toLocaleDateString()}</div>
-                            <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                                <span className="font-bold">Description:</span> {video.snippet.description}
-                            </div>
-                        </div>
-
-                        {/* Comments Section */}
-                        <div className="bg-[#272727] p-6 rounded-xl shadow-lg">
-                            <h3 className="text-lg font-bold mb-4">--- Comments ---</h3>
-                            {comments.length > 0 ? (
-                                <>
-                                    {/* Pinned simulation (just taking the first one or if pinned logic existed) */}
-                                    <div className="mb-6 pb-4 border-b border-gray-600">
-                                        <p className="text-sm font-bold text-purple-400 mb-1">Pinned Comment from @{comments[0].snippet.topLevelComment.snippet.authorDisplayName}</p>
-                                        <p className="text-sm">{comments[0].snippet.topLevelComment.snippet.textDisplay}</p>
-                                    </div>
-                                    
-                                    <div className="space-y-4">
-                                        {comments.slice(1).map(comment => (
-                                            <div key={comment.id} className="text-sm">
-                                                <span className="font-bold text-gray-300">@{comment.snippet.topLevelComment.snippet.authorDisplayName}</span>
-                                                <span className="mx-2">-</span>
-                                                <span className="text-gray-400" dangerouslySetInnerHTML={{__html: comment.snippet.topLevelComment.snippet.textDisplay}}></span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </>
-                            ) : (
-                                <p className="text-gray-500">No comments available.</p>
-                            )}
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="bg-white text-black p-4 rounded-xl flex flex-col justify-center items-center text-center shadow-lg border-l-8 border-green-500"><div className="text-3xl font-bold">{formatNumber(video.statistics.likeCount)}</div><div className="text-sm font-semibold text-gray-600">Likes</div></div>
+                        <div className="bg-white text-black p-4 rounded-xl flex flex-col justify-center items-center text-center shadow-lg border-t-8 border-blue-500"><div className="font-bold text-lg">@{channel?.snippet.customUrl || video.snippet.channelTitle}</div><div className="text-sm text-gray-600">{video.snippet.channelTitle}</div>{channel && <img src={channel.snippet.thumbnails.default.url} className="w-10 h-10 rounded-full mt-2" />}</div>
+                        <div className="bg-white text-black p-4 rounded-xl flex flex-col justify-center items-center text-center shadow-lg border-r-8 border-purple-500"><div className="text-lg font-bold">Comments: {formatNumber(video.statistics.commentCount)}</div><div className="text-lg font-bold">Views: {formatNumber(video.statistics.viewCount)}</div></div>
                     </div>
+                    <div className="bg-[#7c3aed] text-white p-6 rounded-xl shadow-lg mb-4"><div className="font-bold mb-2">Published: {new Date(video.snippet.publishedAt).toLocaleDateString()}</div><div className="text-sm whitespace-pre-wrap leading-relaxed"><span className="font-bold">Description:</span> {video.snippet.description}</div></div>
+                    <div className="bg-[#272727] p-6 rounded-xl shadow-lg"><h3 className="text-lg font-bold mb-4">--- Comments ---</h3>{comments.length > 0 ? (<div className="space-y-4">{comments.slice(0, 10).map(comment => (<div key={comment.id} className="text-sm"><span className="font-bold text-gray-300">@{comment.snippet.topLevelComment.snippet.authorDisplayName}</span><span className="mx-2">-</span><span className="text-gray-400" dangerouslySetInnerHTML={{__html: comment.snippet.topLevelComment.snippet.textDisplay}}></span></div>))}</div>) : (<p className="text-gray-500">No comments.</p>)}</div>
                 </div>
             </div>
         </div>

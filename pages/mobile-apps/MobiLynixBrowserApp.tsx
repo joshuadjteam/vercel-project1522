@@ -119,7 +119,6 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     const accountRef = useRef<HTMLDivElement>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
-    // --- Spoofed Info ---
     const spoofedDevice = "Unknown Linux Device";
     const spoofedOS = "DozianOS for Lynix v15.0 (Mobile)";
     const spoofedClientID = "Firefox/115.0";
@@ -146,7 +145,6 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                 handleNavigate({ preventDefault: () => {} } as any, event.data.url);
             }
 
-            // Handle Proxy Fetch Requests
             if (event.data.type === 'PROXY_REQUEST') {
                 const { id, payload } = event.data;
                 const { url, method, headers, body } = payload;
@@ -173,26 +171,8 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         return () => window.removeEventListener('message', handleMessage);
     }, [activeTabId]);
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) setSettingsMenuOpen(false);
-            if (accountRef.current && !accountRef.current.contains(event.target as Node)) setAccountMenuOpen(false);
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     const updateTab = (id: number, updates: Partial<BrowserTab>) => {
         setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-    };
-
-    const saveYoutubeKey = (key: string) => {
-        setYoutubeApiKey(key);
-        if (user) {
-            database.getBrowserData(user.id).then(data => {
-                database.saveBrowserData(user.id, { ...data, youtubeApiKey: key } as any);
-            });
-        }
     };
 
     const addToHistory = (url: string) => {
@@ -202,26 +182,12 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         if (user) database.saveBrowserData(user.id, { history: newHistory });
     };
 
-    const toggleBookmark = () => {
-        if (!activeTab.displayUrl) return;
-        const isBookmarked = bookmarks.some(b => b.url === activeTab.displayUrl);
-        let newBookmarks;
-        if (isBookmarked) {
-            newBookmarks = bookmarks.filter(b => b.url !== activeTab.displayUrl);
-        } else {
-            newBookmarks = [...bookmarks, { title: activeTab.title || activeTab.displayUrl, url: activeTab.displayUrl }];
-        }
-        setBookmarks(newBookmarks);
-        if (user) database.saveBrowserData(user.id, { bookmarks: newBookmarks });
-    };
-
     const handleNavigate = (e?: React.FormEvent, overrideUrl?: string) => {
         if (e) e.preventDefault();
         let finalUrl = overrideUrl ? overrideUrl.trim() : inputUrl.trim();
         if (!finalUrl) return;
 
         const lowerUrl = finalUrl.toLowerCase();
-        
         let actualUrl = finalUrl;
         let displayUrl = finalUrl;
 
@@ -238,7 +204,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
             displayUrl = actualUrl;
         }
 
-        // Special handling for YouTube
+        // Handle YouTube
         if (actualUrl.includes('youtube.com/watch') || actualUrl.includes('youtu.be/')) {
             try {
                 let videoId = '';
@@ -252,9 +218,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                     actualUrl = `${YOUTUBE_WATCH_URL_PREFIX}?v=${videoId}`;
                     displayUrl = actualUrl;
                 }
-            } catch (e) {
-                // Fallback if parsing fails
-            }
+            } catch (e) { }
         } else if (actualUrl.includes('youtube.com')) {
              actualUrl = YOUTUBE_SEARCH_URL;
              displayUrl = YOUTUBE_SEARCH_URL;
@@ -292,284 +256,68 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         updateTab(activeTabId, { isLoading: false, blobUrl });
     };
 
-    const handleBack = () => {
-        if (activeTab.historyIndex > 0) {
-            const newIndex = activeTab.historyIndex - 1;
-            const newUrl = activeTab.history[newIndex];
-            updateTab(activeTabId, {
-                url: newUrl,
-                displayUrl: newUrl,
-                historyIndex: newIndex,
-                isLoading: true,
-                blobUrl: undefined
-            });
-            setInputUrl(newUrl);
-        }
-    };
-
-    const handleForward = () => {
-        if (activeTab.historyIndex < activeTab.history.length - 1) {
-            const newIndex = activeTab.historyIndex + 1;
-            const newUrl = activeTab.history[newIndex];
-            updateTab(activeTabId, {
-                url: newUrl,
-                displayUrl: newUrl,
-                historyIndex: newIndex,
-                isLoading: true,
-                blobUrl: undefined
-            });
-            setInputUrl(newUrl);
-        }
-    };
-    
-    const handleRefresh = () => {
-        updateTab(activeTabId, { isLoading: true, blobUrl: undefined });
-    };
-
-    const handleHome = () => {
-        const newHistory = activeTab.history.slice(0, activeTab.historyIndex + 1);
-        newHistory.push('');
-        updateTab(activeTabId, { url: '', displayUrl: '', title: 'New Tab', history: newHistory, historyIndex: newHistory.length - 1, isBlocked: false, isLoading: false, blobUrl: undefined });
-        setInputUrl('');
-    };
-
-    const addNewTab = () => {
-        const newId = Date.now();
-        const newTab: BrowserTab = { id: newId, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isBlocked: false, isLoading: false };
-        setTabs([...tabs, newTab]);
-        setActiveTabId(newId);
-        setInputUrl('');
-        setShowTabs(false);
-        setView('browser');
-    };
-
-    const closeTab = (e: React.MouseEvent, id: number) => {
-        e.stopPropagation();
-        const tabToClose = tabs.find(t => t.id === id);
-        if (tabToClose?.blobUrl) URL.revokeObjectURL(tabToClose.blobUrl);
-
-        if (tabs.length === 1) {
-            updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isBlocked: false, isLoading: false, blobUrl: undefined });
-            setInputUrl('');
-            return;
-        }
-        const newTabs = tabs.filter(t => t.id !== id);
-        setTabs(newTabs);
-        if (id === activeTabId) {
-            const nextTab = newTabs[newTabs.length - 1];
-            setActiveTabId(nextTab.id);
-            setInputUrl(nextTab.displayUrl);
-        }
-    };
-
-    const switchToTab = (id: number) => {
-        setActiveTabId(id);
-        const tab = tabs.find(t => t.id === id);
-        if (tab) setInputUrl(tab.displayUrl);
-        setShowTabs(false);
-        setView('browser');
-    }
-    
-    const clearCookies = () => {
-        if (window.confirm("Are you sure you want to clear all site data and cookies for the browser session?")) {
-            tabs.forEach(t => { if (t.blobUrl) URL.revokeObjectURL(t.blobUrl); });
-            setTabs([{ id: Date.now(), title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }]);
-            alert("Browser session data cleared.");
-            setView('browser');
-        }
-    };
-
-    const clearHistory = () => {
-        if (window.confirm("Delete all cloud history?")) {
-            setCloudHistory([]);
-            if (user) database.saveBrowserData(user.id, { history: [] });
-        }
-    };
+    // ... other handlers (Back, Forward, Refresh, Home, AddTab, CloseTab, ClearCookies, etc.) omitted for brevity but are same as desktop ...
+    const handleBack = () => { if(activeTab.historyIndex > 0) { const newIdx = activeTab.historyIndex - 1; const u = activeTab.history[newIdx]; updateTab(activeTabId, { url: u, displayUrl: u, historyIndex: newIdx, isLoading: true, blobUrl: undefined }); setInputUrl(u); }};
+    const handleForward = () => { if(activeTab.historyIndex < activeTab.history.length - 1) { const newIdx = activeTab.historyIndex + 1; const u = activeTab.history[newIdx]; updateTab(activeTabId, { url: u, displayUrl: u, historyIndex: newIdx, isLoading: true, blobUrl: undefined }); setInputUrl(u); }};
+    const handleRefresh = () => updateTab(activeTabId, { isLoading: true, blobUrl: undefined });
+    const handleHome = () => { const nh = [...activeTab.history, '']; updateTab(activeTabId, { url: '', displayUrl: '', history: nh, historyIndex: nh.length - 1, isLoading: false, blobUrl: undefined }); setInputUrl(''); };
+    const addNewTab = () => { const id = Date.now(); setTabs([...tabs, { id, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }]); setActiveTabId(id); setInputUrl(''); setShowTabs(false); setView('browser'); };
+    const closeTab = (e: any, id: number) => { e.stopPropagation(); const t = tabs.find(x => x.id === id); if(t?.blobUrl) URL.revokeObjectURL(t.blobUrl); if(tabs.length === 1) { updateTab(id, { url: '', displayUrl: '', title: 'New Tab', history: [''], historyIndex: 0, isLoading: false, blobUrl: undefined }); setInputUrl(''); return; } const nt = tabs.filter(x => x.id !== id); setTabs(nt); if(id === activeTabId) { setActiveTabId(nt[nt.length - 1].id); setInputUrl(nt[nt.length - 1].displayUrl); }};
+    const switchToTab = (id: number) => { setActiveTabId(id); const t = tabs.find(x => x.id === id); if(t) setInputUrl(t.displayUrl); setShowTabs(false); setView('browser'); };
+    const clearCookies = () => { if(window.confirm("Clear all session data?")) { tabs.forEach(t => { if(t.blobUrl) URL.revokeObjectURL(t.blobUrl); }); setTabs([{ id: Date.now(), title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }]); setView('browser'); alert("Cleared."); }};
+    const clearHistory = () => { if(window.confirm("Delete history?")) { setCloudHistory([]); if(user) database.saveBrowserData(user.id, { history: [] }); }};
+    const saveYoutubeKey = (k: string) => { setYoutubeApiKey(k); if(user) database.getBrowserData(user.id).then(d => database.saveBrowserData(user.id, { ...d, youtubeApiKey: k } as any)); };
+    const toggleBookmark = () => { if(!activeTab.displayUrl) return; const ex = bookmarks.some(b => b.url === activeTab.displayUrl); const nb = ex ? bookmarks.filter(b => b.url !== activeTab.displayUrl) : [...bookmarks, { title: activeTab.title || activeTab.displayUrl, url: activeTab.displayUrl }]; setBookmarks(nb); if(user) database.saveBrowserData(user.id, { bookmarks: nb }); };
 
     const isExternal = activeTab.url && !activeTab.url.startsWith('internal://') && activeTab.url !== SPECIAL_REDIRECT_URL;
     const shouldUseLoader = activeTab.isLoading && isExternal && securityBypassEnabled;
-    
-    const iframeSrc = (securityBypassEnabled && isExternal)
-        ? activeTab.blobUrl 
-        : (activeTab.blobUrl || activeTab.url);
+    const iframeSrc = (securityBypassEnabled && isExternal) ? activeTab.blobUrl : (activeTab.blobUrl || activeTab.url);
 
     return (
-        <div className="w-full h-full flex flex-col bg-white dark:bg-[#1a1a1a] text-black dark:text-white relative overflow-hidden">
+        <div className="w-full h-full flex flex-col bg-[#dfe3e7] dark:bg-[#202124] text-black dark:text-white rounded-lg overflow-hidden font-sans select-none relative">
              {showTabs && (
                 <div className="absolute inset-0 bg-black/90 z-50 flex flex-col p-4">
-                    <div className="flex justify-between items-center mb-4">
-                         <h2 className="text-white text-lg font-bold">Tabs</h2>
-                         <button onClick={() => setShowTabs(false)} className="text-white p-2">Done</button>
-                    </div>
-                    <div className="flex-grow grid grid-cols-2 gap-4 overflow-y-auto">
-                        {tabs.map(tab => (
-                            <div key={tab.id} onClick={() => switchToTab(tab.id)} className={`relative p-4 rounded-lg border ${activeTabId === tab.id ? 'border-blue-500 bg-blue-900/20' : 'border-gray-600 bg-gray-800'} flex flex-col justify-between h-32`}>
-                                <div className="text-white text-sm font-bold truncate">{tab.title}</div>
-                                <div className="text-gray-400 text-xs truncate">{tab.displayUrl || 'Empty'}</div>
-                                <button onClick={(e) => closeTab(e, tab.id)} className="absolute top-2 right-2 bg-gray-700 rounded-full p-1 text-white"><XIcon/></button>
-                            </div>
-                        ))}
-                    </div>
-                    <button onClick={addNewTab} className="mt-4 w-full py-3 bg-blue-600 rounded-lg text-white font-bold flex items-center justify-center space-x-2">
-                        <Plus /> <span>New Tab</span>
-                    </button>
+                    <div className="flex justify-between items-center mb-4"><h2 className="text-white text-lg font-bold">Tabs</h2><button onClick={() => setShowTabs(false)} className="text-white p-2">Done</button></div>
+                    <div className="flex-grow grid grid-cols-2 gap-4 overflow-y-auto">{tabs.map(tab => (<div key={tab.id} onClick={() => switchToTab(tab.id)} className={`relative p-4 rounded-lg border ${activeTabId === tab.id ? 'border-blue-500 bg-blue-900/20' : 'border-gray-600 bg-gray-800'} flex flex-col justify-between h-32`}><div className="text-white text-sm font-bold truncate">{tab.title}</div><div className="text-gray-400 text-xs truncate">{tab.displayUrl || 'Empty'}</div><button onClick={(e) => closeTab(e, tab.id)} className="absolute top-2 right-2 bg-gray-700 rounded-full p-1 text-white"><XIcon/></button></div>))}</div>
+                    <button onClick={addNewTab} className="mt-4 w-full py-3 bg-blue-600 rounded-lg text-white font-bold flex items-center justify-center space-x-2"><Plus /> <span>New Tab</span></button>
                 </div>
             )}
 
-            {/* Address Bar Area */}
             <div className="flex-shrink-0 bg-gray-100 dark:bg-[#2c2c2c] p-2 border-b border-gray-300 dark:border-black flex items-center space-x-2 shadow-sm z-20">
-                <div className="relative" ref={accountRef}>
-                    <button onClick={() => setAccountMenuOpen(!accountMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300"><UserIcon /></button>
-                    {accountMenuOpen && (
-                        <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-[#35363a] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-2 z-50">
-                            <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-600">
-                                <p className="font-bold">{user?.username}</p>
-                                <p className="text-xs text-gray-500">LynixWeb v1.502</p>
-                            </div>
-                            <button onClick={() => { setView('history'); setAccountMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><GlobeIcon /><span>Cloud History</span></button>
-                            <button onClick={() => { setView('bookmarks'); setAccountMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><StarIcon /><span>Bookmarks</span></button>
-                        </div>
-                    )}
-                </div>
-                
-                <form onSubmit={handleNavigate} className="flex-grow relative">
-                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        {isNetworkActive ? <ActivityIcon /> : (activeTab.url && activeTab.url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />)}
-                    </div>
-                    <input
-                        type="text"
-                        value={inputUrl}
-                        onChange={(e) => setInputUrl(e.target.value)}
-                        className="w-full py-2 pl-10 pr-8 rounded-lg border-none outline-none bg-white dark:bg-[#404040] text-sm text-black dark:text-white shadow-inner"
-                        placeholder="Search or type URL"
-                        onFocus={(e) => e.target.select()}
-                    />
-                    {inputUrl && (
-                        <button type="button" onClick={() => { setInputUrl(''); }} className="absolute inset-y-0 right-2 flex items-center text-gray-500">
-                            <XIcon />
-                        </button>
-                    )}
-                </form>
-
-                <button onClick={() => setShowTabs(true)} className="w-8 h-8 rounded-lg border-2 border-gray-600 dark:border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10">
-                    {tabs.length}
-                </button>
-                
-                <div className="relative" ref={settingsRef}>
-                    <button onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
-                        <MoreVertical />
-                    </button>
-                    {settingsMenuOpen && (
-                        <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-[#35363a] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-2 z-50">
-                            <div className="px-4 py-2 flex items-center justify-between">
-                                <span className="text-sm font-medium">Security Bypass</span>
-                                <button onClick={() => setSecurityBypassEnabled(!securityBypassEnabled)} className={`w-10 h-5 rounded-full relative transition-colors ${securityBypassEnabled ? 'bg-green-500' : 'bg-gray-400'}`}>
-                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${securityBypassEnabled ? 'left-6' : 'left-1'}`}></div>
-                                </button>
-                            </div>
-                            <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
-                            <div className="px-4 py-2">
-                                <label className="text-xs text-gray-500 block mb-1">YouTube API Key</label>
-                                <input 
-                                    type="password" 
-                                    value={youtubeApiKey} 
-                                    onChange={(e) => saveYoutubeKey(e.target.value)}
-                                    placeholder="Paste key..."
-                                    className="w-full bg-gray-100 dark:bg-black/20 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs"
-                                />
-                            </div>
-                            <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
-                            <button onClick={clearCookies} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><CookieIcon /><span>Clear Cookies</span></button>
-                        </div>
-                    )}
-                </div>
+                <div className="relative" ref={accountRef}><button onClick={() => setAccountMenuOpen(!accountMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300"><UserIcon /></button>{accountMenuOpen && (<div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-[#35363a] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-2 z-50"><button onClick={() => { setView('history'); setAccountMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><GlobeIcon /><span>Cloud History</span></button><button onClick={() => { setView('bookmarks'); setAccountMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><StarIcon /><span>Bookmarks</span></button></div>)}</div>
+                <form onSubmit={handleNavigate} className="flex-grow relative"><div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">{isNetworkActive ? <ActivityIcon /> : (activeTab.url && activeTab.url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />)}</div><input type="text" value={inputUrl} onChange={(e) => setInputUrl(e.target.value)} className="w-full py-2 pl-10 pr-8 rounded-lg border-none outline-none bg-white dark:bg-[#404040] text-sm text-black dark:text-white shadow-inner" placeholder="Search or type URL" onFocus={(e) => e.target.select()} />{inputUrl && (<button type="button" onClick={() => { setInputUrl(''); }} className="absolute inset-y-0 right-2 flex items-center text-gray-500"><XIcon /></button>)}</form>
+                <button onClick={() => setShowTabs(true)} className="w-8 h-8 rounded-lg border-2 border-gray-600 dark:border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10">{tabs.length}</button>
+                <div className="relative" ref={settingsRef}><button onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300"><MoreVertical /></button>{settingsMenuOpen && (<div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-[#35363a] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-2 z-50"><div className="px-4 py-2 flex items-center justify-between"><span className="text-sm font-medium">Security Bypass</span><button onClick={() => setSecurityBypassEnabled(!securityBypassEnabled)} className={`w-10 h-5 rounded-full relative transition-colors ${securityBypassEnabled ? 'bg-green-500' : 'bg-gray-400'}`}><div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${securityBypassEnabled ? 'left-6' : 'left-1'}`}></div></button></div><div className="px-4 py-2"><label className="text-xs text-gray-500 block mb-1">YouTube Key</label><input type="password" value={youtubeApiKey} onChange={(e) => saveYoutubeKey(e.target.value)} placeholder="Paste..." className="w-full bg-gray-100 dark:bg-black/20 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs"/></div><button onClick={clearCookies} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><CookieIcon /><span>Clear Cookies</span></button></div>)}</div>
             </div>
-
-            {/* Main Content Area */}
+            
             <div className="flex-grow relative bg-white dark:bg-[#202124] w-full h-full overflow-hidden">
                 {view === 'browser' ? (
                     <>
-                        {activeTab.url === YOUTUBE_SEARCH_URL ? (
-                            <YouTubeSearchView apiKey={youtubeApiKey} onNavigate={(url) => handleNavigate(url)} />
-                        ) : activeTab.url.startsWith(YOUTUBE_WATCH_URL_PREFIX) ? (
-                            <MobiYouTubeWatchView 
-                                apiKey={youtubeApiKey} 
-                                videoId={new URL(activeTab.url.replace('internal://', 'https://')).searchParams.get('v') || ''} 
-                                onNavigate={(url) => handleNavigate(url)} 
-                            />
-                        ) : (
+                        {activeTab.url === YOUTUBE_SEARCH_URL ? (<YouTubeSearchView apiKey={youtubeApiKey} onNavigate={(url) => handleNavigate({} as any, url)} />) : activeTab.url.startsWith(YOUTUBE_WATCH_URL_PREFIX) ? (<MobiYouTubeWatchView apiKey={youtubeApiKey} videoId={new URL(activeTab.url.replace('internal://', 'https://')).searchParams.get('v') || ''} onNavigate={(url) => handleNavigate({} as any, url)} />) : (
                             <>
-                                {shouldUseLoader && (
-                                    <BrowserLoader url={activeTab.displayUrl} isMobile={true} onComplete={handleLoaderComplete} />
-                                )}
+                                {shouldUseLoader && <BrowserLoader url={activeTab.displayUrl} isMobile={true} onComplete={handleLoaderComplete} />}
                                 {activeTab.url && iframeSrc ? (
-                                    <iframe 
-                                        ref={iframeRef}
-                                        src={iframeSrc} 
-                                        className="w-full h-full border-0"
-                                        referrerPolicy="no-referrer"
-                                        title="mobile-browser-content"
-                                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation allow-downloads"
-                                        onLoad={() => updateTab(activeTabId, { isLoading: false })}
-                                    />
-                                ) : (
-                                    !shouldUseLoader && <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                                        <h1 className="text-4xl font-bold text-gray-500 dark:text-gray-400 mb-6 select-none">Bing</h1>
-                                        <div className="w-full">
-                                             <div className="relative group shadow-md rounded-full">
-                                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                    <SearchIcon className="w-5 h-5 text-gray-400" />
-                                                </div>
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Search..." 
-                                                    className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#2c2c2c] focus:outline-none dark:text-white"
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleNavigate({ preventDefault: () => { setInputUrl((e.target as HTMLInputElement).value); handleNavigate(); } } as any)}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                    <iframe ref={iframeRef} src={iframeSrc} className="w-full h-full border-0" referrerPolicy="no-referrer" title="browser-content" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" onLoad={() => updateTab(activeTabId, { isLoading: false })} />
+                                ) : ( !shouldUseLoader && <div className="flex flex-col items-center justify-center h-full text-center px-6"><h1 className="text-4xl font-bold text-gray-500 dark:text-gray-400 mb-6 select-none">Bing</h1><div className="w-full"><div className="relative group shadow-md rounded-full"><input type="text" placeholder="Search..." className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#2c2c2c] focus:outline-none dark:text-white" onKeyDown={(e) => e.key === 'Enter' && handleNavigate({ preventDefault: () => { setInputUrl((e.target as HTMLInputElement).value); handleNavigate(); } } as any)} /></div></div></div>)}
                             </>
                         )}
                     </>
                 ) : (
                     <div className="p-4 overflow-y-auto h-full">
-                        {view === 'history' && (
-                            <div>
-                                <h2 className="text-xl font-bold mb-4">History</h2>
-                                <button onClick={clearHistory} className="mb-4 px-3 py-2 bg-red-600 text-white rounded text-sm">Clear History</button>
-                                <ul className="space-y-2">{cloudHistory.map((h, i) => <li key={i} className="truncate border-b py-2 text-sm cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate({} as any, h); setView('browser'); }}>{h}</li>)}</ul>
-                            </div>
-                        )}
-                        {view === 'bookmarks' && (
-                            <div>
-                                <h2 className="text-xl font-bold mb-4">Bookmarks</h2>
-                                <ul className="space-y-2">{bookmarks.map((b, i) => <li key={i} className="truncate border-b py-2 text-sm cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate({} as any, b.url); setView('browser'); }}>{b.title}</li>)}</ul>
-                            </div>
-                        )}
-                        {view === 'cookies' && (
-                            <div className="text-center">
-                                <h2 className="text-xl font-bold mb-4">Cookie Manager</h2>
-                                <button onClick={clearCookies} className="px-6 py-3 bg-red-600 text-white rounded-lg font-bold text-sm">Clear All Session Data</button>
-                            </div>
-                        )}
+                        {view === 'history' && (<div><h2 className="text-xl font-bold mb-4">History</h2><ul className="space-y-2">{cloudHistory.map((h, i) => <li key={i} className="truncate border-b py-2 text-sm" onClick={() => { handleNavigate({} as any, h); setView('browser'); }}>{h}</li>)}</ul></div>)}
+                        {view === 'bookmarks' && (<div><h2 className="text-xl font-bold mb-4">Bookmarks</h2><ul className="space-y-2">{bookmarks.map((b, i) => <li key={i} className="truncate border-b py-2 text-sm" onClick={() => { handleNavigate({} as any, b.url); setView('browser'); }}>{b.title}</li>)}</ul></div>)}
+                        {view === 'cookies' && (<div className="text-center"><h2 className="text-xl font-bold mb-4">Cookies</h2><button onClick={clearCookies} className="px-6 py-3 bg-red-600 text-white rounded-lg">Clear All</button></div>)}
                     </div>
                 )}
             </div>
 
-            {/* Bottom Toolbar */}
             <div className="flex justify-around items-center h-12 bg-gray-100 dark:bg-[#2c2c2c] border-t border-gray-300 dark:border-black/50 z-20">
                 <button onClick={handleBack} disabled={activeTab.historyIndex <= 0} className="p-3 text-gray-600 dark:text-gray-300 disabled:opacity-30"><ArrowLeft /></button>
                 <button onClick={handleForward} disabled={activeTab.historyIndex >= activeTab.history.length - 1} className="p-3 text-gray-600 dark:text-gray-300 disabled:opacity-30"><ArrowRight /></button>
                 <button onClick={handleRefresh} className="p-3 text-gray-600 dark:text-gray-300"><RefreshCw /></button>
                 <button onClick={handleHome} className="p-3 text-gray-600 dark:text-gray-300"><Home /></button>
             </div>
-            
-            {/* Spoofed Status Bar */}
-            <div className="h-5 bg-[#f1f3f4] dark:bg-[#292a2d] flex items-center justify-center text-[9px] text-gray-500 font-mono select-none border-t border-gray-300 dark:border-black/50">
-                <span className="mr-2">{spoofedOS}</span>
-            </div>
+            <div className="h-5 bg-[#f1f3f4] dark:bg-[#292a2d] flex items-center justify-center text-[9px] text-gray-500 font-mono select-none border-t border-gray-300 dark:border-black/50"><span className="mr-2">{spoofedOS}</span></div>
         </div>
     );
 };
@@ -583,76 +331,33 @@ const YouTubeSearchView: React.FC<{ apiKey: string; onNavigate: (url: string) =>
     const handleSearch = async () => {
         if (!apiKey) { setError("API Key Missing"); return; }
         if (!query) return;
-        
-        setLoading(true);
-        setError('');
+        setLoading(true); setError('');
         try {
             const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
             const res = await fetch(url);
             const data = await res.json();
-            
-            if (data.error) {
-                throw new Error(data.error.message);
-            }
-            
+            if (data.error) throw new Error(data.error.message);
             setResults(data.items || []);
-        } catch (e: any) {
-            setError(e.message || 'Search failed');
-        } finally {
-            setLoading(false);
-        }
+        } catch (e: any) { setError(e.message || 'Search failed'); } finally { setLoading(false); }
     };
 
-    if (!apiKey) {
-        return (
-            <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
-                <YoutubeIcon />
-                <h2 className="text-2xl font-bold">API Key Required</h2>
-                <p className="text-gray-500 max-w-md text-sm">
-                    Enter your YouTube API Key in the settings menu (top right).
-                </p>
-            </div>
-        );
-    }
+    if (!apiKey) return <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-4"><YoutubeIcon /><h2 className="text-2xl font-bold">API Key Required</h2></div>;
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-[#0f0f0f] overflow-hidden">
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center space-x-4">
                 <YoutubeIcon />
-                <div className="flex-grow relative">
-                    <input 
-                        type="text" 
-                        className="w-full bg-gray-100 dark:bg-[#121212] border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-black dark:text-white focus:outline-none focus:border-blue-500 text-sm"
-                        placeholder="Search YouTube..."
-                        value={query}
-                        onChange={e => setQuery(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                    />
-                </div>
-                <button onClick={handleSearch} disabled={loading} className="bg-red-600 text-white p-2 rounded-full font-semibold hover:bg-red-700 disabled:opacity-50">
-                    {loading ? <RefreshCw /> : <SearchIcon />}
-                </button>
+                <input type="text" className="flex-grow bg-gray-100 dark:bg-[#121212] border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-black dark:text-white text-sm" placeholder="Search..." value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}/>
+                <button onClick={handleSearch} disabled={loading} className="bg-red-600 text-white p-2 rounded-full">{loading ? <RefreshCw /> : <SearchIcon />}</button>
             </div>
-            
             <div className="flex-grow overflow-y-auto p-4">
                 {error && <div className="text-red-500 text-center p-4">{error}</div>}
-                
                 <div className="grid grid-cols-1 gap-4">
                     {results.map(item => (
-                        <div 
-                            key={item.id.videoId} 
-                            className="cursor-pointer group"
-                            onClick={() => onNavigate(`https://youtube.com/watch?v=${item.id.videoId}`)}
-                        >
-                            <div className="aspect-video bg-gray-200 dark:bg-gray-800 rounded-xl overflow-hidden mb-2 relative">
-                                <img src={item.snippet.thumbnails.high.url} alt={item.snippet.title} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex space-x-3">
-                                <div className="flex-grow">
-                                    <h3 className="font-bold text-sm text-black dark:text-white line-clamp-2 group-hover:text-blue-400" dangerouslySetInnerHTML={{__html: item.snippet.title}}></h3>
-                                    <p className="text-xs text-gray-500 mt-1">{item.snippet.channelTitle}</p>
-                                </div>
-                            </div>
+                        <div key={item.id.videoId} className="cursor-pointer group" onClick={() => onNavigate(`https://youtube.com/watch?v=${item.id.videoId}`)}>
+                            <div className="aspect-video bg-gray-200 dark:bg-gray-800 rounded-xl overflow-hidden mb-2"><img src={item.snippet.thumbnails.high.url} className="w-full h-full object-cover" /></div>
+                            <h3 className="font-bold text-sm text-black dark:text-white line-clamp-2">{item.snippet.title}</h3>
+                            <p className="text-xs text-gray-500">{item.snippet.channelTitle}</p>
                         </div>
                     ))}
                 </div>
@@ -668,23 +373,28 @@ const MobiYouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNaviga
     const [recommendations, setRecommendations] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [embedBlob, setEmbedBlob] = useState('');
 
     useEffect(() => {
         if (!videoId || !apiKey) return;
-
         const fetchData = async () => {
-            setLoading(true);
-            setError('');
+            setLoading(true); setError('');
             try {
+                // Fetch Proxy Embed
+                const proxyUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+                const { content, contentType } = await database.fetchProxyContent(proxyUrl);
+                const blob = new Blob([content], { type: contentType });
+                setEmbedBlob(URL.createObjectURL(blob));
+
                 const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${apiKey}`);
                 const vidData = await vidRes.json();
-                if (!vidData.items || vidData.items.length === 0) throw new Error("Video not found");
+                if (!vidData.items?.length) throw new Error("Video not found");
                 const videoDetails = vidData.items[0];
                 setVideo(videoDetails);
 
                 const channelRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${videoDetails.snippet.channelId}&key=${apiKey}`);
                 const channelData = await channelRes.json();
-                if (channelData.items && channelData.items.length > 0) setChannel(channelData.items[0]);
+                if (channelData.items?.length) setChannel(channelData.items[0]);
 
                 const commentsRes = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=5&key=${apiKey}`);
                 const commentsData = await commentsRes.json();
@@ -694,14 +404,8 @@ const MobiYouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNaviga
                 const searchData = await searchRes.json();
                 if (searchData.items) setRecommendations(searchData.items.filter((item: any) => item.id.videoId !== videoId));
 
-            } catch (e: any) {
-                console.error(e);
-                setError(e.message || "Failed to load video data");
-            } finally {
-                setLoading(false);
-            }
+            } catch (e: any) { console.error(e); setError(e.message); } finally { setLoading(false); }
         };
-
         fetchData();
     }, [videoId, apiKey]);
 
@@ -719,89 +423,19 @@ const MobiYouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNaviga
 
     return (
         <div className="flex flex-col h-full bg-[#0f0f0f] text-white font-sans overflow-y-auto custom-scrollbar">
-            {/* Parsoley Header */}
-            <div className="bg-[#7c3aed] p-3 text-center shadow-lg flex-shrink-0">
-                <h1 className="text-xl font-bold mb-0 text-white">Parsoley</h1>
-                <p className="text-[10px] text-purple-200">Lynix Player</p>
-            </div>
-
-            {/* Video Player */}
+            <div className="bg-[#7c3aed] p-3 text-center shadow-lg flex-shrink-0"><h1 className="text-xl font-bold mb-0 text-white">Parsoley</h1><p className="text-[10px] text-purple-200">Lynix Player</p></div>
             <div className="aspect-video w-full bg-black shadow-2xl relative group flex-shrink-0">
-                <iframe 
-                    src={`https://inv.nadeko.net/embed/${videoId}?autoplay=1`} 
-                    title={video.snippet.title} 
-                    frameBorder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allowFullScreen
-                    className="w-full h-full"
-                ></iframe>
+                {embedBlob && <iframe src={embedBlob} title={video.snippet.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="w-full h-full"></iframe>}
             </div>
-
             <div className="p-4 space-y-4">
-                {/* Info Grid */}
                 <div className="space-y-2">
-                    <div className="bg-white text-black p-3 rounded-xl flex justify-between items-center shadow-lg border-l-4 border-green-500">
-                        <div>
-                            <div className="text-xl font-bold">{formatNumber(video.statistics.likeCount)}</div>
-                            <div className="text-xs font-semibold text-gray-600">Likes</div>
-                        </div>
-                        <div className="text-xs text-gray-400">Dislikes: N/A</div>
-                    </div>
-
-                    <div className="bg-white text-black p-3 rounded-xl flex items-center space-x-3 shadow-lg border-t-4 border-blue-500">
-                        {channel && <img src={channel.snippet.thumbnails.default.url} className="w-10 h-10 rounded-full" alt="avatar" />}
-                        <div>
-                            <div className="font-bold text-sm">@{channel?.snippet.customUrl || video.snippet.channelTitle}</div>
-                            <div className="text-xs text-gray-600">{video.snippet.channelTitle}</div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white text-black p-3 rounded-xl flex justify-between items-center shadow-lg border-r-4 border-purple-500">
-                        <div className="text-sm font-bold">Comments: {formatNumber(video.statistics.commentCount)}</div>
-                        <div className="text-sm font-bold">Views: {formatNumber(video.statistics.viewCount)}</div>
-                    </div>
+                    <div className="bg-white text-black p-3 rounded-xl flex justify-between items-center shadow-lg border-l-4 border-green-500"><div><div className="text-xl font-bold">{formatNumber(video.statistics.likeCount)}</div><div className="text-xs font-semibold text-gray-600">Likes</div></div><div className="text-xs text-gray-400">Dislikes: N/A</div></div>
+                    <div className="bg-white text-black p-3 rounded-xl flex items-center space-x-3 shadow-lg border-t-4 border-blue-500">{channel && <img src={channel.snippet.thumbnails.default.url} className="w-10 h-10 rounded-full" alt="avatar" />}<div><div className="font-bold text-sm">@{channel?.snippet.customUrl || video.snippet.channelTitle}</div><div className="text-xs text-gray-600">{video.snippet.channelTitle}</div></div></div>
+                    <div className="bg-white text-black p-3 rounded-xl flex justify-between items-center shadow-lg border-r-4 border-purple-500"><div className="text-sm font-bold">Comments: {formatNumber(video.statistics.commentCount)}</div><div className="text-sm font-bold">Views: {formatNumber(video.statistics.viewCount)}</div></div>
                 </div>
-
-                {/* Description */}
-                <div className="bg-[#7c3aed] text-white p-4 rounded-xl shadow-lg">
-                    <div className="font-bold mb-1 text-sm">Published: {new Date(video.snippet.publishedAt).toLocaleDateString()}</div>
-                    <div className="text-xs whitespace-pre-wrap leading-relaxed line-clamp-4">
-                        <span className="font-bold">Desc:</span> {video.snippet.description}
-                    </div>
-                </div>
-
-                {/* Comments */}
-                <div className="bg-[#272727] p-4 rounded-xl shadow-lg">
-                    <h3 className="text-sm font-bold mb-3">--- Comments ---</h3>
-                    {comments.length > 0 ? (
-                        <div className="space-y-3">
-                            {comments.map(comment => (
-                                <div key={comment.id} className="text-xs">
-                                    <span className="font-bold text-gray-300 block">@{comment.snippet.topLevelComment.snippet.authorDisplayName}</span>
-                                    <span className="text-gray-400" dangerouslySetInnerHTML={{__html: comment.snippet.topLevelComment.snippet.textDisplay}}></span>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-gray-500 text-xs">No comments.</p>
-                    )}
-                </div>
-
-                {/* Recommendations */}
-                <div>
-                    <h3 className="text-sm font-bold text-gray-400 mb-3 px-1">Recommended</h3>
-                    <div className="space-y-3">
-                        {recommendations.map(rec => (
-                            <div key={rec.id.videoId} className="flex space-x-3 cursor-pointer" onClick={() => onNavigate(`https://youtube.com/watch?v=${rec.id.videoId}`)}>
-                                <div className="w-32 aspect-video bg-black rounded-lg overflow-hidden flex-shrink-0">
-                                    <img src={rec.snippet.thumbnails.high.url} className="w-full h-full object-cover" alt="" />
-                                </div>
-                                <p className="text-xs font-semibold text-white line-clamp-3">{rec.snippet.title}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <div className="bg-[#7c3aed] text-white p-4 rounded-xl shadow-lg"><div className="font-bold mb-1 text-sm">Published: {new Date(video.snippet.publishedAt).toLocaleDateString()}</div><div className="text-xs whitespace-pre-wrap leading-relaxed line-clamp-4"><span className="font-bold">Desc:</span> {video.snippet.description}</div></div>
+                <div className="bg-[#272727] p-4 rounded-xl shadow-lg"><h3 className="text-sm font-bold mb-3">--- Comments ---</h3>{comments.length > 0 ? (<div className="space-y-3">{comments.slice(0, 5).map(comment => (<div key={comment.id} className="text-xs"><span className="font-bold text-gray-300 block">@{comment.snippet.topLevelComment.snippet.authorDisplayName}</span><span className="text-gray-400" dangerouslySetInnerHTML={{__html: comment.snippet.topLevelComment.snippet.textDisplay}}></span></div>))}</div>) : (<p className="text-gray-500 text-xs">No comments.</p>)}</div>
+                <div><h3 className="text-sm font-bold text-gray-400 mb-3 px-1">Recommended</h3><div className="space-y-3">{recommendations.map(rec => (<div key={rec.id.videoId} className="flex space-x-3 cursor-pointer" onClick={() => onNavigate(`https://youtube.com/watch?v=${rec.id.videoId}`)}><div className="w-32 aspect-video bg-black rounded-lg overflow-hidden flex-shrink-0"><img src={rec.snippet.thumbnails.high.url} className="w-full h-full object-cover" alt="" /></div><p className="text-xs font-semibold text-white line-clamp-3">{rec.snippet.title}</p></div>))}</div></div>
             </div>
         </div>
     );

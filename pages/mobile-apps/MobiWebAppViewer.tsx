@@ -39,7 +39,7 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, iconSvg
             return 'https://www.google.com/webhp?igu=1';
         }
         
-        // Fix for YouTube - Redirect to inv.nadeko.net
+        // Fix for YouTube - Redirect to official embed
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
             try {
                 let targetUrl = url;
@@ -48,14 +48,15 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, iconSvg
                 
                 if (urlObj.hostname.includes('youtu.be')) {
                     const videoId = urlObj.pathname.slice(1);
-                    let newUrl = `https://inv.nadeko.net/watch?v=${videoId}`;
-                    if (urlObj.search) newUrl += '&' + urlObj.search.slice(1);
-                    return newUrl;
-                } else {
-                    return `https://inv.nadeko.net${urlObj.pathname}${urlObj.search}`;
+                    return `https://www.youtube-nocookie.com/embed/${videoId}`;
+                } else if (urlObj.pathname.startsWith('/watch')) {
+                    const videoId = urlObj.searchParams.get('v');
+                    if (videoId) {
+                        return `https://www.youtube-nocookie.com/embed/${videoId}`;
+                    }
                 }
             } catch (e) {
-                return 'https://inv.nadeko.net/';
+                // Fallback
             }
         }
 
@@ -147,7 +148,7 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, iconSvg
                             scrolling="yes"
                             allowFullScreen
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; camera; microphone; geolocation; payment; fullscreen; clipboard-read; clipboard-write"
-                            referrerPolicy="no-referrer"
+                            referrerPolicy="strict-origin-when-cross-origin"
                             style={{ height: '100%', width: '100%' }}
                         />
                     </>
