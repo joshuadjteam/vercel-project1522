@@ -446,10 +446,14 @@ export const database = {
     },
 
     // --- Proxy Service ---
-    fetchProxyContent: async (url: string): Promise<{ content: string; contentType: string; strippedHeaders?: string[]; error?: string }> => {
-        // CHANGED: Use dedicated 'proxy-service' function instead of 'app-service'
+    fetchProxyContent: async (url: string, options?: { method?: string, headers?: any, body?: string }): Promise<{ content: string; contentType: string; headers?: Record<string, string>; strippedHeaders?: string[]; error?: string }> => {
         const { data, error } = await supabase.functions.invoke('proxy-service', {
-            body: { url }
+            body: { 
+                url,
+                method: options?.method || 'GET',
+                headers: options?.headers,
+                body: options?.body 
+            }
         });
         
         if (error) {
@@ -471,7 +475,7 @@ export const database = {
              return { content: '', contentType: '', error: data.error };
         }
 
-        return { content: data.content, contentType: data.contentType, strippedHeaders: data.strippedHeaders };
+        return { content: data.content, contentType: data.contentType, headers: data.headers, strippedHeaders: data.strippedHeaders };
     },
 
     getMailsForUser: async (username: string): Promise<{ inbox: Mail[], sent: Mail[] }> => {
@@ -699,13 +703,6 @@ export const database = {
 
     // --- Browser Cloud Sync (Simulated via User Metadata) ---
     getBrowserData: async (userId: number): Promise<{ history: string[], bookmarks: { title: string, url: string }[] }> => {
-        // Fetch user profile which includes metadata
-        // This requires auth_id, but for simplicity we assume the calling context handles it.
-        // In a real app, we'd query user_metadata.
-        // Since we can't change the API easily, we'll use localStorage for this demo session persistence
-        // or rely on the app to pass the full user object if available.
-        
-        // Returning from localStorage as "Cloud" simulation for stability in this environment
         const saved = localStorage.getItem(`lynix_browser_data_${userId}`);
         return saved ? JSON.parse(saved) : { history: [], bookmarks: [] };
     },
@@ -714,6 +711,5 @@ export const database = {
         const current = JSON.parse(localStorage.getItem(`lynix_browser_data_${userId}`) || '{"history":[], "bookmarks":[]}');
         const newData = { ...current, ...data };
         localStorage.setItem(`lynix_browser_data_${userId}`, JSON.stringify(newData));
-        // Ideally: await supabase.auth.admin.updateUserById(...) if we had admin key access here
     }
 };

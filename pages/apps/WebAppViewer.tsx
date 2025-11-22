@@ -35,7 +35,7 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title, iconSvg }) => {
             return 'https://www.google.com/webhp?igu=1';
         }
         
-        // Fix for YouTube - Redirect to yewtu.be to allow embedding
+        // Fix for YouTube - Redirect to inv.nadeko.net to allow embedding
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
             try {
                 let targetUrl = url;
@@ -45,16 +45,15 @@ const WebAppViewer: React.FC<WebAppViewerProps> = ({ url, title, iconSvg }) => {
                 if (urlObj.hostname.includes('youtu.be')) {
                     // youtu.be/ID -> /watch?v=ID
                     const videoId = urlObj.pathname.slice(1);
-                    let newUrl = `https://yewtu.be/watch?v=${videoId}`;
+                    let newUrl = `https://inv.nadeko.net/watch?v=${videoId}`;
                     if (urlObj.search) newUrl += '&' + urlObj.search.slice(1);
                     return newUrl;
                 } else {
                     // Standard youtube.com/path -> /youtube/path
-                    // Note: yewtu.be mirrors the path structure of YouTube
-                    return `https://yewtu.be${urlObj.pathname}${urlObj.search}`;
+                    return `https://inv.nadeko.net${urlObj.pathname}${urlObj.search}`;
                 }
             } catch (e) {
-                return 'https://yewtu.be/';
+                return 'https://inv.nadeko.net/';
             }
         }
 

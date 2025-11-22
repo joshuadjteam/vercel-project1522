@@ -18,36 +18,86 @@ const Plus = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" v
 const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 const CookieIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const HistoryIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ShieldCheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
+const ActivityIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-blue-500 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+const YoutubeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" /></svg>;
+const StarIcon = (props: { filled?: boolean }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${props.filled ? 'fill-yellow-400 text-yellow-400' : 'fill-none text-gray-500'}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+const GlobeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>;
+const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+
+interface BrowserTab {
+    id: number;
+    title: string;
+    url: string;
+    displayUrl: string; 
+    history: string[];
+    historyIndex: number;
+    isLoading: boolean;
+    isBlocked: boolean;
+    blobUrl?: string; 
+}
+
+interface SearchResult {
+    id: { videoId: string };
+    snippet: {
+        title: string;
+        channelTitle: string;
+        thumbnails: { high: { url: string } };
+    }
+}
+
+interface VideoDetails {
+    id: string;
+    snippet: {
+        title: string;
+        description: string;
+        channelId: string;
+        channelTitle: string;
+        publishedAt: string;
+        thumbnails: { high: { url: string } };
+    };
+    statistics: {
+        viewCount: string;
+        likeCount: string;
+        commentCount: string;
+    };
+}
+
+interface ChannelDetails {
+    id: string;
+    snippet: {
+        title: string;
+        customUrl: string;
+        thumbnails: { default: { url: string } };
+    };
+    statistics: {
+        subscriberCount: string;
+    };
+}
+
+interface CommentThread {
+    id: string;
+    snippet: {
+        topLevelComment: {
+            snippet: {
+                authorDisplayName: string;
+                authorProfileImageUrl: string;
+                textDisplay: string;
+                likeCount: number;
+                publishedAt: string;
+            }
+        }
+    }
+}
 
 interface MobiLynixBrowserAppProps {
     navigate: (page: Page, params?: any) => void;
     initialUrl?: string;
 }
 
-interface BrowserTab {
-    id: number;
-    title: string;
-    url: string;
-    displayUrl: string;
-    history: string[];
-    historyIndex: number;
-    isBlocked: boolean;
-    isLoading: boolean;
-    blobUrl?: string;
-}
-
-const SEARCH_ENGINES = [
-    'bing.com', 'www.bing.com',
-    'yahoo.com', 'search.yahoo.com',
-    'duckduckgo.com',
-    'baidu.com',
-    'ask.com',
-    'aol.com',
-    'yandex.com'
-];
-
 const SPECIAL_REDIRECT_URL = 'https://lynixity.x10.bz/iframe.html';
+const YOUTUBE_SEARCH_URL = 'internal://youtube-search';
+const YOUTUBE_WATCH_URL_PREFIX = 'internal://youtube-watch';
+const DEFAULT_YOUTUBE_API_KEY = 'AIzaSyBHN9YqjsgbgAikzvi_PTghK4VxBf7hmvM';
 
 const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, initialUrl }) => {
     const { user } = useAuth();
@@ -57,9 +107,17 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     const [showTabs, setShowTabs] = useState(false);
     const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
     const [securityBypassEnabled, setSecurityBypassEnabled] = useState(true);
+    const [isNetworkActive, setIsNetworkActive] = useState(false);
+    const [youtubeApiKey, setYoutubeApiKey] = useState(DEFAULT_YOUTUBE_API_KEY);
+    const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+    const [cloudHistory, setCloudHistory] = useState<string[]>([]);
+    const [bookmarks, setBookmarks] = useState<{title: string, url: string}[]>([]);
+    const [view, setView] = useState<'browser' | 'history' | 'bookmarks' | 'cookies'>('browser');
 
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId)!, [tabs, activeTabId]);
     const settingsRef = useRef<HTMLDivElement>(null);
+    const accountRef = useRef<HTMLDivElement>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
 
     // --- Spoofed Info ---
     const spoofedDevice = "Unknown Linux Device";
@@ -71,10 +129,44 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     }, [activeTabId, activeTab.url, activeTab.displayUrl]);
 
     useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            if (event.data && event.data.type === 'LYNIX_NAVIGATE' && event.data.url) {
-                console.log('MobileBrowser: Received navigation request to:', event.data.url);
+        if (user) {
+            database.getBrowserData(user.id).then(data => {
+                if (data.history) setCloudHistory(data.history);
+                if (data.bookmarks) setBookmarks(data.bookmarks);
+                if ((data as any).youtubeApiKey) setYoutubeApiKey((data as any).youtubeApiKey);
+            });
+        }
+    }, [user]);
+
+    useEffect(() => {
+        const handleMessage = async (event: MessageEvent) => {
+            if (!event.data) return;
+
+            if (event.data.type === 'LYNIX_NAVIGATE' && event.data.url) {
                 handleNavigate({ preventDefault: () => {} } as any, event.data.url);
+            }
+
+            // Handle Proxy Fetch Requests
+            if (event.data.type === 'PROXY_REQUEST') {
+                const { id, payload } = event.data;
+                const { url, method, headers, body } = payload;
+                
+                setIsNetworkActive(true);
+
+                try {
+                    const result = await database.fetchProxyContent(url, { method, headers, body });
+                    if (iframeRef.current && iframeRef.current.contentWindow) {
+                        iframeRef.current.contentWindow.postMessage({
+                            type: 'PROXY_RESPONSE',
+                            id: id,
+                            response: result
+                        }, '*');
+                    }
+                } catch (e) {
+                    console.error("Proxy Request Failed:", e);
+                } finally {
+                    setTimeout(() => setIsNetworkActive(false), 500);
+                }
             }
         };
         window.addEventListener('message', handleMessage);
@@ -84,6 +176,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) setSettingsMenuOpen(false);
+            if (accountRef.current && !accountRef.current.contains(event.target as Node)) setAccountMenuOpen(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -91,6 +184,35 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
 
     const updateTab = (id: number, updates: Partial<BrowserTab>) => {
         setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    };
+
+    const saveYoutubeKey = (key: string) => {
+        setYoutubeApiKey(key);
+        if (user) {
+            database.getBrowserData(user.id).then(data => {
+                database.saveBrowserData(user.id, { ...data, youtubeApiKey: key } as any);
+            });
+        }
+    };
+
+    const addToHistory = (url: string) => {
+        if (!url || url === SPECIAL_REDIRECT_URL || url.startsWith('internal') || url === YOUTUBE_SEARCH_URL) return;
+        const newHistory = [url, ...cloudHistory].slice(0, 50);
+        setCloudHistory(newHistory);
+        if (user) database.saveBrowserData(user.id, { history: newHistory });
+    };
+
+    const toggleBookmark = () => {
+        if (!activeTab.displayUrl) return;
+        const isBookmarked = bookmarks.some(b => b.url === activeTab.displayUrl);
+        let newBookmarks;
+        if (isBookmarked) {
+            newBookmarks = bookmarks.filter(b => b.url !== activeTab.displayUrl);
+        } else {
+            newBookmarks = [...bookmarks, { title: activeTab.title || activeTab.displayUrl, url: activeTab.displayUrl }];
+        }
+        setBookmarks(newBookmarks);
+        if (user) database.saveBrowserData(user.id, { bookmarks: newBookmarks });
     };
 
     const handleNavigate = (e?: React.FormEvent, overrideUrl?: string) => {
@@ -102,7 +224,6 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         
         let actualUrl = finalUrl;
         let displayUrl = finalUrl;
-        let specialHandled = false;
 
         if (!lowerUrl.startsWith('http') && !lowerUrl.startsWith('internal://')) {
              const isSearch = !lowerUrl.includes('.') || lowerUrl.includes(' ');
@@ -117,6 +238,30 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
             displayUrl = actualUrl;
         }
 
+        // Special handling for YouTube
+        if (actualUrl.includes('youtube.com/watch') || actualUrl.includes('youtu.be/')) {
+            try {
+                let videoId = '';
+                const urlObj = new URL(actualUrl.startsWith('http') ? actualUrl : `https://${actualUrl}`);
+                if (urlObj.hostname.includes('youtu.be')) {
+                    videoId = urlObj.pathname.slice(1);
+                } else {
+                    videoId = urlObj.searchParams.get('v') || '';
+                }
+                if (videoId) {
+                    actualUrl = `${YOUTUBE_WATCH_URL_PREFIX}?v=${videoId}`;
+                    displayUrl = actualUrl;
+                }
+            } catch (e) {
+                // Fallback if parsing fails
+            }
+        } else if (actualUrl.includes('youtube.com')) {
+             actualUrl = YOUTUBE_SEARCH_URL;
+             displayUrl = YOUTUBE_SEARCH_URL;
+        }
+
+        addToHistory(displayUrl);
+
         setTabs(currentTabs => {
             const tab = currentTabs.find(t => t.id === activeTabId);
             if(!tab) return currentTabs;
@@ -126,22 +271,21 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
             
             if (tab.blobUrl) URL.revokeObjectURL(tab.blobUrl);
 
-            const requiresProxy = securityBypassEnabled && !actualUrl.startsWith('internal://') && actualUrl !== SPECIAL_REDIRECT_URL;
-
             return currentTabs.map(t => t.id === activeTabId ? { 
                 ...t,
                 url: actualUrl, 
                 displayUrl: displayUrl, 
-                title: displayUrl, 
+                title: displayUrl.startsWith(YOUTUBE_WATCH_URL_PREFIX) ? 'YouTube Player' : (displayUrl === YOUTUBE_SEARCH_URL ? 'YouTube Search' : displayUrl),
                 history: newHistory, 
                 historyIndex: newHistory.length - 1, 
                 isBlocked: false,
                 isLoading: true,
-                blobUrl: requiresProxy ? undefined : undefined
+                blobUrl: undefined
             } : t);
         });
         
         setInputUrl(displayUrl);
+        setView('browser');
     };
 
     const handleLoaderComplete = (blobUrl?: string) => {
@@ -196,6 +340,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         setActiveTabId(newId);
         setInputUrl('');
         setShowTabs(false);
+        setView('browser');
     };
 
     const closeTab = (e: React.MouseEvent, id: number) => {
@@ -222,19 +367,31 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
         const tab = tabs.find(t => t.id === id);
         if (tab) setInputUrl(tab.displayUrl);
         setShowTabs(false);
+        setView('browser');
     }
     
     const clearCookies = () => {
-        if (window.confirm("Clear all browser data?")) {
+        if (window.confirm("Are you sure you want to clear all site data and cookies for the browser session?")) {
             tabs.forEach(t => { if (t.blobUrl) URL.revokeObjectURL(t.blobUrl); });
             setTabs([{ id: Date.now(), title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false }]);
-            setInputUrl('');
-            setSettingsMenuOpen(false);
+            alert("Browser session data cleared.");
+            setView('browser');
         }
     };
 
-    const iframeSrc = activeTab.blobUrl || activeTab.url;
-    const shouldUseLoader = activeTab.isLoading && !!activeTab.url && securityBypassEnabled && !activeTab.url.startsWith('internal://') && activeTab.url !== SPECIAL_REDIRECT_URL;
+    const clearHistory = () => {
+        if (window.confirm("Delete all cloud history?")) {
+            setCloudHistory([]);
+            if (user) database.saveBrowserData(user.id, { history: [] });
+        }
+    };
+
+    const isExternal = activeTab.url && !activeTab.url.startsWith('internal://') && activeTab.url !== SPECIAL_REDIRECT_URL;
+    const shouldUseLoader = activeTab.isLoading && isExternal && securityBypassEnabled;
+    
+    const iframeSrc = (securityBypassEnabled && isExternal)
+        ? activeTab.blobUrl 
+        : (activeTab.blobUrl || activeTab.url);
 
     return (
         <div className="w-full h-full flex flex-col bg-white dark:bg-[#1a1a1a] text-black dark:text-white relative overflow-hidden">
@@ -261,13 +418,23 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
 
             {/* Address Bar Area */}
             <div className="flex-shrink-0 bg-gray-100 dark:bg-[#2c2c2c] p-2 border-b border-gray-300 dark:border-black flex items-center space-x-2 shadow-sm z-20">
-                <button onClick={handleHome} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300">
-                    <Home />
-                </button>
+                <div className="relative" ref={accountRef}>
+                    <button onClick={() => setAccountMenuOpen(!accountMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300"><UserIcon /></button>
+                    {accountMenuOpen && (
+                        <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-[#35363a] rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 py-2 z-50">
+                            <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-600">
+                                <p className="font-bold">{user?.username}</p>
+                                <p className="text-xs text-gray-500">LynixWeb v1.502</p>
+                            </div>
+                            <button onClick={() => { setView('history'); setAccountMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><GlobeIcon /><span>Cloud History</span></button>
+                            <button onClick={() => { setView('bookmarks'); setAccountMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><StarIcon /><span>Bookmarks</span></button>
+                        </div>
+                    )}
+                </div>
                 
                 <form onSubmit={handleNavigate} className="flex-grow relative">
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        {activeTab.url && activeTab.url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />}
+                        {isNetworkActive ? <ActivityIcon /> : (activeTab.url && activeTab.url.startsWith('https') ? <LockIcon /> : <SearchIcon className="w-4 h-4 text-gray-400" />)}
                     </div>
                     <input
                         type="text"
@@ -301,6 +468,17 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                                 </button>
                             </div>
                             <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
+                            <div className="px-4 py-2">
+                                <label className="text-xs text-gray-500 block mb-1">YouTube API Key</label>
+                                <input 
+                                    type="password" 
+                                    value={youtubeApiKey} 
+                                    onChange={(e) => saveYoutubeKey(e.target.value)}
+                                    placeholder="Paste key..."
+                                    className="w-full bg-gray-100 dark:bg-black/20 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs"
+                                />
+                            </div>
+                            <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
                             <button onClick={clearCookies} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center space-x-2"><CookieIcon /><span>Clear Cookies</span></button>
                         </div>
                     )}
@@ -309,33 +487,73 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
 
             {/* Main Content Area */}
             <div className="flex-grow relative bg-white dark:bg-[#202124] w-full h-full overflow-hidden">
-                {shouldUseLoader ? (
-                    <BrowserLoader url={activeTab.displayUrl} isMobile={true} onComplete={handleLoaderComplete} />
-                ) : activeTab.url ? (
-                    <iframe 
-                        src={iframeSrc} 
-                        className="w-full h-full border-0"
-                        referrerPolicy="no-referrer"
-                        title="mobile-browser-content"
-                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation allow-downloads"
-                        onLoad={() => updateTab(activeTabId, { isLoading: false })}
-                    />
+                {view === 'browser' ? (
+                    <>
+                        {activeTab.url === YOUTUBE_SEARCH_URL ? (
+                            <YouTubeSearchView apiKey={youtubeApiKey} onNavigate={(url) => handleNavigate(url)} />
+                        ) : activeTab.url.startsWith(YOUTUBE_WATCH_URL_PREFIX) ? (
+                            <MobiYouTubeWatchView 
+                                apiKey={youtubeApiKey} 
+                                videoId={new URL(activeTab.url.replace('internal://', 'https://')).searchParams.get('v') || ''} 
+                                onNavigate={(url) => handleNavigate(url)} 
+                            />
+                        ) : (
+                            <>
+                                {shouldUseLoader && (
+                                    <BrowserLoader url={activeTab.displayUrl} isMobile={true} onComplete={handleLoaderComplete} />
+                                )}
+                                {activeTab.url && iframeSrc ? (
+                                    <iframe 
+                                        ref={iframeRef}
+                                        src={iframeSrc} 
+                                        className="w-full h-full border-0"
+                                        referrerPolicy="no-referrer"
+                                        title="mobile-browser-content"
+                                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation allow-downloads"
+                                        onLoad={() => updateTab(activeTabId, { isLoading: false })}
+                                    />
+                                ) : (
+                                    !shouldUseLoader && <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                                        <h1 className="text-4xl font-bold text-gray-500 dark:text-gray-400 mb-6 select-none">Bing</h1>
+                                        <div className="w-full">
+                                             <div className="relative group shadow-md rounded-full">
+                                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                    <SearchIcon className="w-5 h-5 text-gray-400" />
+                                                </div>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Search..." 
+                                                    className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#2c2c2c] focus:outline-none dark:text-white"
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleNavigate({ preventDefault: () => { setInputUrl((e.target as HTMLInputElement).value); handleNavigate(); } } as any)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                        <h1 className="text-4xl font-bold text-gray-500 dark:text-gray-400 mb-6 select-none">Bing</h1>
-                        <div className="w-full">
-                             <div className="relative group shadow-md rounded-full">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <SearchIcon className="w-5 h-5 text-gray-400" />
-                                </div>
-                                <input 
-                                    type="text" 
-                                    placeholder="Search..." 
-                                    className="w-full pl-12 pr-5 py-3 rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#2c2c2c] focus:outline-none dark:text-white"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleNavigate({ preventDefault: () => { setInputUrl((e.target as HTMLInputElement).value); handleNavigate(); } } as any)}
-                                />
+                    <div className="p-4 overflow-y-auto h-full">
+                        {view === 'history' && (
+                            <div>
+                                <h2 className="text-xl font-bold mb-4">History</h2>
+                                <button onClick={clearHistory} className="mb-4 px-3 py-2 bg-red-600 text-white rounded text-sm">Clear History</button>
+                                <ul className="space-y-2">{cloudHistory.map((h, i) => <li key={i} className="truncate border-b py-2 text-sm cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate({} as any, h); setView('browser'); }}>{h}</li>)}</ul>
                             </div>
-                        </div>
+                        )}
+                        {view === 'bookmarks' && (
+                            <div>
+                                <h2 className="text-xl font-bold mb-4">Bookmarks</h2>
+                                <ul className="space-y-2">{bookmarks.map((b, i) => <li key={i} className="truncate border-b py-2 text-sm cursor-pointer hover:text-blue-500" onClick={() => { handleNavigate({} as any, b.url); setView('browser'); }}>{b.title}</li>)}</ul>
+                            </div>
+                        )}
+                        {view === 'cookies' && (
+                            <div className="text-center">
+                                <h2 className="text-xl font-bold mb-4">Cookie Manager</h2>
+                                <button onClick={clearCookies} className="px-6 py-3 bg-red-600 text-white rounded-lg font-bold text-sm">Clear All Session Data</button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -351,6 +569,239 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
             {/* Spoofed Status Bar */}
             <div className="h-5 bg-[#f1f3f4] dark:bg-[#292a2d] flex items-center justify-center text-[9px] text-gray-500 font-mono select-none border-t border-gray-300 dark:border-black/50">
                 <span className="mr-2">{spoofedOS}</span>
+            </div>
+        </div>
+    );
+};
+
+const YouTubeSearchView: React.FC<{ apiKey: string; onNavigate: (url: string) => void }> = ({ apiKey, onNavigate }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<SearchResult[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSearch = async () => {
+        if (!apiKey) { setError("API Key Missing"); return; }
+        if (!query) return;
+        
+        setLoading(true);
+        setError('');
+        try {
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.error) {
+                throw new Error(data.error.message);
+            }
+            
+            setResults(data.items || []);
+        } catch (e: any) {
+            setError(e.message || 'Search failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!apiKey) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
+                <YoutubeIcon />
+                <h2 className="text-2xl font-bold">API Key Required</h2>
+                <p className="text-gray-500 max-w-md text-sm">
+                    Enter your YouTube API Key in the settings menu (top right).
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="h-full flex flex-col bg-white dark:bg-[#0f0f0f] overflow-hidden">
+            <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-800 flex items-center space-x-4">
+                <YoutubeIcon />
+                <div className="flex-grow relative">
+                    <input 
+                        type="text" 
+                        className="w-full bg-gray-100 dark:bg-[#121212] border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-black dark:text-white focus:outline-none focus:border-blue-500 text-sm"
+                        placeholder="Search YouTube..."
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                    />
+                </div>
+                <button onClick={handleSearch} disabled={loading} className="bg-red-600 text-white p-2 rounded-full font-semibold hover:bg-red-700 disabled:opacity-50">
+                    {loading ? <RefreshCw /> : <SearchIcon />}
+                </button>
+            </div>
+            
+            <div className="flex-grow overflow-y-auto p-4">
+                {error && <div className="text-red-500 text-center p-4">{error}</div>}
+                
+                <div className="grid grid-cols-1 gap-4">
+                    {results.map(item => (
+                        <div 
+                            key={item.id.videoId} 
+                            className="cursor-pointer group"
+                            onClick={() => onNavigate(`https://youtube.com/watch?v=${item.id.videoId}`)}
+                        >
+                            <div className="aspect-video bg-gray-200 dark:bg-gray-800 rounded-xl overflow-hidden mb-2 relative">
+                                <img src={item.snippet.thumbnails.high.url} alt={item.snippet.title} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex space-x-3">
+                                <div className="flex-grow">
+                                    <h3 className="font-bold text-sm text-black dark:text-white line-clamp-2 group-hover:text-blue-400" dangerouslySetInnerHTML={{__html: item.snippet.title}}></h3>
+                                    <p className="text-xs text-gray-500 mt-1">{item.snippet.channelTitle}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const MobiYouTubeWatchView: React.FC<{ videoId: string; apiKey: string; onNavigate: (url: string) => void }> = ({ videoId, apiKey, onNavigate }) => {
+    const [video, setVideo] = useState<VideoDetails | null>(null);
+    const [channel, setChannel] = useState<ChannelDetails | null>(null);
+    const [comments, setComments] = useState<CommentThread[]>([]);
+    const [recommendations, setRecommendations] = useState<SearchResult[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!videoId || !apiKey) return;
+
+        const fetchData = async () => {
+            setLoading(true);
+            setError('');
+            try {
+                const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${apiKey}`);
+                const vidData = await vidRes.json();
+                if (!vidData.items || vidData.items.length === 0) throw new Error("Video not found");
+                const videoDetails = vidData.items[0];
+                setVideo(videoDetails);
+
+                const channelRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${videoDetails.snippet.channelId}&key=${apiKey}`);
+                const channelData = await channelRes.json();
+                if (channelData.items && channelData.items.length > 0) setChannel(channelData.items[0]);
+
+                const commentsRes = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=5&key=${apiKey}`);
+                const commentsData = await commentsRes.json();
+                if (commentsData.items) setComments(commentsData.items);
+
+                const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(videoDetails.snippet.title)}&type=video&maxResults=5&key=${apiKey}`);
+                const searchData = await searchRes.json();
+                if (searchData.items) setRecommendations(searchData.items.filter((item: any) => item.id.videoId !== videoId));
+
+            } catch (e: any) {
+                console.error(e);
+                setError(e.message || "Failed to load video data");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [videoId, apiKey]);
+
+    const formatNumber = (numStr: string) => {
+        const num = parseInt(numStr);
+        if (isNaN(num)) return '0';
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
+    };
+
+    if (loading) return <div className="flex items-center justify-center h-full text-white"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
+    if (error) return <div className="flex items-center justify-center h-full text-red-500">{error}</div>;
+    if (!video) return null;
+
+    return (
+        <div className="flex flex-col h-full bg-[#0f0f0f] text-white font-sans overflow-y-auto custom-scrollbar">
+            {/* Parsoley Header */}
+            <div className="bg-[#7c3aed] p-3 text-center shadow-lg flex-shrink-0">
+                <h1 className="text-xl font-bold mb-0 text-white">Parsoley</h1>
+                <p className="text-[10px] text-purple-200">Lynix Player</p>
+            </div>
+
+            {/* Video Player */}
+            <div className="aspect-video w-full bg-black shadow-2xl relative group flex-shrink-0">
+                <iframe 
+                    src={`https://inv.nadeko.net/embed/${videoId}?autoplay=1`} 
+                    title={video.snippet.title} 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                    className="w-full h-full"
+                ></iframe>
+            </div>
+
+            <div className="p-4 space-y-4">
+                {/* Info Grid */}
+                <div className="space-y-2">
+                    <div className="bg-white text-black p-3 rounded-xl flex justify-between items-center shadow-lg border-l-4 border-green-500">
+                        <div>
+                            <div className="text-xl font-bold">{formatNumber(video.statistics.likeCount)}</div>
+                            <div className="text-xs font-semibold text-gray-600">Likes</div>
+                        </div>
+                        <div className="text-xs text-gray-400">Dislikes: N/A</div>
+                    </div>
+
+                    <div className="bg-white text-black p-3 rounded-xl flex items-center space-x-3 shadow-lg border-t-4 border-blue-500">
+                        {channel && <img src={channel.snippet.thumbnails.default.url} className="w-10 h-10 rounded-full" alt="avatar" />}
+                        <div>
+                            <div className="font-bold text-sm">@{channel?.snippet.customUrl || video.snippet.channelTitle}</div>
+                            <div className="text-xs text-gray-600">{video.snippet.channelTitle}</div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white text-black p-3 rounded-xl flex justify-between items-center shadow-lg border-r-4 border-purple-500">
+                        <div className="text-sm font-bold">Comments: {formatNumber(video.statistics.commentCount)}</div>
+                        <div className="text-sm font-bold">Views: {formatNumber(video.statistics.viewCount)}</div>
+                    </div>
+                </div>
+
+                {/* Description */}
+                <div className="bg-[#7c3aed] text-white p-4 rounded-xl shadow-lg">
+                    <div className="font-bold mb-1 text-sm">Published: {new Date(video.snippet.publishedAt).toLocaleDateString()}</div>
+                    <div className="text-xs whitespace-pre-wrap leading-relaxed line-clamp-4">
+                        <span className="font-bold">Desc:</span> {video.snippet.description}
+                    </div>
+                </div>
+
+                {/* Comments */}
+                <div className="bg-[#272727] p-4 rounded-xl shadow-lg">
+                    <h3 className="text-sm font-bold mb-3">--- Comments ---</h3>
+                    {comments.length > 0 ? (
+                        <div className="space-y-3">
+                            {comments.map(comment => (
+                                <div key={comment.id} className="text-xs">
+                                    <span className="font-bold text-gray-300 block">@{comment.snippet.topLevelComment.snippet.authorDisplayName}</span>
+                                    <span className="text-gray-400" dangerouslySetInnerHTML={{__html: comment.snippet.topLevelComment.snippet.textDisplay}}></span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 text-xs">No comments.</p>
+                    )}
+                </div>
+
+                {/* Recommendations */}
+                <div>
+                    <h3 className="text-sm font-bold text-gray-400 mb-3 px-1">Recommended</h3>
+                    <div className="space-y-3">
+                        {recommendations.map(rec => (
+                            <div key={rec.id.videoId} className="flex space-x-3 cursor-pointer" onClick={() => onNavigate(`https://youtube.com/watch?v=${rec.id.videoId}`)}>
+                                <div className="w-32 aspect-video bg-black rounded-lg overflow-hidden flex-shrink-0">
+                                    <img src={rec.snippet.thumbnails.high.url} className="w-full h-full object-cover" alt="" />
+                                </div>
+                                <p className="text-xs font-semibold text-white line-clamp-3">{rec.snippet.title}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         </div>
     );

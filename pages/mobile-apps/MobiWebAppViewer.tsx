@@ -39,7 +39,7 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, iconSvg
             return 'https://www.google.com/webhp?igu=1';
         }
         
-        // Fix for YouTube - Redirect to yewtu.be
+        // Fix for YouTube - Redirect to inv.nadeko.net
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
             try {
                 let targetUrl = url;
@@ -48,14 +48,14 @@ const MobiWebAppViewer: React.FC<MobiWebAppViewerProps> = ({ url, title, iconSvg
                 
                 if (urlObj.hostname.includes('youtu.be')) {
                     const videoId = urlObj.pathname.slice(1);
-                    let newUrl = `https://yewtu.be/watch?v=${videoId}`;
+                    let newUrl = `https://inv.nadeko.net/watch?v=${videoId}`;
                     if (urlObj.search) newUrl += '&' + urlObj.search.slice(1);
                     return newUrl;
                 } else {
-                    return `https://yewtu.be${urlObj.pathname}${urlObj.search}`;
+                    return `https://inv.nadeko.net${urlObj.pathname}${urlObj.search}`;
                 }
             } catch (e) {
-                return 'https://yewtu.be/';
+                return 'https://inv.nadeko.net/';
             }
         }
 
