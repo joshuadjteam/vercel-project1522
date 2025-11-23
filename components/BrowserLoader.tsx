@@ -49,30 +49,29 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
 
         const fetchData = async (attempt = 1) => {
             try {
-                setStatusText(attempt > 1 ? `Retrying connection (${attempt}/3)...` : 'Connecting to Proxy...');
+                setStatusText(attempt > 1 ? `Retrying connection (${attempt}/3)...` : 'Contacting Proxy...');
                 setPercent(attempt > 1 ? 15 : 10);
                 
-                // Timeout race (10 minutes)
+                // Timeout race (10 minutes to prevent premature kill)
                 const timeoutPromise = new Promise<any>((_, reject) => {
                     timeoutId = setTimeout(() => {
-                        reject(new Error("Connection timed out (10m). The destination server is not responding."));
+                        reject(new Error("Connection timed out. The server is not responding."));
                     }, 600000); 
                 });
 
-                // Long wait message timer (1 minute)
+                // Long wait message (15 seconds)
                 longWaitTimeoutId = setTimeout(() => {
                     if (isMounted) setShowLongWait(true);
-                }, 60000); 
+                }, 15000); 
 
                 await new Promise(resolve => setTimeout(resolve, 200));
                 if (!isMounted) return;
                 
                 if (attempt === 1) {
-                    setStatusText('Analyzing Security Headers...');
+                    setStatusText('Analyzing Site Security...');
                     setPercent(30);
                 }
                 
-                // Race Fetch
                 const result = await Promise.race([
                     database.fetchProxyContent(url),
                     timeoutPromise
@@ -83,27 +82,17 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
                 
                 if (!isMounted) return;
 
-                const { content, contentType, strippedHeaders, error } = result;
+                const { content, contentType, error } = result;
 
-                if (error) {
-                    throw new Error(error);
-                }
+                if (error) throw new Error(error);
 
                 setPercent(50);
-                setStatusText('Stripping X-Frame-Options...');
-                
-                if (strippedHeaders && strippedHeaders.length > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                }
-
-                setPercent(75);
-                setStatusText('Processing Content...');
+                setStatusText('Stripping Restrictions...');
                 await new Promise(resolve => setTimeout(resolve, 200));
 
-                setPercent(90);
-                setStatusText('Rendering...');
+                setPercent(80);
+                setStatusText('Rendering Content...');
                 
-                // Create Blob
                 let blob: Blob;
                 
                 if (typeof content === 'string' && content.startsWith('data:')) {
@@ -117,7 +106,6 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
                         }
                         blob = new Blob([bytes], { type: contentType });
                     } catch (e) {
-                        console.error("Failed to decode binary content in loader:", e);
                         blob = new Blob([content], { type: contentType });
                     }
                 } else {
@@ -127,11 +115,11 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
                 const blobUrl = URL.createObjectURL(blob);
                 
                 setPercent(100);
-                setStatusText('Loaded');
+                setStatusText('Ready');
 
                 setTimeout(() => {
                     if (isMounted) onComplete(blobUrl);
-                }, 400);
+                }, 300);
 
             } catch (e: any) {
                 clearTimeout(timeoutId);
@@ -139,20 +127,16 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
                 
                 if (!isMounted) return;
 
-                // Auto-retry logic for specific edge function errors
                 const msg = e.message || "";
                 const isRetryable = msg.includes("Failed to send") || msg.includes("timed out") || msg.includes("Proxy Error");
                 
                 if (attempt < 3 && isRetryable) {
-                    console.warn(`Proxy attempt ${attempt} failed. Retrying...`, e);
                     setStatusText(`Connection failed. Retrying (${attempt}/3)...`);
-                    // Wait 2 seconds before retrying
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     if (isMounted) fetchData(attempt + 1);
                     return;
                 }
 
-                console.error("BrowserLoader Error:", e);
                 setStatusText('Generating Error Report...');
                 const errorUrl = createErrorBlob(msg || "Unknown error occurred");
                 setTimeout(() => { if(isMounted) onComplete(errorUrl); }, 500);
@@ -173,17 +157,16 @@ const BrowserLoader: React.FC<BrowserLoaderProps> = ({ url, isMobile, onComplete
             {showLongWait && (
                 <div className="absolute top-10 w-[90%] max-w-md bg-yellow-900/90 border border-yellow-600 p-4 rounded-lg text-center animate-fade-in shadow-2xl backdrop-blur-md z-50">
                     <p className="text-sm text-yellow-100 mb-3 font-sans leading-relaxed">
-                        Our Servers are taking longer time than usual... Please sit back as we try to connect!
+                        This site is taking a while to load. We are trying alternate connection methods.
                     </p>
                     <p className="text-xs text-yellow-200/80 font-sans flex flex-wrap items-center justify-center gap-1">
-                        If you need to urgently go to this website, click the 
+                        If it doesn't load, try opening it directly: 
                         <button 
                             onClick={() => window.open(url, '_blank')}
                             className="px-2 py-0.5 bg-yellow-500 text-black font-bold rounded hover:bg-yellow-400 transition-colors text-xs mx-1"
                         >
-                            Open Now
+                            Open External
                         </button>
-                        now.
                     </p>
                 </div>
             )}

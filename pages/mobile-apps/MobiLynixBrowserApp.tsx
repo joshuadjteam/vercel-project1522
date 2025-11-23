@@ -232,7 +232,6 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
             actualUrl = finalUrl;
         }
 
-        // Updated regex to capture all regional domains like youtube.ca
         const youtubeWatchRegex = /(?:www\.)?youtube\.[a-z.]+\/watch/;
         const youtubeShortRegex = /youtu\.be\//;
         const youtubeGeneralRegex = /(?:www\.)?youtube\.[a-z.]+/;
@@ -251,7 +250,6 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                 }
             } catch (e) { }
         } else if (youtubeGeneralRegex.test(actualUrl)) {
-             // Redirect general Youtube hits to internal search
              actualUrl = YOUTUBE_SEARCH_URL;
         }
 
@@ -289,7 +287,7 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                 isBlocked: false,
                 isLoading: true,
                 blobUrl: undefined,
-                navigationId: t.navigationId + 1 // Force remount
+                navigationId: t.navigationId + 1 
             } : t);
         });
     };
@@ -342,7 +340,17 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
                             <>
                                 {shouldUseLoader && <BrowserLoader key={`${activeTabId}-${activeTab.url}-${activeTab.navigationId}`} url={activeTab.displayUrl} isMobile={true} onComplete={handleLoaderComplete} />}
                                 {activeTab.url && iframeSrc && iframeSrc !== 'about:blank' ? (
-                                    <iframe ref={iframeRef} key={iframeSrc} src={iframeSrc} className="w-full h-full border-0" referrerPolicy="no-referrer" title="browser-content" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" onLoad={() => updateTab(activeTabId, { isLoading: false })} />
+                                    <iframe 
+                                        ref={iframeRef} 
+                                        key={iframeSrc} 
+                                        src={iframeSrc} 
+                                        className="w-full h-full border-0" 
+                                        referrerPolicy="no-referrer" 
+                                        title="browser-content" 
+                                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation allow-downloads allow-modals"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" 
+                                        onLoad={() => updateTab(activeTabId, { isLoading: false })} 
+                                    />
                                 ) : (
                                      !shouldUseLoader && <div className="flex flex-col items-center justify-center h-full text-center pb-20">
                                          <h1 className="text-6xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8 select-none">Bing</h1>

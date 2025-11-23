@@ -291,7 +291,7 @@ const LynixBrowserApp: React.FC = () => {
                 isLoading: true, 
                 isBlocked: false, 
                 blobUrl: undefined,
-                navigationId: t.navigationId + 1 // Force component reset
+                navigationId: t.navigationId + 1 
             } : t);
         });
     };
@@ -472,7 +472,17 @@ const LynixBrowserApp: React.FC = () => {
                             <>
                                 {shouldUseLoader && <BrowserLoader key={`${activeTabId}-${activeTab.url}-${activeTab.navigationId}`} url={activeTab.displayUrl} onComplete={handleLoaderComplete} />}
                                 {activeTab.url && iframeSrc && iframeSrc !== 'about:blank' ? (
-                                    <iframe ref={iframeRef} key={iframeSrc} src={iframeSrc} className="w-full h-full border-0" referrerPolicy="no-referrer" title="browser-content" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" onLoad={() => updateTab(activeTabId, { isLoading: false })} />
+                                    <iframe 
+                                        ref={iframeRef} 
+                                        key={iframeSrc} 
+                                        src={iframeSrc} 
+                                        className="w-full h-full border-0" 
+                                        referrerPolicy="no-referrer" 
+                                        title="browser-content" 
+                                        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-presentation allow-downloads allow-modals"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation; payment" 
+                                        onLoad={() => updateTab(activeTabId, { isLoading: false })} 
+                                    />
                                 ) : (
                                      !shouldUseLoader && <div className="flex flex-col items-center justify-center h-full text-center pb-20">
                                          <h1 className="text-6xl font-bold text-[#5f6368] dark:text-[#e8eaed] mb-8 select-none">Bing</h1>
