@@ -478,21 +478,27 @@ const App: React.FC = () => {
                 const MobileComponent = MOBILE_PAGES_MAP[page] || MobiLauncher;
                 
                 return (
-                    <>
+                    <div className="absolute inset-0 flex flex-col overflow-hidden">
                         {showBootScreen && <BootScreen />}
                         <LockScreen isLocked={isLocked} onUnlock={() => setIsLocked(false)} />
                         
                         {/* Mobile Top Bar (Status Bar) */}
-                        <div className="absolute top-0 left-0 right-0 z-40">
-                            <MobileTopBar navigate={navigate} onSleep={() => setIsLocked(true)} />
+                        <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none">
+                            <div className="pointer-events-auto">
+                                <MobileTopBar navigate={navigate} onSleep={() => setIsLocked(true)} />
+                            </div>
                         </div>
 
-                        {/* Removed bg-black and mt-8 to allow wallpaper to show under transparent status bar */}
-                        <main className="flex-grow overflow-hidden flex flex-col min-h-0 relative pb-12">
+                        {/* Main Content */}
+                        <main className="flex-grow relative w-full h-full overflow-hidden">
                             <MobileComponent navigate={navigate} appsList={dynamicAppsList} {...pageParams} />
                         </main>
-                        <MobileNavBar navigate={navigate} />
-                    </>
+                        
+                        {/* Navigation Bar */}
+                        <div className="relative z-50">
+                            <MobileNavBar navigate={navigate} />
+                        </div>
+                    </div>
                 );
             }
 

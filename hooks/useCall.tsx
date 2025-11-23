@@ -52,6 +52,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const callTimeoutRef = useRef<any>(null);
     const callDurationIntervalRef = useRef<any>(null);
     const iceCandidatesQueue = useRef<RTCIceCandidate[]>([]);
+    const isRemoteSet = useRef(false);
     
     const stateRef = useRef({ user, isCalling, callee, callStatus, incomingCall, localStream, isLoggedIn });
     stateRef.current = { user, isCalling, callee, callStatus, incomingCall, localStream, isLoggedIn };
@@ -107,7 +108,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const processIceQueue = useCallback(async () => {
-        if (!pc.current || !pc.current.remoteDescription) return;
+        if (!pc.current || !isRemoteSet.current) return;
+        // Small delay to ensure remote description is fully applied
+        await new Promise(r => setTimeout(r, 100));
+        
         console.log(`Processing ${iceCandidatesQueue.current.length} buffered ICE candidates`);
         while (iceCandidatesQueue.current.length > 0) {
             const candidate = iceCandidatesQueue.current.shift();
@@ -143,6 +147,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (callDurationIntervalRef.current) { clearInterval(callDurationIntervalRef.current); callDurationIntervalRef.current = null; }
         
         iceCandidatesQueue.current = [];
+        isRemoteSet.current = false;
         setRemoteStream(null); setIsVideoCall(false); setIsCalling(false); setCallee(''); setCallStatus(''); setCallDuration(0); setIncomingCall(null); setRemoteExtraInfo(null);
         offerForIncomingCall.current = null;
     }, [sendSignal]);
@@ -170,7 +175,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     break;
                 case 'failed':
                 case 'closed':
-                    stableEndCall(targetUsername);
+                    // Only end if we were actually connected or connecting
+                    if (stateRef.current.callStatus !== 'Call Ended') {
+                        stableEndCall(targetUsername);
+                    }
                     break;
             }
         };
@@ -195,12 +203,12 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (pc.current && stateRef.current.callee === from) { 
                     try { 
                         await pc.current.setRemoteDescription(new RTCSessionDescription(payload.answer)); 
+                        isRemoteSet.current = true;
                         setCallStatus('Connecting...'); 
-                        // CRITICAL FIX: Process queue on caller side after answer reception
                         await processIceQueue();
                         if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current); 
                     } catch(e) { 
-                        console.error("Error setting remote desc:", e); 
+                        console.error("Error setting remote desc (Answer):", e); 
                         stableEndCall(from); 
                     } 
                 } 
@@ -217,7 +225,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             case 'ice-candidate': 
                 if (payload.candidate) {
                     const candidate = new RTCIceCandidate(payload.candidate);
-                    if (pc.current && pc.current.remoteDescription && pc.current.remoteDescription.type) {
+                    if (pc.current && isRemoteSet.current) {
                         try {
                             await pc.current.addIceCandidate(candidate);
                         } catch(e) {
@@ -249,6 +257,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // Reset state
             iceCandidatesQueue.current = [];
+            isRemoteSet.current = false;
             setIsCalling(true); 
             setCallStatus('Initializing...'); 
             setIsVideoCall(withVideo); 
@@ -295,6 +304,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             // Reset queue
             iceCandidatesQueue.current = [];
+            isRemoteSet.current = false;
             
             setIsCalling(true); 
             setCallStatus('Connecting...'); 
@@ -308,6 +318,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             
             // Set remote description first (the offer)
             await peerConnection.setRemoteDescription(new RTCSessionDescription(offerForIncomingCall.current));
+            isRemoteSet.current = true;
             
             // Process any ICE candidates that arrived while we were setting up
             await processIceQueue();

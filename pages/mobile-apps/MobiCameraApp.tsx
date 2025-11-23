@@ -80,15 +80,14 @@ const MobiCameraApp: React.FC<MobiCameraAppProps> = ({ navigate }) => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
         
-        // Set canvas dimensions to match video
+        // Explicitly set canvas dimensions to video stream dimensions
+        // This ensures high quality capture and avoids distortion
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         
-        // Flip horizontally if it's a front-facing camera (heuristic based on label or just convention)
-        // For simplicity, we draw as is.
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
         const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
@@ -125,7 +124,7 @@ const MobiCameraApp: React.FC<MobiCameraAppProps> = ({ navigate }) => {
     return (
         <div className="w-full h-full bg-black relative flex flex-col">
             {/* Viewfinder */}
-            <div className="flex-grow relative overflow-hidden bg-black">
+            <div className="flex-grow relative overflow-hidden bg-black flex items-center justify-center">
                 {error ? (
                     <div className="absolute inset-0 flex items-center justify-center text-white text-center p-4">
                         <p>{error}</p>
@@ -135,7 +134,7 @@ const MobiCameraApp: React.FC<MobiCameraAppProps> = ({ navigate }) => {
                         ref={videoRef} 
                         autoPlay 
                         playsInline 
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="w-full h-full object-cover"
                     />
                 )}
                 {/* Hidden canvas for capture */}
@@ -143,7 +142,7 @@ const MobiCameraApp: React.FC<MobiCameraAppProps> = ({ navigate }) => {
                 
                 {/* Status Toast */}
                 {uploadStatus && (
-                    <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm animate-fade-in">
+                    <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm animate-fade-in z-30">
                         {uploadStatus}
                     </div>
                 )}
@@ -176,7 +175,7 @@ const MobiCameraApp: React.FC<MobiCameraAppProps> = ({ navigate }) => {
             {/* Error Modal */}
             {showErrorModal && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6">
-                    <div className="bg-[#1e1e1e] rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border border-gray-700">
+                    <div className="bg-[#1e1e1e] rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border border-gray-700 animate-fade-in">
                         <div className="flex justify-center mb-4">
                             <WarningIcon />
                         </div>

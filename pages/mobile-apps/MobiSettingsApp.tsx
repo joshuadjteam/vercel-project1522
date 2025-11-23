@@ -9,6 +9,7 @@ const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-
 const PaintIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12.5a2 2 0 002-2v-6.5a2 2 0 00-2-2H7" /></svg>;
 const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
 interface MobiSettingsAppProps {
     navigate: (page: Page) => void;
@@ -17,7 +18,7 @@ interface MobiSettingsAppProps {
 const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
     const { user, logout } = useAuth();
     const { wallpaper, setWallpaper } = useTheme();
-    const [view, setView] = useState<'main' | 'wallpaper' | 'security'>('main');
+    const [view, setView] = useState<'main' | 'wallpaper' | 'security' | 'about'>('main');
     const [pin, setPin] = useState('');
     const [confirmPin, setConfirmPin] = useState('');
     const [status, setStatus] = useState('');
@@ -55,6 +56,40 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
             navigate('signin');
         }
     };
+
+    if (view === 'about') {
+        return (
+            <div className="w-full h-full flex flex-col bg-[#121212] text-white font-sans">
+                <header className="p-4 flex items-center space-x-4 border-b border-white/10">
+                    <button onClick={() => setView('main')} className="p-2 rounded-full hover:bg-white/10"><BackIcon /></button>
+                    <h1 className="text-xl font-medium">About phone</h1>
+                </header>
+                <div className="p-6 space-y-6 overflow-y-auto">
+                    <div className="space-y-1">
+                        <h2 className="text-sm text-gray-400">Device name</h2>
+                        <p className="text-lg font-medium">Generic Lynix Mobile Simulation</p>
+                    </div>
+                    <div className="space-y-1">
+                        <h2 className="text-sm text-gray-400">Phone number</h2>
+                        <p className="text-lg font-medium">{user?.phone_number || 'Unknown'}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <h2 className="text-sm text-gray-400">Account</h2>
+                        <p className="text-lg font-medium">{user?.username}</p>
+                    </div>
+                    <div className="w-full h-px bg-white/10 my-4"></div>
+                    <div className="space-y-1">
+                        <h2 className="text-sm text-gray-400">Lynix Version</h2>
+                        <p className="text-lg font-medium">12.0.2</p>
+                    </div>
+                    <div className="space-y-1">
+                        <h2 className="text-sm text-gray-400">Android Version (Simulation)</h2>
+                        <p className="text-lg font-medium">14</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (view === 'wallpaper') {
         return (
@@ -151,11 +186,19 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                     </div>
                 </button>
 
-                <button onClick={handleReset} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
+                <button onClick={() => handleReset} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
                     <div className="p-2 bg-red-500/20 text-red-400 rounded-full"><TrashIcon /></div>
                     <div className="text-left flex-grow">
                         <div className="font-medium">Reset Options</div>
                         <div className="text-xs text-gray-400">Erase all data, cookies</div>
+                    </div>
+                </button>
+
+                <button onClick={() => setView('about')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
+                    <div className="p-2 bg-blue-500/20 text-blue-400 rounded-full"><InfoIcon /></div>
+                    <div className="text-left flex-grow">
+                        <div className="font-medium">About phone</div>
+                        <div className="text-xs text-gray-400">{user?.phone_number}</div>
                     </div>
                 </button>
                 

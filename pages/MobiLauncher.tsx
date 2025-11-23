@@ -8,19 +8,11 @@ const GoogleG = () => <svg viewBox="0 0 24 24" className="w-6 h-6"><path fill="#
 const LensIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9a5 5 0 0 1 5-5 1 1 0 0 1 1 1 1 1 0 0 0 2 0 1 1 0 0 1 1 1 5 5 0 0 1-5 5 1 1 0 0 1-1 1 1 1 0 0 0-2 0 1 1 0 0 1-1-1z"/></svg>;
 const MicIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>;
 
-// Specific Icons for Dock to match screenshot
 const PhoneIcon = () => <svg viewBox="0 0 24 24" className="w-full h-full p-3 text-[#004a77]" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>;
 const MessageIcon = () => <svg viewBox="0 0 24 24" className="w-full h-full p-3 text-[#004a77]" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>;
-
-// Updated Chrome Icon (More colorful/accurate)
 const ChromeIcon = () => (
     <svg viewBox="0 0 100 100" className="w-full h-full p-1">
         <circle cx="50" cy="50" r="45" fill="white"/>
-        <path d="M50 14 L86 32 L50 50 L14 32 Z" fill="none"/> {/* Spacer */}
-        <path d="M50 50 L86 32 A 40 40 0 0 1 86 68 L50 88 Z" fill="#4CAF50"/>
-        <path d="M50 50 L14 68 A 40 40 0 0 1 14 32 L50 12 Z" fill="#F44336"/>
-        <path d="M50 50 L50 12 A 40 40 0 0 1 86 32 L86 32 Z" fill="#FFC107"/> {/* Patching logic simplification for React SVG without complex clip-paths */}
-        {/* Simplified Accurate Representation */}
         <circle cx="50" cy="50" r="18" fill="white"/>
         <circle cx="50" cy="50" r="14" fill="#1A73E8"/>
         <path d="M50 22 L50 10 A 40 40 0 0 1 84.6 30 L67.3 40 Z" fill="#E53935"/>
@@ -29,18 +21,14 @@ const ChromeIcon = () => (
         <path d="M15.4 30 A 40 40 0 0 1 50 10 L50 22 L32.7 40 Z" fill="#E53935"/>
     </svg>
 );
-
-// Updated Play Store Icon
 const PlayStoreIcon = () => (
     <svg viewBox="0 0 24 24" className="w-full h-full p-2" fill="none">
-        <path d="M4.5 4.5L4.5 19.5L16 12L4.5 4.5Z" fill="#34A853" fillOpacity="0"/> {/* Hitbox */}
         <path d="M5 3.8C4.8 4 4.7 4.3 4.7 4.6V19.4C4.7 19.7 4.8 20 5 20.2L5.1 20.3L13.5 11.9V11.8L5.1 3.6L5 3.8Z" fill="#00E2F2"/>
         <path d="M16.7 15.1L13.5 11.9L5.1 20.3C5.6 20.8 6.4 20.9 7.1 20.5L16.7 15.1Z" fill="#FF3A44"/>
         <path d="M16.7 8.9L7.1 3.5C6.4 3.1 5.6 3.2 5.1 3.7L13.5 12.1L16.7 8.9Z" fill="#00E676"/>
         <path d="M16.7 15.1L20.2 13.1C21.2 12.5 21.2 11.5 20.2 10.9L16.7 8.9L13.5 12.1L16.7 15.1Z" fill="#FFC400"/>
     </svg>
 );
-
 const CameraIcon = () => <svg viewBox="0 0 24 24" className="w-full h-full p-3 text-[#004a77]" fill="currentColor"><circle cx="12" cy="12" r="3.2"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>;
 
 interface MobiLauncherProps {
@@ -51,6 +39,7 @@ interface MobiLauncherProps {
 const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [date, setDate] = useState(new Date());
+    const [pageIndex, setPageIndex] = useState(0);
     const { wallpaper } = useTheme();
 
     useEffect(() => {
@@ -60,14 +49,9 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
 
     const handleSearch = () => {
         if (searchQuery.trim() !== '') {
-            const url = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-            window.open(url, '_blank');
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank');
             setSearchQuery('');
         }
-    };
-
-    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') handleSearch();
     };
 
     const dockItems = [
@@ -89,12 +73,18 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
         }
     };
 
-    const gridApps = useMemo(() =>
+    const allGridApps = useMemo(() =>
         appsList.filter(app => !app.isHidden && !['app-phone', 'app-chat', 'app-webly-store', 'app-browser', 'app-camera'].includes(app.id)),
         [appsList]
     );
 
-    // Use the global theme wallpaper if set, otherwise default
+    const ITEMS_PER_PAGE = 20; // 5 columns * 4 rows
+    const totalPages = Math.ceil(allGridApps.length / ITEMS_PER_PAGE);
+    
+    // Current page apps
+    const currentApps = allGridApps.slice(pageIndex * ITEMS_PER_PAGE, (pageIndex + 1) * ITEMS_PER_PAGE);
+
+    // Wallpaper handling
     const bgClass = wallpaper ? "" : "bg-gradient-to-b from-[#4A6C8C] via-[#2C4763] to-[#1F364D]";
 
     return (
@@ -104,42 +94,54 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
         >
             {wallpaper && <div className={`absolute inset-0 ${wallpapers[wallpaper]?.class || 'bg-gray-800'} -z-10 opacity-100`} />}
 
-            {/* Scrollable Content Area */}
-            <div className="flex-grow overflow-y-auto p-4 pb-36 no-scrollbar pt-12">
-                {/* At a Glance */}
-                <div className="px-2 mb-8 mt-8">
-                    <div className="text-5xl font-normal opacity-90">
-                        {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </div>
-                    <div className="text-sm opacity-80 mt-1 font-medium tracking-wide">
-                        {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                    </div>
+            {/* Top Area: Clock & At A Glance */}
+            <div className="pt-16 px-4 mb-2 flex-shrink-0">
+                <div className="text-6xl font-normal opacity-90 tracking-tighter">
+                    {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                 </div>
+                <div className="text-sm opacity-80 mt-1 font-medium tracking-wide pl-1">
+                    {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </div>
+            </div>
 
-                {/* App Grid */}
-                <div className="grid grid-cols-4 gap-y-8 gap-x-4 justify-items-center">
-                    {gridApps.map(app => (
+            {/* Paged App Grid Area (Flexible Height) */}
+            <div className="flex-grow flex flex-col relative">
+                <div className="flex-grow grid grid-cols-5 grid-rows-4 gap-2 p-4 items-start content-start">
+                    {currentApps.map(app => (
                         <button 
                             key={app.id} 
                             onClick={() => {
                                 if (app.isWebApp) navigate('mobi-app-webview', { url: app.url, title: app.label, appData: app });
                                 else navigate(app.page, { ...app.params, appData: app });
                             }}
-                            className="flex flex-col items-center space-y-2 active:opacity-70 transition-opacity w-16 group"
+                            className="flex flex-col items-center space-y-1 group w-full"
                         >
-                            <div className="w-14 h-14 bg-[#F1F5F9] rounded-full flex items-center justify-center shadow-md overflow-hidden group-active:scale-90 transition-transform">
-                                {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8 text-[#4A6C8C]" })}
+                            <div className="w-12 h-12 bg-[#F1F5F9] rounded-full flex items-center justify-center shadow-md overflow-hidden group-active:scale-90 transition-transform">
+                                {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-7 h-7 text-[#4A6C8C]" })}
                             </div>
-                            <span className="text-xs text-white drop-shadow-md truncate w-full text-center font-normal tracking-wide">{app.label}</span>
+                            <span className="text-[10px] text-white drop-shadow-md truncate w-full text-center font-normal tracking-wide">{app.label}</span>
                         </button>
                     ))}
                 </div>
+
+                {/* Pagination Indicators */}
+                {totalPages > 1 && (
+                    <div className="flex justify-center space-x-2 pb-2 h-6">
+                        {Array.from({ length: totalPages }).map((_, i) => (
+                            <button 
+                                key={i}
+                                onClick={() => setPageIndex(i)}
+                                className={`w-2 h-2 rounded-full transition-colors ${i === pageIndex ? 'bg-white' : 'bg-white/30'}`}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {/* Fixed Bottom Area */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 pb-14 z-30 bg-gradient-to-t from-black/20 to-transparent">
+            {/* Bottom Dock & Search (Fixed Height) */}
+            <div className="flex-shrink-0 pb-14 px-4 bg-gradient-to-t from-black/20 to-transparent pt-4">
                 {/* Dock Icons */}
-                <div className="flex justify-between items-center px-2 mb-6">
+                <div className="flex justify-between items-center px-1 mb-4">
                     {dockItems.map((item) => (
                         <button 
                             key={item.id} 
@@ -154,13 +156,13 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
                 </div>
 
                 {/* Search Bar */}
-                <div className="bg-[#F1F5F9] rounded-full h-12 flex items-center px-4 shadow-lg mx-1 mb-2">
+                <div className="bg-[#F1F5F9] rounded-full h-12 flex items-center px-4 shadow-lg mb-2">
                     <GoogleG />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyPress={handleKeyPress}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                         className="flex-grow bg-transparent border-none outline-none ml-3 text-gray-800 placeholder-gray-500 text-base"
                         placeholder="Search..."
                     />
