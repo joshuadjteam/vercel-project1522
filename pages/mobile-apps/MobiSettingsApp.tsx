@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme, wallpapers } from '../../hooks/useTheme';
@@ -6,6 +5,7 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { Page } from '../../types';
 import { database } from '../../services/database';
 
+// Icons
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m7 7H3" /></svg>;
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const PaintIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12.5a2 2 0 002-2v-6.5a2 2 0 00-2-2H7" /></svg>;
@@ -41,9 +41,8 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
         if (user) {
             const storedPin = localStorage.getItem(`lynix_pin_${user.id}`);
             if (storedPin) setStatus('PIN is set');
+            if (user.system_version) setCurrentVersion(user.system_version);
         }
-        const storedVer = localStorage.getItem('lynix_version');
-        if (storedVer) setCurrentVersion(storedVer);
     }, [user]);
 
     const handleSetPin = () => {
@@ -66,7 +65,7 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
     };
 
     const handleUpdate = () => {
-        if (!updateInfo) return;
+        if (!updateInfo || !user) return;
         setUpdateStatus('downloading');
         let p = 0;
         const interval = setInterval(() => {
@@ -75,9 +74,11 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                 clearInterval(interval);
                 setProgress(100);
                 setUpdateStatus('installing');
-                setTimeout(() => {
+                setTimeout(async () => {
+                    // Persist update to database
+                    await database.updateUser({ id: user.id, system_version: updateInfo.latestVersion });
+                    
                     setUpdateStatus('rebooting');
-                    localStorage.setItem('lynix_version', updateInfo.latestVersion);
                     setTimeout(() => window.location.reload(), 2000);
                 }, 3000);
             } else {

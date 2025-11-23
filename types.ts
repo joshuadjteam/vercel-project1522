@@ -21,6 +21,7 @@ export interface User {
     role: UserRole;
     plan_name?: string;
     phone_number?: string;
+    system_version?: string; // Added system version
     features: {
         chat: boolean;
         ai: boolean;

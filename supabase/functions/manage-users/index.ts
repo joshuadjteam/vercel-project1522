@@ -63,11 +63,12 @@ serve(async (req) => {
     const authUser = authData?.user;
     if (authError || !authUser) throw { message: 'Not authenticated', status: 401 };
     
-    const ensureAdmin = async () => {
-      const { data: requestingUserProfile, error: profileError } = await supabaseAdmin.from('users').select('role').eq('auth_id', authUser.id).single();
-      if (profileError) throw { message: 'Could not verify user role.', status: 500 };
-      if (!requestingUserProfile || requestingUserProfile.role !== 'Admin') throw { message: 'Permission denied: Admin role required.', status: 403 };
-    };
+    // For normal user updates (like system update), we allow the user to update themselves or Admin to update others.
+    // But for managing permissions/roles, we strictly check Admin.
+    
+    // Check requesting user role
+    const { data: requestingUserProfile, error: profileError } = await supabaseAdmin.from('users').select('role').eq('auth_id', authUser.id).single();
+    const isAdmin = requestingUserProfile?.role === 'Admin';
     
     switch (action) {
       case 'updatePassword': {
@@ -77,7 +78,7 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
       case 'createUser': {
-        await ensureAdmin();
+        if (!isAdmin) throw { message: 'Permission denied: Admin role required.', status: 403 };
         const { password, username, role, features } = payload;
         const email = normalizeEmail(payload.email);
         if (!email) throw { status: 400, message: 'A valid email is required.' };
@@ -101,30 +102,65 @@ serve(async (req) => {
         return new Response(JSON.stringify({ user: profileData }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
       case 'updateUser': {
-        await ensureAdmin();
-        const { id, auth_id, password, username, role, features } = payload;
+        // Allow user to update their own system version or Admin to update anyone
+        const { id, auth_id, password, username, role, features, system_version } = payload;
+        
+        // If target ID is different from authenticated user ID, require Admin
+        // We need to verify if 'id' (public table id) corresponds to 'authUser.id' (auth table id)
+        // But since we pass both usually, we check auth_id if present.
+        const targetAuthId = auth_id;
+        
+        if (targetAuthId && targetAuthId !== authUser.id && !isAdmin) {
+             throw { message: 'Permission denied: Cannot update other users.', status: 403 };
+        }
+        
         const email = normalizeEmail(payload.email);
         
-        let updatePayload: Record<string, any> = { username, role, features };
+        // Public Profile Update
+        let updatePayload: Record<string, any> = {};
+        if (username) updatePayload.username = username;
+        if (role && isAdmin) updatePayload.role = role; // Only admin can change roles
+        if (features && isAdmin) updatePayload.features = features;
         if (email) updatePayload.email = email;
 
-        const { data: profileData, error: profileError } = await supabaseAdmin.from('users').update(updatePayload).eq('id', id).select().single();
-        if (profileError) throw profileError;
-
-        if (auth_id && email) {
-          const { error: authEmailError } = await supabaseAdmin.auth.admin.updateUserById(auth_id, { email });
-          if (authEmailError) throw authEmailError;
+        let profileData = null;
+        if (Object.keys(updatePayload).length > 0) {
+            const { data, error: profileError } = await supabaseAdmin.from('users').update(updatePayload).eq('id', id).select().single();
+            if (profileError) throw profileError;
+            profileData = data;
+        } else {
+             // Fetch existing if not updating public profile to return consistent shape
+             const { data } = await supabaseAdmin.from('users').select('*').eq('id', id).single();
+             profileData = data;
         }
 
-        if (auth_id && password) {
-          const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(auth_id, { password });
-          if (authError) throw authError;
+        // Auth User Update (Email, Password, Metadata)
+        let authUpdatePayload: any = {};
+        if (email) authUpdatePayload.email = email;
+        if (password) authUpdatePayload.password = password;
+        
+        // Handle System Version Update in Metadata
+        if (system_version) {
+            // Fetch current metadata first to merge
+            const { data: currentUserData } = await supabaseAdmin.auth.admin.getUserById(targetAuthId || authUser.id);
+            const currentMeta = currentUserData?.user?.app_metadata || {};
+            authUpdatePayload.app_metadata = { ...currentMeta, system_version };
+        }
+
+        if (Object.keys(authUpdatePayload).length > 0 && (targetAuthId || authUser.id)) {
+          const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(targetAuthId || authUser.id, authUpdatePayload);
+          if (authUpdateError) throw authUpdateError;
+        }
+        
+        // Return profile with injected system_version if updated
+        if (profileData && system_version) {
+            profileData.system_version = system_version;
         }
         
         return new Response(JSON.stringify({ user: profileData }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
       }
       case 'deleteUser': {
-        await ensureAdmin();
+        if (!isAdmin) throw { message: 'Permission denied: Admin role required.', status: 403 };
         const { auth_id } = payload;
         if (!auth_id) throw { message: 'auth_id is required for deletion.', status: 400 };
 

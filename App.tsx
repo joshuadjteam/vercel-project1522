@@ -42,7 +42,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage';
 import WeblyStoreApp from './pages/apps/WeblyStoreApp';
 import WebAppViewer from './pages/apps/WebAppViewer';
 import LynixBrowserApp from './pages/apps/LynixBrowserApp';
-import SettingsApp from './pages/apps/SettingsApp'; // Imported Desktop Settings
+import SettingsApp from './pages/apps/SettingsApp';
 
 // Mobile App Imports
 import MobiProfilePage from './pages/mobile-apps/MobiProfilePage';
@@ -100,7 +100,7 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
     'app-webly-store': { component: WeblyStoreApp },
     'app-webview': { component: WebAppViewer, defaultSize: { width: 1024, height: 768 } },
     'app-browser': { component: LynixBrowserApp, defaultSize: { width: 1000, height: 700 } },
-    'app-settings': { component: SettingsApp, defaultSize: { width: 800, height: 600 } }, // Added Desktop Settings
+    'app-settings': { component: SettingsApp, defaultSize: { width: 800, height: 600 } },
 };
 
 export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
@@ -126,7 +126,7 @@ export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
     'app-webly-store': WeblyStoreApp,
     'app-webview': WebAppViewer,
     'app-browser': LynixBrowserApp,
-    'app-settings': SettingsApp, // Added Desktop Settings
+    'app-settings': SettingsApp,
 };
 
 export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
@@ -287,8 +287,8 @@ const App: React.FC = () => {
         const coreApps = APPS_LIST;
         let availableApps: AppLaunchable[] = coreApps;
 
-        // Software Update Check
-        const currentVersion = localStorage.getItem('lynix_version');
+        // Software Update Check using database/user system_version instead of local storage
+        const currentVersion = user?.system_version || '12.0.2';
         if (currentVersion !== '13.0') {
             availableApps = availableApps.filter(app => !['app-maps', 'app-music', 'app-gallery'].includes(app.id));
         }

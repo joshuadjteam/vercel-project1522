@@ -1,5 +1,4 @@
 import { supabase } from '../supabaseClient';
-// Add DriveFile type to imports
 import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile, WeblyApp } from '../types';
 
 // Helper to map DB user to app User
@@ -16,6 +15,7 @@ const mapDbUserToUser = (dbUser: any): User => {
         role: dbUser.role,
         plan_name: dbUser.plan_name,
         phone_number: phoneNumber,
+        system_version: dbUser.system_version || '12.0.2', // Map system_version, default to 12.0.2
         features: dbUser.features,
         installed_webly_apps: dbUser.installed_webly_apps || [],
     };
@@ -31,6 +31,7 @@ export const database = {
             role: UserRole.Trial,
             plan_name: 'Trial',
             phone_number: '2901000000',
+            system_version: '12.0.2',
             features: { chat: false, ai: true, mail: false }
         });
     },
@@ -135,7 +136,7 @@ export const database = {
         const { data, error } = await supabase.functions.invoke('manage-users', {
             body: { 
                 action: 'updateUser',
-                ...userData
+                ...userData // system_version is passed here
             }
         });
         if (error) {
@@ -394,7 +395,6 @@ export const database = {
 
     uploadPhotoToDrive: async (base64Data: string): Promise<{ success: boolean, error?: string }> => {
         const filename = `Photo_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
-        // Strip header if present to send raw base64
         const content = base64Data.replace(/^data:image\/\w+;base64,/, "");
         
         const { data, error } = await supabase.functions.invoke('app-service', {

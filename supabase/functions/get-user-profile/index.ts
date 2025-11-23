@@ -16,7 +16,6 @@ serve(async (req)=>{
   }
   try {
     // This client is used to verify the JWT and get the user.
-    // It uses the anon key, but the Authorization header from the incoming request will authenticate the call.
     const supabaseClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
       global: {
         headers: {
@@ -43,12 +42,11 @@ serve(async (req)=>{
     // Fetch the user's profile from the public.users table.
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('users')
-      .select('*') // No longer selecting the non-existent 'installed_webly_apps' column
+      .select('*') 
       .eq('auth_id', user.id)
       .single();
 
     if (profileError) {
-      // PGRST116 indicates that the query returned no rows, which means no profile was found.
       if (profileError.code === 'PGRST116') {
         return new Response(JSON.stringify({
           error: `Profile not found for user ${user.id}`
@@ -60,14 +58,15 @@ serve(async (req)=>{
           status: 404
         });
       }
-      // For other database errors, throw them to be caught by the generic error handler.
       throw profileError;
     }
     
     // Combine the public profile data with the app metadata from the auth user object.
+    // This is where system_version is retrieved.
     const combinedProfile = {
       ...profileData,
       installed_webly_apps: user.app_metadata?.installed_webly_apps || [],
+      system_version: user.app_metadata?.system_version || '12.0.2', // Default version
     };
 
     // Return the combined profile data.
