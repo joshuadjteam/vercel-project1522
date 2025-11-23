@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 
 export interface NotificationProps {
@@ -31,7 +32,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification }) =
     if (!notification) return null;
 
     return (
-        <div className={`fixed top-12 left-4 right-4 z-[10000] flex justify-center transition-all duration-500 ${visible ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0'}`}>
+        <div className={`fixed top-12 left-4 right-4 z-[20000] flex justify-center transition-all duration-500 ${visible ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0'}`}>
             <div className="bg-[#2d2d2d] text-white rounded-2xl shadow-2xl p-4 flex items-center space-x-4 max-w-md w-full border border-white/10 backdrop-blur-md">
                 <div className="bg-white/10 p-2 rounded-full">
                     {notification.icon || <DatabaseIcon />}

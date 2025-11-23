@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
 import { ConsoleViewProvider, useConsoleView } from './hooks/useConsoleView';
 import { CallProvider } from './hooks/useCall';
+import { LanguageProvider } from './hooks/useLanguage';
 import useIsMobileDevice from './hooks/useIsMobileDevice';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -41,6 +42,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage';
 import WeblyStoreApp from './pages/apps/WeblyStoreApp';
 import WebAppViewer from './pages/apps/WebAppViewer';
 import LynixBrowserApp from './pages/apps/LynixBrowserApp';
+import SettingsApp from './pages/apps/SettingsApp'; // Imported Desktop Settings
 
 // Mobile App Imports
 import MobiProfilePage from './pages/mobile-apps/MobiProfilePage';
@@ -63,11 +65,14 @@ import MobiLynixBrowserApp from './pages/mobile-apps/MobiLynixBrowserApp';
 import MobiHelpApp from './pages/mobile-apps/MobiHelpApp';
 import MobiCameraApp from './pages/mobile-apps/MobiCameraApp';
 import MobiSettingsApp from './pages/mobile-apps/MobiSettingsApp';
+import MobiMapsApp from './pages/mobile-apps/MobiMapsApp';
+import MobiMusicApp from './pages/mobile-apps/MobiMusicApp';
+import MobiGalleryApp from './pages/mobile-apps/MobiGalleryApp';
 
 import CallWidget from './components/CallWidget';
 import CallNotificationWidget from './components/CallNotificationWidget';
 
-import { Page, UserRole, AppLaunchable, WeblyApp } from './types';
+import { Page, UserRole, AppLaunchable, WeblyApp, WindowInstance } from './types';
 import { database } from './services/database';
 
 const WeblyStoreIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1012 10.125A2.625 2.625 0 0012 4.875z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.125v10.125" /><path strokeLinecap="round" strokeLinejoin="round" d="M18.375 10.125c.621 0 1.125.504 1.125 1.125v8.25" /><path strokeLinecap="round" strokeLinejoin="round" d="M5.625 10.125c-.621 0-1.125.504-1.125 1.125v8.25" /></svg>;
@@ -75,6 +80,9 @@ const ProfileIcon = (props: { className?: string }) => <svg xmlns="http://www.w3
 const HelpAppIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const CameraIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" /></svg>;
 const SettingsAppIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const MapsIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>;
+const MusicIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>;
+const GalleryIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 
 export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: { width: number, height: number } }> = {
     'app-phone': { component: PhoneApp, defaultSize: { width: 450, height: 700 } },
@@ -92,6 +100,7 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
     'app-webly-store': { component: WeblyStoreApp },
     'app-webview': { component: WebAppViewer, defaultSize: { width: 1024, height: 768 } },
     'app-browser': { component: LynixBrowserApp, defaultSize: { width: 1000, height: 700 } },
+    'app-settings': { component: SettingsApp, defaultSize: { width: 800, height: 600 } }, // Added Desktop Settings
 };
 
 export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
@@ -117,6 +126,7 @@ export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
     'app-webly-store': WeblyStoreApp,
     'app-webview': WebAppViewer,
     'app-browser': LynixBrowserApp,
+    'app-settings': SettingsApp, // Added Desktop Settings
 };
 
 export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
@@ -144,6 +154,9 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-help': MobiHelpApp,
     'app-camera': MobiCameraApp,
     'app-settings': MobiSettingsApp,
+    'app-maps': MobiMapsApp,
+    'app-music': MobiMusicApp,
+    'app-gallery': MobiGalleryApp,
 };
 
 export const APPS_LIST: AppLaunchable[] = [
@@ -151,19 +164,11 @@ export const APPS_LIST: AppLaunchable[] = [
   { id: 'profile', label: 'Profile', icon: <ProfileIcon />, page: 'profile', isHidden: true },
   { id: 'app-help', label: 'Help?', icon: <HelpAppIcon />, page: 'app-help' },
   { id: 'app-camera', label: 'Camera', icon: <CameraIcon />, page: 'app-camera' },
-  { id: 'app-settings', label: 'Settings', icon: <SettingsAppIcon />, page: 'app-settings' }
+  { id: 'app-settings', label: 'Settings', icon: <SettingsAppIcon />, page: 'app-settings' },
+  { id: 'app-maps', label: 'Maps', icon: <MapsIcon />, page: 'app-maps' },
+  { id: 'app-music', label: 'Music', icon: <MusicIcon />, page: 'app-music' },
+  { id: 'app-gallery', label: 'Gallery', icon: <GalleryIcon />, page: 'app-gallery' },
 ];
-
-export interface WindowInstance {
-    id: string;
-    appId: Page;
-    title: string;
-    position: { x: number, y: number };
-    size: { width: number, height: number };
-    zIndex: number;
-    state: 'open' | 'minimized';
-    props?: any;
-}
 
 const BootScreen: React.FC = () => {
     const [stage, setStage] = useState(0);
@@ -233,11 +238,13 @@ const App: React.FC = () => {
         const handlePeriodicRefresh = async () => {
             setNotification({ title: 'Database', message: 'Refreshing apps... Services are going to be inactive for 5 seconds', icon: <DatabaseIcon /> });
             await new Promise(resolve => setTimeout(resolve, 5000));
-            const { profile } = await database.getUserProfile(user.auth_id!);
-            if (profile) updateUserProfile(profile);
+            try {
+                const { profile } = await database.getUserProfile(user.auth_id!);
+                if (profile) updateUserProfile(profile);
+            } catch(e) { console.error("Refresh failed", e); }
             setNotification(null);
         };
-        const intervalId = setInterval(handlePeriodicRefresh, 180000);
+        const intervalId = setInterval(handlePeriodicRefresh, 90000); 
         return () => clearInterval(intervalId);
     }, [isLoggedIn, user?.auth_id, updateUserProfile]);
 
@@ -280,6 +287,12 @@ const App: React.FC = () => {
         const coreApps = APPS_LIST;
         let availableApps: AppLaunchable[] = coreApps;
 
+        // Software Update Check
+        const currentVersion = localStorage.getItem('lynix_version');
+        if (currentVersion !== '13.0') {
+            availableApps = availableApps.filter(app => !['app-maps', 'app-music', 'app-gallery'].includes(app.id));
+        }
+
         if (user?.installed_webly_apps && allWeblyApps.length > 0) {
              const installedApps: AppLaunchable[] = user.installed_webly_apps
                 .map((appId): AppLaunchable | null => {
@@ -298,7 +311,7 @@ const App: React.FC = () => {
                     };
                 })
                 .filter((app): app is AppLaunchable => app !== null);
-            availableApps = [...coreApps, ...installedApps];
+            availableApps = [...availableApps, ...installedApps];
         }
 
         if (user) {
@@ -394,11 +407,13 @@ const App: React.FC = () => {
     const wallpaperClass = (isLoggedIn || !isMobileDevice) ? (wallpapers[wallpaper] || wallpapers.forest).class : 'bg-light-bg dark:bg-dark-bg';
 
     return (
-        <div className={`flex flex-col min-h-screen ${isDark ? 'dark' : ''} ${wallpaperClass} font-sans transition-all duration-500`}>
-            {renderLayout()}
-            <CallWidget />
-            <CallNotificationWidget />
-        </div>
+        <LanguageProvider>
+            <div className={`flex flex-col min-h-screen ${isDark ? 'dark' : ''} ${wallpaperClass} font-sans transition-all duration-500`}>
+                {renderLayout()}
+                <CallWidget />
+                <CallNotificationWidget />
+            </div>
+        </LanguageProvider>
     );
 };
 

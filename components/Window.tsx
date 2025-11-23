@@ -1,6 +1,5 @@
-
 import React, { useRef, useCallback } from 'react';
-import { WindowInstance } from '../App';
+import { WindowInstance } from '../types';
 
 interface WindowComponentProps {
     win: WindowInstance;

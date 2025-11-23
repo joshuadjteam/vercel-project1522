@@ -1,4 +1,3 @@
-
 import type { ReactNode } from 'react';
 
 export enum UserRole {
@@ -131,6 +130,9 @@ export type Page =
     | 'app-help'
     | 'app-camera'
     | 'app-settings'
+    | 'app-maps'
+    | 'app-music'
+    | 'app-gallery'
     | 'mobi-app-webview'
     | 'auth-callback';
 
@@ -153,3 +155,14 @@ export type NavAction = {
   action: 'navigate' | 'logout';
   params?: any;
 };
+
+export interface WindowInstance {
+    id: string;
+    appId: string;
+    title: string;
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+    zIndex: number;
+    state: 'open' | 'minimized' | 'maximized';
+    props?: any;
+}
