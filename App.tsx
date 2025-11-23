@@ -240,7 +240,7 @@ const BootScreen: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    const { user, isLoggedIn, isLoading } = useAuth();
+    const { user, isLoggedIn, isLoading, updateUserProfile } = useAuth();
     const { view: consoleView, isInitialChoice } = useConsoleView();
     const [page, setPage] = useState<Page>('home');
     const [pageParams, setPageParams] = useState<any>({});
@@ -253,6 +253,22 @@ const App: React.FC = () => {
     const [showBootScreen, setShowBootScreen] = useState(false); // Default false, updated in useEffect
     const [isLocked, setIsLocked] = useState(false);
     const inactivityTimerRef = useRef<any>(null);
+
+    // Periodic Profile Refresh (Every 180 seconds)
+    useEffect(() => {
+        if (!isLoggedIn || !user?.auth_id) return;
+
+        const refreshProfile = async () => {
+            const { profile } = await database.getUserProfile(user.auth_id!);
+            if (profile) {
+                updateUserProfile(profile);
+            }
+        };
+
+        const intervalId = setInterval(refreshProfile, 180000); // 180,000 ms = 3 minutes
+
+        return () => clearInterval(intervalId);
+    }, [isLoggedIn, user?.auth_id, updateUserProfile]);
 
     // Inactivity Timer Logic
     useEffect(() => {

@@ -3,12 +3,30 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
 
+// Icons
 const ProfileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const PowerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
 const MoonIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>;
 const HelpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const UserSwitchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>;
+
+// Network Icons
+const EthernetIcon = () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" opacity="0.5"/></svg>; // Simplified Globe/Earth
+const SignalIcon = ({ strength }: { strength: number }) => (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M2 22h20V2L2 22zm18-2h-3v-3h3v3zm0-5h-3v-3h3v3zm0-5h-3V7h3v3z" fillOpacity={strength >= 4 ? 1 : 0.3} />
+        <path d="M15 20h-3v-8h3v8zm-5 0H7v-5h3v5zm-5 0H2v-2h3v2z" fillOpacity={strength >= 2 ? 1 : 0.3} /> 
+        {/* A generic signal bar structure */}
+        <path d="M2 22L22 2" fill="none" stroke="none" /> 
+        {/* Constructing bars manually for clarity */}
+        <rect x="2" y="18" width="3" height="4" fillOpacity={strength >= 1 ? 1 : 0.3} />
+        <rect x="7" y="14" width="3" height="8" fillOpacity={strength >= 2 ? 1 : 0.3} />
+        <rect x="12" y="10" width="3" height="12" fillOpacity={strength >= 3 ? 1 : 0.3} />
+        <rect x="17" y="6" width="3" height="16" fillOpacity={strength >= 4 ? 1 : 0.3} />
+    </svg>
+);
+const WifiIcon = () => <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.01 21.49L23.64 7c-.45-.34-4.93-4-11.64-4C5.28 3 .81 6.66.36 7l11.63 14.49.01.01.01-.01z" /></svg>;
 
 interface MobileTopBarProps {
     navigate: (page: Page) => void;
@@ -20,10 +38,74 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
     const [time, setTime] = useState(new Date());
     const [isOpen, setIsOpen] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
+    
+    // Status States
+    const [battery, setBattery] = useState<{ level: number; charging: boolean } | null>(null);
+    const [networkType, setNetworkType] = useState<string>('wifi');
+    const [cellularGen, setCellularGen] = useState<string>('');
+    const [signalStrength, setSignalStrength] = useState<number>(4); // 0-4
 
     useEffect(() => {
         const timerId = setInterval(() => setTime(new Date()), 1000);
         return () => clearInterval(timerId);
+    }, []);
+
+    // Battery Monitor
+    useEffect(() => {
+        if ((navigator as any).getBattery) {
+            (navigator as any).getBattery().then((bat: any) => {
+                const updateBat = () => setBattery({ level: Math.round(bat.level * 100), charging: bat.charging });
+                updateBat();
+                bat.addEventListener('levelchange', updateBat);
+                bat.addEventListener('chargingchange', updateBat);
+            });
+        } else {
+            setBattery({ level: 100, charging: false }); // Fallback
+        }
+    }, []);
+
+    // Network Monitor
+    useEffect(() => {
+        const updateNetwork = () => {
+            const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+            if (conn) {
+                const type = conn.type || 'unknown';
+                const effectiveType = conn.effectiveType || '4g';
+                const rtt = conn.rtt || 50; // latency
+                const downlink = conn.downlink || 10; // Mbps
+
+                setNetworkType(type);
+
+                // Calculate cellular generation label
+                if (effectiveType === 'slow-2g') setCellularGen('GPRS');
+                else if (effectiveType === '2g') setCellularGen('E');
+                else if (effectiveType === '3g') setCellularGen('H+');
+                else if (effectiveType === '4g') {
+                    // Heuristic: High speed + 4g usually implies decent LTE or 5G in JS API context
+                    if (downlink > 8) setCellularGen('5G');
+                    else setCellularGen('LTE');
+                } else {
+                    setCellularGen('');
+                }
+
+                // Simulate Signal Strength based on RTT (latency)
+                // Lower RTT = Better Signal
+                if (rtt < 50) setSignalStrength(4);
+                else if (rtt < 100) setSignalStrength(3);
+                else if (rtt < 200) setSignalStrength(2);
+                else setSignalStrength(1);
+            }
+        };
+
+        updateNetwork();
+        const conn = (navigator as any).connection;
+        if (conn) {
+            conn.addEventListener('change', updateNetwork);
+        }
+        
+        // Fallback polling for browsers that don't fire events often
+        const interval = setInterval(updateNetwork, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -63,9 +145,32 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
                 className="w-full bg-gradient-to-b from-black/80 to-transparent text-white p-2 flex justify-between items-center flex-shrink-0 z-50 cursor-pointer fixed top-0 left-0 right-0 h-8 px-4"
             >
                 <span className="text-xs font-medium drop-shadow-md">{timeString}</span>
-                <div className="flex items-center space-x-2 drop-shadow-md">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0a1.5 1.5 0 0 1 0 2.121l-9.536 9.536a1.5 1.5 0 0 1-2.121 0L1.393 11.514a1.5 1.5 0 0 1 0-2.121z"/></svg>
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M16.667 4H15V2H9v2H7.333C6.597 4 6 4.597 6 5.333V20.667C6 21.403 6.597 22 7.333 22h9.334c.736 0 1.333-.597 1.333-1.333V5.333C18 4.597 17.403 4 16.667 4z"/></svg>
+                <div className="flex items-center space-x-2 drop-shadow-md text-xs font-medium">
+                    {/* Network Icon Logic */}
+                    {networkType === 'ethernet' ? (
+                        <EthernetIcon />
+                    ) : networkType === 'wifi' || networkType === 'unknown' ? (
+                        <WifiIcon />
+                    ) : (
+                        <div className="flex items-center space-x-1">
+                            <span>{cellularGen}</span>
+                            <SignalIcon strength={signalStrength} />
+                        </div>
+                    )}
+
+                    {/* Battery Icon */}
+                    <div className="flex items-center space-x-1">
+                        <span>{battery ? `${battery.level}%` : ''}</span>
+                        <div className="relative w-5 h-3 border border-white rounded-sm flex items-center p-0.5">
+                            <div 
+                                className={`h-full bg-white ${battery && battery.level <= 20 ? 'bg-red-500' : 'bg-white'}`} 
+                                style={{ width: `${battery ? battery.level : 100}%` }}
+                            ></div>
+                            {battery?.charging && (
+                                <span className="absolute inset-0 flex items-center justify-center text-[10px] text-black font-bold">⚡</span>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </header>
 
