@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useCall } from '../../hooks/useCall';
 import VoiceAssistantWidget from '../../components/VoiceAssistantWidget';
@@ -59,6 +60,7 @@ const PhoneApp: React.FC = () => {
     const handleCall = async (withVideo: boolean) => {
         if (targetUser.trim()) {
             let finalTarget = targetUser.trim();
+            let extraInfo = undefined;
             
             // Check if it's a 10-digit number starting with 2901
             if (/^2901\d{6}$/.test(finalTarget)) {
@@ -71,11 +73,12 @@ const PhoneApp: React.FC = () => {
                 }
                 
                 if (username) {
+                    extraInfo = finalTarget; // Pass the number as extra info
                     finalTarget = username;
                 }
             }
             
-            startP2PCall(finalTarget, withVideo);
+            startP2PCall(finalTarget, withVideo, extraInfo);
         }
     };
 

@@ -27,16 +27,10 @@ const CallContext = createContext<CallContextType | undefined>(undefined);
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun.l.google.com:5349" },
-    { urls: "stun:stun1.l.google.com:3478" },
-    { urls: "stun:stun1.l.google.com:5349" },
+    { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:5349" },
-    { urls: "stun:stun3.l.google.com:3478" },
-    { urls: "stun:stun3.l.google.com:5349" },
+    { urls: "stun:stun3.l.google.com:19302" },
     { urls: "stun:stun4.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:5349" },
-    { urls: 'stun:stun.services.mozilla.com' },
 ];
 
 export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -55,25 +49,25 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const pc = useRef<RTCPeerConnection | null>(null);
     const channelRef = useRef<RealtimeChannel | null>(null);
     const offerForIncomingCall = useRef<RTCSessionDescriptionInit | null>(null);
-    const callTimeoutRef = useRef<number | null>(null);
-    const callDurationIntervalRef = useRef<number | null>(null);
+    const callTimeoutRef = useRef<any>(null);
+    const callDurationIntervalRef = useRef<any>(null);
+    const iceCandidatesQueue = useRef<RTCIceCandidate[]>([]);
     
-    // Keep a ref to current state for event handlers/callbacks to access latest values
     const stateRef = useRef({ user, isCalling, callee, callStatus, incomingCall, localStream, isLoggedIn });
     stateRef.current = { user, isCalling, callee, callStatus, incomingCall, localStream, isLoggedIn };
 
-    // --- Signaling Setup (Supabase Realtime Broadcast) ---
+    // --- Signaling Setup ---
     useEffect(() => {
         if (!isLoggedIn || !user) return;
 
-        console.log("Initializing P2P Signaling...");
-        
-        // Join a global signaling channel. 
-        const channel = supabase.channel('lynix-global-signaling');
+        const channel = supabase.channel('lynix-global-signaling', {
+            config: {
+                broadcast: { self: false }
+            }
+        });
 
         channel
             .on('broadcast', { event: 'signal' }, ({ payload }) => {
-                // Filter: Only process messages strictly intended for me
                 if (payload.target === user.username) {
                     console.log(`[Signaling] Received ${payload.type} from ${payload.from}`);
                     handleSignal({
@@ -92,7 +86,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         channelRef.current = channel;
 
         return () => {
-            console.log("Disconnecting Signaling...");
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
@@ -110,8 +103,21 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     data: data
                 }
             });
-        } else {
-            console.warn("Signaling channel not ready, cannot send message.");
+        }
+    }, []);
+
+    const processIceQueue = useCallback(async () => {
+        if (!pc.current || !pc.current.remoteDescription) return;
+        console.log(`Processing ${iceCandidatesQueue.current.length} buffered ICE candidates`);
+        while (iceCandidatesQueue.current.length > 0) {
+            const candidate = iceCandidatesQueue.current.shift();
+            if (candidate) {
+                try {
+                    await pc.current.addIceCandidate(candidate);
+                } catch (e) {
+                    console.error("Error adding buffered ICE candidate", e);
+                }
+            }
         }
     }, []);
 
@@ -133,9 +139,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setLocalStream(null);
         }
         
-        if (callTimeoutRef.current) { window.clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
-        if (callDurationIntervalRef.current) { window.clearInterval(callDurationIntervalRef.current); callDurationIntervalRef.current = null; }
+        if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
+        if (callDurationIntervalRef.current) { clearInterval(callDurationIntervalRef.current); callDurationIntervalRef.current = null; }
         
+        iceCandidatesQueue.current = [];
         setRemoteStream(null); setIsVideoCall(false); setIsCalling(false); setCallee(''); setCallStatus(''); setCallDuration(0); setIncomingCall(null); setRemoteExtraInfo(null);
         offerForIncomingCall.current = null;
     }, [sendSignal]);
@@ -154,13 +161,13 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
         
         peer.onconnectionstatechange = () => {
+            console.log("Connection State:", peer.connectionState);
             switch(peer.connectionState) {
                 case 'connected':
                     setCallStatus('Connected');
-                    if (callDurationIntervalRef.current) window.clearInterval(callDurationIntervalRef.current);
-                    callDurationIntervalRef.current = window.setInterval(() => setCallDuration(d => d + 1), 1000);
+                    if (callDurationIntervalRef.current) clearInterval(callDurationIntervalRef.current);
+                    callDurationIntervalRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
                     break;
-                case 'disconnected':
                 case 'failed':
                 case 'closed':
                     stableEndCall(targetUsername);
@@ -178,7 +185,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         switch (type) {
             case 'incoming-call': 
                 if (stateRef.current.isCalling) {
-                        sendSignal(from, 'call-declined', { reason: 'busy' });
+                    sendSignal(from, 'call-declined', { reason: 'busy' });
                 } else {
                     setIncomingCall({ from: from, isVideoCall: payload.isVideoCall }); 
                     offerForIncomingCall.current = payload.offer; 
@@ -189,7 +196,9 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     try { 
                         await pc.current.setRemoteDescription(new RTCSessionDescription(payload.answer)); 
                         setCallStatus('Connecting...'); 
-                        if (callTimeoutRef.current) window.clearTimeout(callTimeoutRef.current); 
+                        // CRITICAL FIX: Process queue on caller side after answer reception
+                        await processIceQueue();
+                        if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current); 
                     } catch(e) { 
                         console.error("Error setting remote desc:", e); 
                         stableEndCall(from); 
@@ -206,9 +215,18 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 stableEndCall(from); 
                 break;
             case 'ice-candidate': 
-                if (pc.current && payload.candidate) { 
-                    try { await pc.current.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (e) { console.error("Error adding ICE:", e); } 
-                } 
+                if (payload.candidate) {
+                    const candidate = new RTCIceCandidate(payload.candidate);
+                    if (pc.current && pc.current.remoteDescription && pc.current.remoteDescription.type) {
+                        try {
+                            await pc.current.addIceCandidate(candidate);
+                        } catch(e) {
+                            console.error("Error adding ICE candidate", e);
+                        }
+                    } else {
+                        iceCandidatesQueue.current.push(candidate);
+                    }
+                }
                 break;
         }
     };
@@ -224,41 +242,34 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             
             if (!channelRef.current) {
-                setCallStatus('Signaling offline. Retrying...');
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                if (!channelRef.current) {
-                     setCallStatus('Offline');
-                     return;
-                }
-            }
-
-            // Verify user exists first
-            setCallStatus('Checking user...');
-            const targetUser = await database.getUserByUsername(calleeUsername);
-            if (!targetUser) {
-                setCallStatus('User not found');
+                setCallStatus('Network error');
                 setTimeout(() => setCallStatus(''), 2000);
                 return;
             }
 
+            // Reset state
+            iceCandidatesQueue.current = [];
             setIsCalling(true); 
             setCallStatus('Initializing...'); 
             setIsVideoCall(withVideo); 
             setCallee(calleeUsername);
             if (extraInfo) setRemoteExtraInfo(extraInfo);
             
+            // Get Media first to ensure permissions
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
             setLocalStream(stream);
             
+            // Create PC
             const peerConnection = await createPeerConnection(calleeUsername, stream);
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
             
+            // Send Invite
             sendSignal(calleeUsername, 'incoming-call', { isVideoCall: withVideo, offer });
             setCallStatus('Ringing...');
             
-            // Timeout if user is offline/doesn't answer
-            callTimeoutRef.current = window.setTimeout(() => { 
+            // Timeout
+            callTimeoutRef.current = setTimeout(() => { 
                 if(stateRef.current.isCalling && stateRef.current.callStatus.startsWith('Ringing')) { 
                     setCallStatus('No answer'); 
                     setTimeout(() => stableEndCall(calleeUsername), 3000); 
@@ -267,9 +278,14 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             
         } catch (error: any) { 
             console.error('Error starting P2P call:', error); 
-            setCallStatus(`Error: ${error.message || 'Failed to start'}`); 
+            setCallStatus(`Call Failed`);
+            // Clean up immediately if setup failed
+            if (localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                setLocalStream(null);
+            }
             setIsCalling(false);
-            setLocalStream(null);
+            setTimeout(() => setCallStatus(''), 3000);
         }
     }, [createPeerConnection, sendSignal, stableEndCall]);
 
@@ -277,23 +293,36 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!stateRef.current.incomingCall || !stateRef.current.user || !offerForIncomingCall.current) return;
         const caller = stateRef.current.incomingCall.from;
         try {
-            setIsCalling(true); setCallStatus('Connecting...'); setCallee(caller); setIsVideoCall(stateRef.current.incomingCall.isVideoCall);
+            // Reset queue
+            iceCandidatesQueue.current = [];
+            
+            setIsCalling(true); 
+            setCallStatus('Connecting...'); 
+            setCallee(caller); 
+            setIsVideoCall(stateRef.current.incomingCall.isVideoCall);
             
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: stateRef.current.incomingCall.isVideoCall });
             setLocalStream(stream);
             
             const peerConnection = await createPeerConnection(caller, stream);
+            
+            // Set remote description first (the offer)
             await peerConnection.setRemoteDescription(new RTCSessionDescription(offerForIncomingCall.current));
+            
+            // Process any ICE candidates that arrived while we were setting up
+            await processIceQueue();
+
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
             
             sendSignal(caller, 'call-accepted', { answer });
-            setIncomingCall(null); offerForIncomingCall.current = null;
+            setIncomingCall(null); 
+            offerForIncomingCall.current = null;
         } catch (error: any) { 
             console.error("Error accepting call:", error); 
             stableEndCall(caller); 
         }
-    }, [createPeerConnection, sendSignal, stableEndCall]);
+    }, [createPeerConnection, sendSignal, stableEndCall, processIceQueue]);
 
     const declineCall = useCallback(() => {
         if (!stateRef.current.incomingCall || !stateRef.current.user) return;
