@@ -9,9 +9,10 @@ const RecentsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5
 
 interface MobileNavBarProps {
     navigate: (page: Page) => void;
+    onRecents?: () => void;
 }
 
-const MobileNavBar: React.FC<MobileNavBarProps> = ({ navigate }) => {
+const MobileNavBar: React.FC<MobileNavBarProps> = ({ navigate, onRecents }) => {
     
     const handleBack = () => {
         // In a real router, this would go back. 
@@ -25,8 +26,7 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ navigate }) => {
     };
 
     const handleRecents = () => {
-        // Stub for recents
-        // Could act as a clear cache or just visual feedback
+        if (onRecents) onRecents();
     };
 
     return (

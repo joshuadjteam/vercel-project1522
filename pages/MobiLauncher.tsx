@@ -41,6 +41,7 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
     const [date, setDate] = useState(new Date());
     const [pageIndex, setPageIndex] = useState(0);
     const { wallpaper } = useTheme();
+    const [touchStart, setTouchStart] = useState<number | null>(null);
 
     useEffect(() => {
         const timer = setInterval(() => setDate(new Date()), 60000);
@@ -87,6 +88,27 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
     // Wallpaper handling
     const bgClass = wallpaper ? "" : "bg-gradient-to-b from-[#4A6C8C] via-[#2C4763] to-[#1F364D]";
 
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchStart(e.touches[0].clientX);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStart === null) return;
+        const touchEnd = e.changedTouches[0].clientX;
+        const diff = touchStart - touchEnd;
+
+        if (diff > 50) { // Swipe Left -> Next Page
+            if (pageIndex < totalPages - 1) {
+                setPageIndex(pageIndex + 1);
+            }
+        } else if (diff < -50) { // Swipe Right -> Prev Page
+            if (pageIndex > 0) {
+                setPageIndex(pageIndex - 1);
+            }
+        }
+        setTouchStart(null);
+    };
+
     return (
         <div 
             className={`w-full h-full flex flex-col relative overflow-hidden font-sans text-white ${bgClass}`}
@@ -105,7 +127,11 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
             </div>
 
             {/* Paged App Grid Area (Flexible Height) */}
-            <div className="flex-grow flex flex-col relative">
+            <div 
+                className="flex-grow flex flex-col relative touch-pan-y" 
+                onTouchStart={handleTouchStart} 
+                onTouchEnd={handleTouchEnd}
+            >
                 <div className="flex-grow grid grid-cols-5 grid-rows-4 gap-2 p-4 items-start content-start">
                     {currentApps.map(app => (
                         <button 

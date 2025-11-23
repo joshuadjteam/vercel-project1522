@@ -15,6 +15,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ isLocked, onUnlock }) => {
     const [error, setError] = useState('');
     const [hasPin, setHasPin] = useState(false);
     const [time, setTime] = useState(new Date());
+    const [touchStart, setTouchStart] = useState<number | null>(null);
 
     useEffect(() => {
         if (user) {
@@ -61,12 +62,32 @@ const LockScreen: React.FC<LockScreenProps> = ({ isLocked, onUnlock }) => {
         setPin(prev => prev.slice(0, -1));
     };
 
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchStart(e.touches[0].clientY);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStart === null) return;
+        const touchEnd = e.changedTouches[0].clientY;
+        // Swipe up threshold
+        if (touchStart - touchEnd > 50) {
+            if (!hasPin) {
+                onUnlock();
+            }
+        }
+        setTouchStart(null);
+    };
+
     if (!isLocked) return null;
 
     const wallpaperClass = wallpapers[wallpaper]?.class || 'bg-black';
 
     return (
-        <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-between pb-10 text-white font-sans animate-fade-in overflow-hidden">
+        <div 
+            className="fixed inset-0 z-[10000] flex flex-col items-center justify-between pb-10 text-white font-sans animate-fade-in overflow-hidden touch-none"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+        >
             {/* Wallpaper Background with Blur/Dim */}
             <div className={`absolute inset-0 ${wallpaperClass} bg-cover bg-center`}></div>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>

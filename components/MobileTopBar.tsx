@@ -38,6 +38,7 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
     const [time, setTime] = useState(new Date());
     const [isOpen, setIsOpen] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
+    const [touchStart, setTouchStart] = useState<number | null>(null);
     
     // Status States
     const [battery, setBattery] = useState<{ level: number; charging: boolean } | null>(null);
@@ -131,6 +132,20 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
         onSleep();
     };
 
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchStart(e.touches[0].clientY);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStart === null) return;
+        const touchEnd = e.changedTouches[0].clientY;
+        // Swipe down threshold
+        if (touchEnd - touchStart > 50) {
+            setIsOpen(true);
+        }
+        setTouchStart(null);
+    };
+
     const QuickTile: React.FC<{ icon: React.ReactNode, label: string, onClick: () => void, active?: boolean }> = ({ icon, label, onClick, active }) => (
         <button onClick={onClick} className={`flex flex-col items-center justify-center p-4 rounded-2xl w-full aspect-square transition-all ${active ? 'bg-[#a8c7fa] text-[#041e49]' : 'bg-[#303030] text-white'}`}>
             <div className="mb-2">{icon}</div>
@@ -142,7 +157,9 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
         <>
             <header 
                 onClick={() => setIsOpen(true)}
-                className="w-full bg-gradient-to-b from-black/80 to-transparent text-white p-2 flex justify-between items-center flex-shrink-0 z-50 cursor-pointer fixed top-0 left-0 right-0 h-8 px-4"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                className="w-full bg-gradient-to-b from-black/80 to-transparent text-white p-2 flex justify-between items-center flex-shrink-0 z-50 cursor-pointer fixed top-0 left-0 right-0 h-8 px-4 touch-none"
             >
                 <span className="text-xs font-medium drop-shadow-md">{timeString}</span>
                 <div className="flex items-center space-x-2 drop-shadow-md text-xs font-medium">

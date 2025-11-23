@@ -253,6 +253,10 @@ const App: React.FC = () => {
     const [showBootScreen, setShowBootScreen] = useState(false); // Default false, updated in useEffect
     const [isLocked, setIsLocked] = useState(false);
     const inactivityTimerRef = useRef<any>(null);
+    
+    // Recents View State
+    const [recentApps, setRecentApps] = useState<AppLaunchable[]>([]);
+    const [showRecents, setShowRecents] = useState(false);
 
     // Periodic Profile Refresh (Every 180 seconds)
     useEffect(() => {
@@ -400,6 +404,15 @@ const App: React.FC = () => {
     const navigate = useCallback((newPage: Page, params: any = {}) => {
         const appData = params?.appData as AppLaunchable | undefined;
         
+        // Mobile Recents Tracking
+        if (isMobileDevice && appData) {
+            setRecentApps(prev => {
+                // Remove if exists to move to top
+                const filtered = prev.filter(app => app.id !== appData.id);
+                return [appData, ...filtered].slice(0, 10); // Keep last 10
+            });
+        }
+
         if (appData?.isWebApp && appData.url && appData.load_in_console === false) {
             window.open(appData.url, '_blank');
             return;
@@ -510,9 +523,38 @@ const App: React.FC = () => {
                             <MobileComponent navigate={navigate} appsList={dynamicAppsList} {...pageParams} />
                         </main>
                         
+                        {/* Recents Overlay */}
+                        {showRecents && (
+                            <div className="absolute inset-0 bg-black/90 backdrop-blur-md z-[60] flex flex-col p-6 animate-fade-in">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-white text-2xl font-bold">Recent Apps</h2>
+                                    <button onClick={() => setShowRecents(false)} className="text-white bg-white/10 px-4 py-2 rounded-full text-sm">Close</button>
+                                </div>
+                                {recentApps.length === 0 ? (
+                                    <div className="flex-grow flex items-center justify-center text-gray-500">No recent apps</div>
+                                ) : (
+                                    <div className="flex-grow overflow-y-auto space-y-4 pb-20">
+                                        {recentApps.map(app => (
+                                            <div 
+                                                key={app.id} 
+                                                onClick={(e) => { e.stopPropagation(); navigate(app.page, { ...app.params, appData: app }); setShowRecents(false); }} 
+                                                className="bg-[#303030] p-4 rounded-2xl flex items-center space-x-4 shadow-lg active:scale-95 transition-transform"
+                                            >
+                                                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                                                    {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8" })}
+                                                </div>
+                                                <span className="text-white font-bold text-lg">{app.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <button onClick={() => { setRecentApps([]); setShowRecents(false); }} className="w-full py-3 bg-red-600/80 text-white rounded-xl font-semibold mt-4">Clear All</button>
+                            </div>
+                        )}
+
                         {/* Navigation Bar */}
                         <div className="relative z-50">
-                            <MobileNavBar navigate={navigate} />
+                            <MobileNavBar navigate={navigate} onRecents={() => setShowRecents(true)} />
                         </div>
                     </div>
                 );
