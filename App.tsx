@@ -11,6 +11,7 @@ import WindowComponent from './components/Window';
 import FullScreenAppHeader from './components/FullScreenAppHeader';
 import MobileTopBar from './components/MobileTopBar';
 import MobileNavBar from './components/MobileNavBar';
+import LockScreen from './components/LockScreen'; // Import LockScreen
 import HomePage from './pages/HomePage';
 import ConsolePage from './pages/ConsolePage';
 import FaisConsole from './pages/FaisConsole';
@@ -22,7 +23,7 @@ import COSLaunch from './pages/COSLaunch';
 import SignInPage from './pages/SignInPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPortal from './pages/AdminPortal';
-import SupportPage from './pages/SupportPage'; // Import new SupportPage
+import SupportPage from './pages/SupportPage';
 import PhoneApp from './pages/apps/PhoneApp';
 import ChatApp from './pages/apps/ChatApp';
 import LocalMailApp from './pages/apps/LocalMailApp';
@@ -59,6 +60,8 @@ import MobiWeblyStoreApp from './pages/mobile-apps/MobiWeblyStoreApp';
 import MobiWebAppViewer from './pages/mobile-apps/MobiWebAppViewer';
 import MobiLynixBrowserApp from './pages/mobile-apps/MobiLynixBrowserApp';
 import MobiHelpApp from './pages/mobile-apps/MobiHelpApp';
+import MobiCameraApp from './pages/mobile-apps/MobiCameraApp';
+import MobiSettingsApp from './pages/mobile-apps/MobiSettingsApp'; // Import Settings App
 
 
 // Call-related imports
@@ -73,6 +76,8 @@ import { database } from './services/database';
 const WeblyStoreIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1012 10.125A2.625 2.625 0 0012 4.875z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 10.125v10.125" /><path strokeLinecap="round" strokeLinejoin="round" d="M18.375 10.125c.621 0 1.125.504 1.125 1.125v8.25" /><path strokeLinecap="round" strokeLinejoin="round" d="M5.625 10.125c-.621 0-1.125.504-1.125 1.125v8.25" /></svg>;
 const ProfileIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const HelpAppIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const CameraIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" /></svg>;
+const SettingsAppIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 
 
 export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: { width: number, height: number } }> = {
@@ -96,7 +101,7 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
 // All items that can be a "page", including full-screen apps and standalone pages
 export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
     'home': HomePage,
-    'contact': SupportPage, // Mapping 'contact' to SupportPage as well for backward compatibility
+    'contact': SupportPage, 
     'support': SupportPage,
     'signin': SignInPage,
     'profile': ProfilePage,
@@ -124,7 +129,7 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'home': MobiLauncher,
     'profile': MobiProfilePage,
     'admin': AdminPortal,
-    'contact': MobiHelpApp, // Direct map to help app
+    'contact': MobiHelpApp, 
     'support': MobiHelpApp,
     'app-phone': MobiPhoneApp,
     'app-chat': MobiChatApp,
@@ -143,13 +148,17 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-webview': MobiWebAppViewer, 
     'app-browser': MobiLynixBrowserApp, 
     'app-help': MobiHelpApp,
+    'app-camera': MobiCameraApp,
+    'app-settings': MobiSettingsApp,
 };
 
 
 export const APPS_LIST: AppLaunchable[] = [
   { id: 'app-webly-store', label: 'Store', icon: <WeblyStoreIcon />, page: 'app-webly-store' },
   { id: 'profile', label: 'Profile', icon: <ProfileIcon />, page: 'profile', isHidden: true },
-  { id: 'app-help', label: 'Help?', icon: <HelpAppIcon />, page: 'app-help' }
+  { id: 'app-help', label: 'Help?', icon: <HelpAppIcon />, page: 'app-help' },
+  { id: 'app-camera', label: 'Camera', icon: <CameraIcon />, page: 'app-camera' },
+  { id: 'app-settings', label: 'Settings', icon: <SettingsAppIcon />, page: 'app-settings' }
 ];
 
 export interface WindowInstance {
@@ -163,20 +172,64 @@ export interface WindowInstance {
     props?: any;
 }
 
+// Boot sequence component
 const BootScreen: React.FC = () => {
+    const [stage, setStage] = useState(0);
+    const [showText, setShowText] = useState(false);
+
+    useEffect(() => {
+        const intervals = [2000, 2000, 2000, 2000, 2000]; 
+        let currentTimeout: any;
+
+        const runSequence = (index: number) => {
+            if (index > 5) {
+                setShowText(true);
+                return;
+            }
+            setStage(index);
+            currentTimeout = setTimeout(() => runSequence(index + 1), index < 5 ? 2000 : 100);
+        };
+
+        runSequence(0);
+
+        return () => clearTimeout(currentTimeout);
+    }, []);
+
+    const renderStage = () => {
+        switch (stage) {
+            case 0: return <span className="text-9xl font-bold text-purple-600 animate-pulse">L</span>;
+            case 1: return <span className="text-9xl font-bold text-green-500 animate-pulse">Y</span>;
+            case 2: return <span className="text-9xl font-bold text-orange-500 animate-pulse">N</span>;
+            case 3: return <span className="text-9xl font-bold text-teal-400 animate-pulse">I</span>;
+            case 4: return <span className="text-9xl font-bold text-purple-500 animate-pulse">X</span>;
+            case 5: 
+            default:
+                return (
+                    <div className="flex flex-col items-center animate-fade-in">
+                        <div className="w-32 h-32 bg-orange-500 rounded-xl flex items-center justify-center mb-8 relative overflow-hidden">
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-0 h-0 border-l-[40px] border-l-transparent border-r-[40px] border-r-transparent border-t-[60px] border-t-black/80 transform rotate-45"></div>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-0 h-0 border-l-[40px] border-l-transparent border-r-[40px] border-r-transparent border-b-[60px] border-b-black/80 transform -rotate-45"></div>
+                            </div>
+                        </div>
+                        <h1 className="text-2xl font-medium tracking-widest text-white mt-4">Powered by Lynix</h1>
+                    </div>
+                );
+        }
+    };
+
     return (
-        <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-[9999] text-white animate-fade-out delay-[3000ms]">
-            <div className="flex flex-col items-center space-y-4 animate-pulse">
-                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2"/>
-                    <path d="M12 7v10M7 12h10" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                <h1 className="text-2xl font-sans font-medium tracking-wider">LynixOS</h1>
+        <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-[9999] text-white">
+            <div className="flex-grow flex items-center justify-center">
+                {renderStage()}
             </div>
-            <div className="absolute bottom-10 flex flex-col items-center">
-                <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Powered by</p>
-                <p className="text-xl font-bold text-white">Android</p>
-            </div>
+            {showText && (
+                <div className="absolute bottom-16 text-white/80 text-sm animate-pulse">
+                    Lynix is starting...
+                </div>
+            )}
         </div>
     );
 };
@@ -193,6 +246,37 @@ const App: React.FC = () => {
     const nextZIndex = useRef(10);
     const [allWeblyApps, setAllWeblyApps] = useState<WeblyApp[]>([]);
     const [showBootScreen, setShowBootScreen] = useState(true);
+    const [isLocked, setIsLocked] = useState(false);
+    const inactivityTimerRef = useRef<any>(null);
+
+    // Inactivity Timer Logic
+    useEffect(() => {
+        if (!isMobileDevice || !isLoggedIn) return;
+
+        const resetTimer = () => {
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+            inactivityTimerRef.current = setTimeout(() => {
+                setIsLocked(true);
+            }, 30000); // 30 seconds
+        };
+
+        // Initial Start
+        resetTimer();
+
+        // Listeners
+        window.addEventListener('mousemove', resetTimer);
+        window.addEventListener('keydown', resetTimer);
+        window.addEventListener('click', resetTimer);
+        window.addEventListener('touchstart', resetTimer);
+
+        return () => {
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+            window.removeEventListener('mousemove', resetTimer);
+            window.removeEventListener('keydown', resetTimer);
+            window.removeEventListener('click', resetTimer);
+            window.removeEventListener('touchstart', resetTimer);
+        };
+    }, [isMobileDevice, isLoggedIn]);
 
     useEffect(() => {
         database.getWeblyApps().then(setAllWeblyApps);
@@ -200,12 +284,10 @@ const App: React.FC = () => {
 
     useEffect(() => {
         if (isMobileDevice) {
-            // Request notification permission on mount for mobile "APK" feel
             if ('Notification' in window) {
                 Notification.requestPermission();
             }
-            // Hide boot screen after 3s
-            const timer = setTimeout(() => setShowBootScreen(false), 3000);
+            const timer = setTimeout(() => setShowBootScreen(false), 10500);
             return () => clearTimeout(timer);
         } else {
             setShowBootScreen(false);
@@ -214,7 +296,6 @@ const App: React.FC = () => {
 
     const dynamicAppsList = useMemo(() => {
         const coreApps = APPS_LIST;
-        // Default empty if not loaded
         let availableApps: AppLaunchable[] = coreApps;
 
         if (user?.installed_webly_apps && allWeblyApps.length > 0) {
@@ -241,10 +322,8 @@ const App: React.FC = () => {
             availableApps = [...coreApps, ...installedApps];
         }
 
-        // --- Apply Role Restrictions ---
         if (user) {
             if (user.role === UserRole.Overdue) {
-                // Overdue users can only access Profile (to pay/manage account) and Contact
                 return availableApps.filter(app => ['profile', 'contact', 'support', 'app-console-switch', 'app-help'].includes(app.id));
             }
             
@@ -253,15 +332,10 @@ const App: React.FC = () => {
             }
 
             if (user.role === UserRole.NoStore) {
-                // No Store: Remove store app AND any installed web-apps (keep only internal system apps)
                 availableApps = availableApps.filter(app => {
-                    // Hide store app
                     if (app.id === 'app-webly-store') return false;
-                    // Keep profile and help
-                    if (app.id === 'profile' || app.id === 'app-help') return true;
-                    // If it is a web app (installed from store), hide it to prevent workaround
+                    if (app.id === 'profile' || app.id === 'app-help' || app.id === 'app-camera' || app.id === 'app-settings') return true;
                     if (app.isWebApp) return false;
-                    // Keep internal system apps
                     return true;
                 });
             }
@@ -299,7 +373,6 @@ const App: React.FC = () => {
     }, []);
 
     const navigate = useCallback((newPage: Page, params: any = {}) => {
-        // Check if this app is configured to open in a new tab (external)
         const appData = params?.appData as AppLaunchable | undefined;
         
         if (appData?.isWebApp && appData.url && appData.load_in_console === false) {
@@ -343,7 +416,6 @@ const App: React.FC = () => {
             setWindows([...windows, newWindow]);
             setActiveWindowId(newWindow.id);
         } else {
-            // Otherwise, navigate full screen. This applies to mobile and non-windowed consoles.
             setPage(newPage);
             setPageParams(params);
         }
@@ -385,7 +457,7 @@ const App: React.FC = () => {
 
     const renderLayout = () => {
         if (isLoading) {
-            return (
+            return isMobileDevice && showBootScreen ? <BootScreen /> : (
                 <div className="flex-grow flex items-center justify-center bg-black text-white">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
                 </div>
@@ -400,8 +472,14 @@ const App: React.FC = () => {
                 return (
                     <>
                         {showBootScreen && <BootScreen />}
-                        {!isLauncher && <div className="h-6 w-full bg-black/20 absolute top-0 z-50 pointer-events-none"></div>} 
-                        <main className="flex-grow overflow-hidden flex flex-col min-h-0 relative">
+                        <LockScreen isLocked={isLocked} onUnlock={() => setIsLocked(false)} />
+                        
+                        {/* Mobile Top Bar (Status Bar) */}
+                        <div className="absolute top-0 left-0 right-0 z-40">
+                            <MobileTopBar navigate={navigate} onSleep={() => setIsLocked(true)} />
+                        </div>
+
+                        <main className="flex-grow overflow-hidden flex flex-col min-h-0 relative mt-8 pb-12 bg-black">
                             <MobileComponent navigate={navigate} appsList={dynamicAppsList} {...pageParams} />
                         </main>
                         <MobileNavBar navigate={navigate} />
@@ -409,7 +487,6 @@ const App: React.FC = () => {
                 );
             }
 
-            // --- Desktop Logged In ---
             let ConsoleComponent;
             switch (consoleView) {
                 case 'fais': ConsoleComponent = FaisConsole; break;
@@ -418,19 +495,15 @@ const App: React.FC = () => {
                 case 'win': ConsoleComponent = WinLauncher; break;
                 case 'mac': ConsoleComponent = MacLaunch; break;
                 case 'cos': ConsoleComponent = COSLaunch; break;
-                default: ConsoleComponent = ConsolePage; // 'syno'
+                default: ConsoleComponent = ConsolePage; 
             }
 
-            // Consoles that support windowed mode
             const windowedConsoles = ['syno', 'fais', 'win', 'mac', 'cos'];
             const isWindowedEnvironment = windowedConsoles.includes(consoleView);
-
             const isFullScreenOverride = page === 'app-console-switch';
-
             const PageToRender = FULL_PAGE_MAP[page];
             const isShowingAppPage = page !== 'home' && PageToRender && (!isWindowedEnvironment || isFullScreenOverride);
             
-
             if (isShowingAppPage) {
                 return (
                     <div className="flex-grow flex flex-col overflow-hidden">
@@ -442,7 +515,6 @@ const App: React.FC = () => {
                 );
             }
 
-            // Render the base console environment (either windowed or fullscreen launcher)
             return (
                 <div className="relative flex-grow overflow-hidden">
                     <ConsoleComponent navigate={navigate} appsList={dynamicAppsList} />
@@ -463,14 +535,12 @@ const App: React.FC = () => {
             );
         }
 
-        // --- Not Logged In ---
         if (page === 'auth-callback') {
             const PageToRender = FULL_PAGE_MAP[page];
             return <div className="flex-grow flex items-center justify-center p-4"><PageToRender navigate={navigate} /></div>;
         }
         
         if (isMobileDevice) {
-             // Force mandatory login screen for "APK" feel with boot animation
              return (
                 <div className="flex-grow flex flex-col bg-black text-white">
                     {showBootScreen && <BootScreen />}
@@ -482,7 +552,6 @@ const App: React.FC = () => {
         }
         
         const PageToRender = page === 'signin' ? SignInPage : FULL_PAGE_MAP[page] || HomePage;
-
 
         return (
             <>

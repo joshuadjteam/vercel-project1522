@@ -33,7 +33,7 @@ interface BrowserTab {
     isLoading: boolean;
     isBlocked: boolean;
     blobUrl?: string; 
-    navigationId: number; // Added to force loader remount
+    navigationId: number;
 }
 
 interface SearchResult {

@@ -128,6 +128,8 @@ export type Page =
     | 'app-webview'
     | 'app-browser'
     | 'app-help'
+    | 'app-camera'
+    | 'app-settings'
     | 'mobi-app-webview'
     | 'auth-callback';
 
