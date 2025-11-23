@@ -314,6 +314,13 @@ const MobiLynixBrowserApp: React.FC<MobiLynixBrowserAppProps> = ({ navigate, ini
 
     return (
         <div className="w-full h-full flex flex-col bg-[#dfe3e7] dark:bg-[#202124] text-black dark:text-white rounded-lg overflow-hidden font-sans select-none relative">
+             {/* Disclaimer Overlay */}
+            <div className="absolute bottom-8 right-4 bg-black/80 text-white text-[10px] p-3 rounded-lg max-w-[200px] backdrop-blur-md z-30 pointer-events-auto shadow-lg border border-white/10">
+               Popular and High Demand websites may block this browser due to security circumstances!
+               <button onClick={() => navigate('support')} className="underline text-blue-300 ml-1 font-bold hover:text-blue-200">Visit FaQ</button>
+               to know what websites are blocked!
+            </div>
+
              {showTabs && (
                 <div className="absolute inset-0 bg-black/90 z-50 flex flex-col p-4">
                     <div className="flex justify-between items-center mb-4"><h2 className="text-white text-lg font-bold">Tabs</h2><button onClick={() => setShowTabs(false)} className="text-white p-2">Done</button></div>

@@ -6,7 +6,7 @@ const MobiCalculatorApp: React.FC = () => {
     const [expression, setExpression] = useState('');
 
     const handleButtonClick = (value: string) => {
-        if (value === 'C') {
+        if (value === 'AC') {
             setDisplay('0');
             setExpression('');
         } else if (value === '=') {
@@ -18,11 +18,11 @@ const MobiCalculatorApp: React.FC = () => {
                 setDisplay('Error');
                 setExpression('');
             }
-        } else if (['+', '-', 'x', '÷'].includes(value)) {
+        } else if (['+', '-', 'x', '÷', '%'].includes(value)) {
             setExpression(prev => prev + ` ${value} `);
             setDisplay(value);
         } else {
-            if (display === '0' || ['+', '-', 'x', '÷'].includes(display)) {
+            if (display === '0' || ['+', '-', 'x', '÷', '%'].includes(display)) {
                 setDisplay(value);
             } else {
                 setDisplay(prev => prev + value);
@@ -31,42 +31,60 @@ const MobiCalculatorApp: React.FC = () => {
         }
     };
     
-    const Button: React.FC<{ value: string; className?: string }> = ({ value, className }) => (
-        <button
-            onClick={() => handleButtonClick(value)}
-            className={`bg-gray-200 hover:bg-gray-300 dark:bg-slate-600 dark:hover:bg-slate-700 text-3xl font-semibold rounded-2xl transition-colors flex items-center justify-center ${className}`}
-        >
-            {value}
-        </button>
-    );
+    const Button: React.FC<{ value: string; type?: 'number' | 'operator' | 'action' }> = ({ value, type = 'number' }) => {
+        let bgColor = 'bg-[#2D2F31]'; // Dark grey numbers
+        let textColor = 'text-white';
+        
+        if (type === 'operator') {
+            bgColor = 'bg-[#A8C7FA]'; // Pastel Blue accent (Android 14 style)
+            textColor = 'text-[#041E49]';
+        } else if (type === 'action') {
+            bgColor = 'bg-[#444746]'; // Lighter grey
+        }
+
+        return (
+            <button
+                onClick={() => handleButtonClick(value)}
+                className={`${bgColor} ${textColor} w-16 h-16 rounded-full text-2xl font-medium flex items-center justify-center active:opacity-80 transition-opacity`}
+            >
+                {value}
+            </button>
+        );
+    };
 
     return (
-        <div className="w-full h-full flex flex-col p-4 bg-dark-bg text-light-text dark:text-white">
-            <div className="flex-grow-[2] bg-gray-200 dark:bg-slate-900 rounded-lg p-4 text-right text-7xl font-mono mb-4 break-words flex items-end justify-end">
-                <span className="max-w-full truncate">{display}</span>
+        <div className="w-full h-full flex flex-col bg-[#131314] text-white font-sans p-4">
+            <div className="flex-grow flex flex-col justify-end items-end pb-6 px-2">
+                <div className="text-white/70 text-xl mb-2 truncate w-full text-right">{expression}</div>
+                <div className="text-6xl font-normal truncate w-full text-right">{display}</div>
             </div>
-            <div className="flex-grow-[3] grid grid-cols-4 gap-3">
-                <Button value="C" className="col-span-2 bg-red-600 hover:bg-red-700 text-white" />
-                <Button value="÷" className="bg-orange-500 hover:bg-orange-600 text-white" />
-                <Button value="x" className="bg-orange-500 hover:bg-orange-600 text-white" />
+            <div className="grid grid-cols-4 gap-4 justify-items-center pb-4">
+                <Button value="AC" type="action" />
+                <Button value="( )" type="action" />
+                <Button value="%" type="action" />
+                <Button value="÷" type="operator" />
 
                 <Button value="7" />
                 <Button value="8" />
                 <Button value="9" />
-                <Button value="-" className="bg-orange-500 hover:bg-orange-600 text-white" />
+                <Button value="x" type="operator" />
                 
                 <Button value="4" />
                 <Button value="5" />
                 <Button value="6" />
-                <Button value="+" className="bg-orange-500 hover:bg-orange-600 text-white" />
+                <Button value="-" type="operator" />
 
                 <Button value="1" />
                 <Button value="2" />
                 <Button value="3" />
-                <Button value="=" className="row-span-2 bg-blue-600 hover:bg-blue-700 text-white" />
+                <Button value="+" type="operator" />
                 
-                <Button value="0" className="col-span-2" />
+                <Button value="0" />
                 <Button value="." />
+                <button className="w-16 h-16 rounded-full bg-[#2D2F31] flex items-center justify-center active:opacity-80" onClick={() => setDisplay(prev => prev.slice(0, -1) || '0')}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>
+                </button>
+                <Button value="=" type="operator" />
             </div>
         </div>
     );

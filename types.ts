@@ -108,6 +108,7 @@ export interface WeblyApp {
 export type Page = 
     | 'home' 
     | 'contact' 
+    | 'support'
     | 'signin' 
     | 'profile' 
     | 'admin'
@@ -126,6 +127,7 @@ export type Page =
     | 'app-webly-store'
     | 'app-webview'
     | 'app-browser'
+    | 'app-help'
     | 'mobi-app-webview'
     | 'auth-callback';
 

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
@@ -11,9 +10,10 @@ const SignInIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 
 
 interface SignInPageProps {
     navigate: (page: Page) => void;
+    hideGuest?: boolean;
 }
 
-const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
+const SignInPage: React.FC<SignInPageProps> = ({ navigate, hideGuest }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -40,8 +40,6 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
         const { error: loginError } = await login(email, password);
         
         if (loginError) {
-            // Use the error message directly from Supabase, which is more reliable.
-            // It will be "Invalid login credentials" for both wrong email and password.
             setError(loginError);
         }
         
@@ -100,23 +98,27 @@ const SignInPage: React.FC<SignInPageProps> = ({ navigate }) => {
                     </button>
                 </form>
 
-                <div className="relative flex items-center py-5 w-full">
-                    <div className="flex-grow border-t border-gray-400 dark:border-slate-600"></div>
-                    <span className="flex-shrink mx-4 text-xs text-gray-500 dark:text-gray-400">OR</span>
-                    <div className="flex-grow border-t border-gray-400 dark:border-slate-600"></div>
-                </div>
+                {!hideGuest && (
+                    <>
+                        <div className="relative flex items-center py-5 w-full">
+                            <div className="flex-grow border-t border-gray-400 dark:border-slate-600"></div>
+                            <span className="flex-shrink mx-4 text-xs text-gray-500 dark:text-gray-400">OR</span>
+                            <div className="flex-grow border-t border-gray-400 dark:border-slate-600"></div>
+                        </div>
 
-                <div className="w-full">
-                    <button
-                        type="button"
-                        onClick={handleTryOut}
-                        disabled={isSubmitting}
-                        className="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 transition-colors disabled:bg-gray-800 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                    >
-                        <GuestIcon />
-                        <span>Try as Guest?</span>
-                    </button>
-                </div>
+                        <div className="w-full">
+                            <button
+                                type="button"
+                                onClick={handleTryOut}
+                                disabled={isSubmitting}
+                                className="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 transition-colors disabled:bg-gray-800 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                            >
+                                <GuestIcon />
+                                <span>Try as Guest?</span>
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </AppContainer>
     );

@@ -1,6 +1,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
+const UndoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 
 const MobiPaintApp: React.FC = () => {
@@ -8,7 +9,6 @@ const MobiPaintApp: React.FC = () => {
     const contextRef = useRef<CanvasRenderingContext2D | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const isDrawingRef = useRef(false);
-
     const [color, setColor] = useState('#000000');
     const [brushSize, setBrushSize] = useState(5);
 
@@ -40,28 +40,26 @@ const MobiPaintApp: React.FC = () => {
     useEffect(() => { if (contextRef.current) contextRef.current.strokeStyle = color; }, [color]);
     useEffect(() => { if (contextRef.current) contextRef.current.lineWidth = brushSize; }, [brushSize]);
 
-    const getPosition = (e: React.MouseEvent | React.TouchEvent) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return { x: 0, y: 0 };
-        const rect = canvas.getBoundingClientRect();
-        const touch = e.nativeEvent instanceof TouchEvent ? e.nativeEvent.touches[0] : e.nativeEvent as MouseEvent;
-        return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
-    };
-
-    const startDrawing = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const startDrawing = useCallback((e: React.TouchEvent | React.MouseEvent) => {
         e.preventDefault();
-        if (!contextRef.current) return;
-        const { x, y } = getPosition(e);
+        if (!contextRef.current || !canvasRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        
         contextRef.current.beginPath();
-        contextRef.current.moveTo(x, y);
+        contextRef.current.moveTo(clientX - rect.left, clientY - rect.top);
         isDrawingRef.current = true;
     }, []);
 
-    const draw = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const draw = useCallback((e: React.TouchEvent | React.MouseEvent) => {
         e.preventDefault();
-        if (!isDrawingRef.current || !contextRef.current) return;
-        const { x, y } = getPosition(e);
-        contextRef.current.lineTo(x, y);
+        if (!isDrawingRef.current || !contextRef.current || !canvasRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+        contextRef.current.lineTo(clientX - rect.left, clientY - rect.top);
         contextRef.current.stroke();
     }, []);
     
@@ -74,34 +72,32 @@ const MobiPaintApp: React.FC = () => {
     const clearCanvas = () => {
         const canvas = canvasRef.current;
         const context = contextRef.current;
-        if (canvas && context) {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-        }
+        if (canvas && context) context.clearRect(0, 0, canvas.width, canvas.height);
     };
     
     return (
-        <div className="w-full h-full flex flex-col bg-gray-100 dark:bg-gray-900">
-            <div ref={containerRef} className="flex-grow w-full overflow-hidden">
+        <div className="w-full h-full flex flex-col bg-white dark:bg-[#121212]">
+            <div ref={containerRef} className="flex-grow w-full overflow-hidden relative">
                 <canvas 
                     ref={canvasRef}
-                    onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseOut={stopDrawing}
                     onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}
-                    className="cursor-crosshair"
+                    onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseOut={stopDrawing}
+                    className="touch-none cursor-crosshair bg-white rounded-b-3xl shadow-inner"
                 />
             </div>
-            <div className="flex-shrink-0 w-full bg-white dark:bg-slate-800 p-2 border-t border-gray-300 dark:border-slate-700 shadow-lg">
-                <div className="w-full flex items-center justify-around">
-                    <div className="flex items-center space-x-2">
-                        <input id="color-picker" type="color" value={color} onChange={e => setColor(e.target.value)} className="w-12 h-12 p-1 bg-transparent border-2 border-gray-300 dark:border-slate-600 rounded-md cursor-pointer" />
-                    </div>
-                    <div className="flex flex-col items-center space-y-1">
-                         <label htmlFor="brush-size" className="text-xs font-medium text-light-text dark:text-dark-text">Size: {brushSize}</label>
-                        <input id="brush-size" type="range" min="1" max="50" value={brushSize} onChange={e => setBrushSize(parseInt(e.target.value))} className="w-32" />
-                    </div>
-                    <button onClick={clearCanvas} className="p-3 text-red-500 bg-red-100 dark:bg-red-900/50 rounded-full">
-                       <TrashIcon />
-                    </button>
+            
+            {/* Floating Tool Palette */}
+            <div className="absolute bottom-6 left-4 right-4 bg-[#f3f6fc] dark:bg-[#303030] rounded-full p-2 shadow-xl flex justify-between items-center px-4">
+                <input type="color" value={color} onChange={e => setColor(e.target.value)} className="w-10 h-10 rounded-full border-none bg-transparent" />
+                
+                <div className="flex items-center space-x-2 mx-4 flex-grow">
+                    <span className="text-xs text-gray-500 font-bold">SIZE</span>
+                    <input type="range" min="1" max="30" value={brushSize} onChange={e => setBrushSize(parseInt(e.target.value))} className="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer" />
                 </div>
+
+                <button onClick={clearCanvas} className="w-10 h-10 flex items-center justify-center bg-white dark:bg-[#444] rounded-full text-red-500 shadow-sm">
+                    <TrashIcon />
+                </button>
             </div>
         </div>
     );

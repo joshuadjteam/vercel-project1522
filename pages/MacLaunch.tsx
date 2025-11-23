@@ -79,7 +79,7 @@ const MacLaunch: React.FC<MacLaunchProps> = ({ navigate, appsList }) => {
                     <span className="hidden sm:inline hover:text-gray-200 cursor-default">View</span>
                     <span className="hidden sm:inline hover:text-gray-200 cursor-default">Go</span>
                     <span className="hidden sm:inline hover:text-gray-200 cursor-default">Window</span>
-                    <span className="hidden sm:inline hover:text-gray-200 cursor-default">Help</span>
+                    <button onClick={() => navigate('support')} className="hidden sm:inline hover:text-gray-200 cursor-default">Help</button>
                 </div>
                 <div className="flex items-center space-x-4">
                     <SearchIcon />

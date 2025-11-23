@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import BrowserLoader from '../../components/BrowserLoader';
+import { Page } from '../../types';
 
 // --- Icons ---
 const ArrowLeft = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>;
@@ -93,7 +94,11 @@ const YOUTUBE_SEARCH_URL = 'internal://youtube-search';
 const YOUTUBE_WATCH_URL_PREFIX = 'internal://youtube-watch';
 const DEFAULT_YOUTUBE_API_KEY = 'AIzaSyBHN9YqjsgbgAikzvi_PTghK4VxBf7hmvM';
 
-const LynixBrowserApp: React.FC = () => {
+interface LynixBrowserAppProps {
+    navigate: (page: Page, params?: any) => void;
+}
+
+const LynixBrowserApp: React.FC<LynixBrowserAppProps> = ({ navigate }) => {
     const { user } = useAuth();
     const [tabs, setTabs] = useState<BrowserTab[]>([
         { id: 1, title: 'New Tab', url: '', displayUrl: '', history: [''], historyIndex: 0, isLoading: false, isBlocked: false, navigationId: 0 }
@@ -383,6 +388,13 @@ const LynixBrowserApp: React.FC = () => {
 
     return (
         <div className="w-full h-full flex flex-col bg-[#dfe3e7] dark:bg-[#202124] text-black dark:text-white rounded-lg overflow-hidden font-sans select-none relative">
+            {/* Disclaimer Overlay */}
+            <div className="absolute bottom-8 right-4 bg-black/80 text-white text-[10px] p-3 rounded-lg max-w-[200px] backdrop-blur-md z-30 pointer-events-auto shadow-lg border border-white/10">
+               Popular and High Demand websites may block this browser due to security circumstances!
+               <button onClick={() => navigate('support')} className="underline text-blue-300 ml-1 font-bold hover:text-blue-200">Visit FaQ</button>
+               to know what websites are blocked!
+            </div>
+
             <div className="flex h-10 px-2 pt-2 space-x-1 overflow-x-auto no-scrollbar items-end bg-[#dee1e6] dark:bg-[#000000]">
                 {tabs.map(tab => (
                     <div

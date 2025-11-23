@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Page, UserRole, AppLaunchable } from '../types';
 import { useTheme, wallpapers } from '../hooks/useTheme';
@@ -167,14 +168,13 @@ const FaisConsole: React.FC<FaisConsoleProps> = ({ navigate, appsList }) => {
             </div>
              <div className="fixed bottom-5 right-5 z-50">
                 <button 
-                    onClick={() => setHelpModalOpen(true)} 
+                    onClick={() => navigate('support')} 
                     className="w-14 h-14 bg-indigo-600 dark:bg-purple-600 rounded-full flex items-center justify-center text-white hover:bg-indigo-700 dark:hover:bg-purple-700 transition-colors shadow-lg group"
                     aria-label="Help and Support"
                 >
                     <HelpIcon />
                 </button>
             </div>
-            <HelpModal isOpen={isHelpModalOpen} onClose={() => setHelpModalOpen(false)} />
         </div>
     );
 };

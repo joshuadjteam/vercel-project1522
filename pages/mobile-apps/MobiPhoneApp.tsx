@@ -1,86 +1,107 @@
+
 import React, { useState } from 'react';
 import { useCall } from '../../hooks/useCall';
 import VoiceAssistantWidget from '../../components/VoiceAssistantWidget';
 
 // Icons
-const DialpadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
-const AssistantIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>;
-const VideoCallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>;
-
-type PhoneView = 'dialer' | 'assistant';
+const BackSpaceIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>;
+const VideoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>;
+const PhoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
 
 const MobiPhoneApp: React.FC = () => {
-    const [view, setView] = useState<PhoneView>('dialer');
-    const [targetUser, setTargetUser] = useState('');
+    const [input, setInput] = useState('');
     const { startP2PCall } = useCall();
     const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = useState(false);
 
-    const handleCall = (withVideo: boolean) => {
-        if (targetUser.trim()) {
-            startP2PCall(targetUser.trim(), withVideo);
+    const handleNumberClick = (num: string) => {
+        setInput(prev => prev + num);
+    };
+
+    const handleBackspace = () => {
+        setInput(prev => prev.slice(0, -1));
+    };
+
+    const handleCall = () => {
+        if (input.trim()) {
+            startP2PCall(input.trim(), false);
         }
     };
 
-    const renderContent = () => {
-        if (view === 'dialer') {
-            return (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                    <h2 className="text-xl font-semibold mb-2">P2P Call</h2>
-                    <p className="text-sm text-gray-400 mb-6">Enter a username to start a call.</p>
-                    <input
-                        type="text"
-                        value={targetUser}
-                        onChange={(e) => setTargetUser(e.target.value)}
-                        placeholder="Enter username"
-                        className="w-full max-w-xs bg-gray-100 dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg px-4 py-3 text-lg mb-4 text-center"
-                    />
-                    <div className="flex space-x-4">
-                        <button onClick={() => handleCall(false)} className="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center space-x-2">
-                            <DialpadIcon />
-                            <span>Audio</span>
-                        </button>
-                        <button onClick={() => handleCall(true)} className="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center space-x-2">
-                            <VideoCallIcon />
-                            <span>Video</span>
-                        </button>
-                    </div>
-                </div>
-            );
+    const handleVideoCall = () => {
+        if (input.trim()) {
+            startP2PCall(input.trim(), true);
         }
-        return (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-                <h2 className="text-xl font-semibold mb-2">AI Voice Assistant</h2>
-                <p className="text-sm text-gray-400 mb-6">Tap to start a conversation.</p>
-                <button 
-                    onClick={() => setIsVoiceAssistantOpen(true)} 
-                    className="w-full max-w-xs bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
-                >
-                    <AssistantIcon />
-                    <span>Launch Assistant</span>
-                </button>
-            </div>
-        );
     };
+
+    const KeypadButton = ({ num, sub }: { num: string, sub?: string }) => (
+        <button 
+            onClick={() => handleNumberClick(num)}
+            className="w-20 h-20 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 flex flex-col items-center justify-center transition-colors active:bg-gray-200 dark:active:bg-white/20"
+        >
+            <span className="text-3xl font-normal text-black dark:text-white">{num}</span>
+            {sub && <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 tracking-widest">{sub}</span>}
+        </button>
+    );
 
     return (
         <>
-            <div className="w-full h-full flex flex-col bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text">
-                <header className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h1 className="text-2xl font-bold text-center">Phone</h1>
-                </header>
-                <main className="flex-grow overflow-y-auto p-4">
-                    {renderContent()}
-                </main>
-                <footer className="flex-shrink-0 bg-gray-200 dark:bg-gray-900 flex justify-around">
-                    <button onClick={() => setView('dialer')} className={`flex-1 py-4 flex flex-col items-center justify-center space-y-1 ${view === 'dialer' ? 'text-blue-500' : 'text-gray-500'}`}>
-                        <DialpadIcon />
-                        <span className="text-xs font-semibold">Dialer</span>
-                    </button>
-                    <button onClick={() => setView('assistant')} className={`flex-1 py-4 flex flex-col items-center justify-center space-y-1 ${view === 'assistant' ? 'text-blue-500' : 'text-gray-500'}`}>
-                        <AssistantIcon />
-                        <span className="text-xs font-semibold">Assistant</span>
-                    </button>
-                </footer>
+            <div className="w-full h-full flex flex-col bg-white dark:bg-[#121212] text-black dark:text-white font-sans">
+                {/* Top Display */}
+                <div className="flex-grow flex flex-col justify-end items-center pb-8">
+                    <input 
+                        type="text" 
+                        readOnly 
+                        value={input} 
+                        className="text-4xl text-center bg-transparent border-none focus:outline-none mb-4 w-full px-8 text-black dark:text-white" 
+                        placeholder="Type a name or number"
+                    />
+                    {input && (
+                        <div className="flex space-x-4 text-blue-600 dark:text-blue-300 text-sm font-medium cursor-pointer">
+                            <span onClick={() => setIsVoiceAssistantOpen(true)}>Voice Assistant</span>
+                            <span onClick={() => setInput('')}>Clear</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Keypad */}
+                <div className="px-8 pb-8">
+                    <div className="grid grid-cols-3 gap-y-4 justify-items-center mb-6">
+                        <KeypadButton num="1" />
+                        <KeypadButton num="2" sub="ABC" />
+                        <KeypadButton num="3" sub="DEF" />
+                        <KeypadButton num="4" sub="GHI" />
+                        <KeypadButton num="5" sub="JKL" />
+                        <KeypadButton num="6" sub="MNO" />
+                        <KeypadButton num="7" sub="PQRS" />
+                        <KeypadButton num="8" sub="TUV" />
+                        <KeypadButton num="9" sub="WXYZ" />
+                        <KeypadButton num="*" />
+                        <KeypadButton num="0" sub="+" />
+                        <KeypadButton num="#" />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-center items-center space-x-8">
+                        {input && (
+                            <button onClick={handleVideoCall} className="p-4 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10">
+                                <VideoIcon />
+                            </button>
+                        )}
+                        
+                        <button 
+                            onClick={handleCall}
+                            className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform"
+                        >
+                            <PhoneIcon />
+                        </button>
+
+                        {input && (
+                            <button onClick={handleBackspace} className="p-4 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10">
+                                <BackSpaceIcon />
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
             <VoiceAssistantWidget isOpen={isVoiceAssistantOpen} onClose={() => setIsVoiceAssistantOpen(false)} />
         </>

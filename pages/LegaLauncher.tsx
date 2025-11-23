@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Page, UserRole, AppLaunchable } from '../types';
 import { useTheme, wallpapers } from '../hooks/useTheme';
@@ -8,7 +7,7 @@ import HelpModal from '../components/HelpModal';
 
 // --- Icon Components ---
 const WebIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9V3" /></svg>;
-const AppsIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>;
+const AppsIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>;
 const ContactIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
 const HomeIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
 const SettingsIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066 2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
@@ -100,122 +99,131 @@ const LegaLauncher: React.FC<LegaLauncherProps> = ({ navigate, appsList }) => {
     };
 
     const NavButton: React.FC<{ onClick?: () => void, text: string, icon: React.ReactNode }> = ({ onClick, text, icon }) => (
-        <button onClick={onClick} className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 flex items-center space-x-2 text-gray-300 hover:bg-white/20 hover:text-white">
+        <button onClick={onClick} className="px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 flex items-center space-x-2 text-gray-200 hover:text-white hover:bg-white/10">
             {icon}
             <span>{text}</span>
         </button>
     );
 
-    const DropdownButton: React.FC<{ onClick: () => void, text: string, icon?: React.ReactNode }> = ({ onClick, text, icon }) => (
-        <button onClick={onClick} className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-slate-700 flex items-center space-x-3">
-            {icon && React.cloneElement(icon as React.ReactElement<any>, { className: "w-5 h-5"})}
-            <span>{text}</span>
-        </button>
-    );
-
     return (
-        <div className={`w-screen h-screen overflow-hidden flex flex-col font-sans text-white ${(wallpapers[wallpaper] || wallpapers.canyon).class}`}>
-            {/* Header */}
-            <header className="w-full bg-slate-900/50 backdrop-blur-sm text-white shadow-lg z-50 flex-shrink-0">
-                <div className="container mx-auto px-4 py-2 flex justify-between items-center">
-                    <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('home')}>
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="11" fill="#4A5568"/>
-                            <path d="M15.9042 7.15271C14.4682 6.42517 12.8251 6 11.0625 6C7.16117 6 4 9.13401 4 13C4 16.866 7.16117 20 11.0625 20C12.8251 20 14.4682 19.5748 15.9042 18.8473" stroke="#D1D5DB" strokeWidth="2" strokeLinecap="round"/>
-                            <path d="M8.09583 16.8473C9.53181 17.5748 11.1749 18 12.9375 18C16.8388 18 20 14.866 20 11C20 7.13401 16.8388 4 12.9375 4C11.1749 4 9.53181 4.42517 8.09583 5.15271" stroke="#D1D5DB" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        <span className="text-2xl font-bold text-white">Lynix</span>
-                    </div>
-                    <nav className="flex items-center space-x-1">
-                        <div className="relative" ref={webMenuRef}>
-                            <NavButton onClick={() => setWebMenuOpen(p => !p)} text="Web" icon={<WebIcon />} />
-                            {webMenuOpen && (
-                                <div className="absolute top-full right-0 mt-2 w-48 bg-slate-800/90 backdrop-blur-md rounded-lg shadow-xl py-2 z-20 animate-fade-in-up">
-                                    <DropdownButton onClick={() => window.open('https://darshanjoshuakesavaruban.fwscheckout.com/', '_blank')} text="Buy a Product" />
-                                    <DropdownButton onClick={() => window.open('https://sites.google.com/gcp.lynixity.x10.bz/myportal/home', '_blank')} text="MyPortal" />
-                                </div>
-                            )}
-                        </div>
-                        <div className="relative" ref={appsMenuRef}>
-                            <NavButton onClick={() => setAppsMenuOpen(p => !p)} text="Apps" icon={<AppsIcon />} />
-                            {appsMenuOpen && (
-                                <div className="absolute top-full right-0 mt-2 w-64 max-h-96 overflow-y-auto bg-slate-800/90 backdrop-blur-md rounded-lg shadow-xl py-2 z-20 animate-fade-in-up">
-                                    {appsList.filter(a => !a.isHidden).map(app => (
-                                        <DropdownButton key={app.id} onClick={() => handleAppClick(app)} text={app.label} icon={app.icon} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <NavButton onClick={() => navigate('contact')} text="Contact" icon={<ContactIcon />} />
-                        <NavButton onClick={() => navigate('home')} text="Home" icon={<HomeIcon />} />
-                        <div className="relative" ref={settingsMenuRef}>
-                            <NavButton onClick={() => setSettingsMenuOpen(p => !p)} text="Settings" icon={<SettingsIcon />} />
-                            {settingsMenuOpen && (
-                                <div className="absolute top-full right-0 mt-2 w-56 bg-slate-800/90 backdrop-blur-md rounded-lg shadow-xl py-2 z-20 animate-fade-in-up">
-                                    <DropdownButton onClick={() => { navigate('profile'); setSettingsMenuOpen(false); }} icon={<ProfileIcon />} text={`Profile (${user?.username})`} />
-                                    {user?.role === UserRole.Admin && <DropdownButton onClick={() => { navigate('admin'); setSettingsMenuOpen(false); }} icon={<AdminIcon />} text="Admin Portal" />}
-                                    <DropdownButton onClick={() => setIsDark(!isDark)} icon={isDark ? <LightIcon /> : <DarkIcon />} text={`Theme: ${isDark ? "Dark" : "Light"}`} />
-                                    <div className="border-t border-slate-700 my-1"></div>
-                                    <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/50 flex items-center space-x-3">
-                                        <SignOutIcon />
-                                        <span>Sign Out</span>
+        <div className={`w-screen h-screen overflow-hidden flex flex-col text-white ${(wallpapers[wallpaper] || wallpapers.canyon).class} font-sans select-none transition-all duration-500`}>
+            {/* Top Navigation Bar */}
+            <div className="h-14 bg-black/20 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4 shadow-sm z-50">
+                <div className="flex items-center space-x-2">
+                    <div className="relative" ref={appsMenuRef}>
+                        <NavButton onClick={() => setAppsMenuOpen(!appsMenuOpen)} text="Apps" icon={<AppsIcon />} />
+                        {appsMenuOpen && (
+                            <div className="absolute top-full left-0 mt-2 w-64 bg-slate-800/95 backdrop-blur-xl rounded-lg shadow-2xl border border-white/10 p-2 animate-fade-in-up overflow-y-auto max-h-[80vh] z-50">
+                                {appsList.filter(app => !app.isHidden).map(app => (
+                                    <button key={app.id} onClick={() => handleAppClick(app)} className="w-full flex items-center space-x-3 p-2 hover:bg-white/10 rounded-md transition-colors text-left">
+                                        {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-5 h-5" })}
+                                        <span className="text-sm">{app.label}</span>
                                     </button>
-                                </div>
-                            )}
-                        </div>
-                    </nav>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div className="relative" ref={webMenuRef}>
+                        <NavButton onClick={() => setWebMenuOpen(!webMenuOpen)} text="Web" icon={<WebIcon />} />
+                        {webMenuOpen && (
+                            <div className="absolute top-full left-0 mt-2 w-56 bg-slate-800/95 backdrop-blur-xl rounded-lg shadow-2xl border border-white/10 p-2 animate-fade-in-up z-50">
+                                <a href="https://darshanjoshuakesavaruban.fwscheckout.com/" target="_blank" rel="noopener noreferrer" className="w-full flex items-center px-3 py-2 hover:bg-white/10 rounded-md text-sm transition-colors">Buy A Product</a>
+                                <a href="https://sites.google.com/gcp.lynixity.x10.bz/myportal/home" target="_blank" rel="noopener noreferrer" className="w-full flex items-center px-3 py-2 hover:bg-white/10 rounded-md text-sm transition-colors">MyPortal</a>
+                                <div className="border-t border-white/10 my-1"></div>
+                                <button onClick={() => navigate('contact')} className="w-full flex items-center px-3 py-2 hover:bg-white/10 rounded-md text-sm space-x-2 transition-colors">
+                                    <ContactIcon /><span>Contact</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </header>
 
-            {/* Main Content */}
-            <main className="flex-grow flex flex-col items-center justify-center p-4">
-                 <div className="relative w-full max-w-xl mb-8">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 font-bold">G</span>
-                    <input 
-                        type="text" 
-                        placeholder="Search with Google..."
+                {/* Center Search */}
+                <div className="hidden md:flex relative w-96 group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <SearchIcon className="text-gray-400 group-focus-within:text-white transition-colors" />
+                    </div>
+                    <input
+                        type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        className="w-full bg-slate-800/80 border border-slate-600 text-white rounded-full py-3 pl-10 pr-32 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="Search Google..."
+                        className="block w-full pl-10 pr-3 py-2 border border-transparent rounded-full leading-5 bg-white/10 text-gray-300 placeholder-gray-400 focus:outline-none focus:bg-white/20 focus:text-white sm:text-sm transition-all duration-300"
                     />
-                    <button 
-                        onClick={handleSearch}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                    >
-                        <SearchIcon />
-                        <span>Search</span>
-                    </button>
                 </div>
-                <div className="w-full max-w-4xl p-8 text-center bg-black/30 backdrop-blur-md rounded-2xl border border-white/20">
-                    <h1 className="text-4xl font-bold mb-4">Welcome to Lynix by DJTeam!</h1>
-                    <p className="text-gray-300 max-w-3xl mx-auto leading-relaxed">
-                        Welcome to Lynix, where innovation in technology and coding comes to life. Since our inception in January 2024, we've been dedicated to pushing the boundaries of web development. We launched our first suite of products in July 2024 and began sharing our journey on our YouTube channel '@DarCodR'. Today, our primary mission remains rooted in creating powerful coding solutions, while expanding our services to include reliable email support, crystal-clear SIP Voice communication, and more. Explore what we have to offer.
-                    </p>
-                    <div className="mt-8">
+
+                <div className="flex items-center space-x-4">
+                    <div className="hidden sm:block text-right text-gray-300">
                         <LegaClock />
                     </div>
+                    <div className="relative" ref={settingsMenuRef}>
+                        <button onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                            <SettingsIcon />
+                        </button>
+                        {settingsMenuOpen && (
+                            <div className="absolute top-full right-0 mt-2 w-64 bg-slate-800/95 backdrop-blur-xl rounded-lg shadow-2xl border border-white/10 p-2 animate-fade-in-up z-50">
+                                <div className="px-4 py-2 border-b border-white/10 mb-2">
+                                    <p className="font-bold text-white">{user?.username}</p>
+                                    <p className="text-xs text-gray-400">{user?.email}</p>
+                                </div>
+                                <button onClick={() => { navigate('profile'); setSettingsMenuOpen(false); }} className="w-full flex items-center px-3 py-2 hover:bg-white/10 rounded-md text-sm space-x-3 transition-colors">
+                                    <ProfileIcon /><span>Profile</span>
+                                </button>
+                                {user?.role === UserRole.Admin && (
+                                    <button onClick={() => { navigate('admin'); setSettingsMenuOpen(false); }} className="w-full flex items-center px-3 py-2 hover:bg-white/10 rounded-md text-sm space-x-3 transition-colors">
+                                        <AdminIcon /><span>Admin Portal</span>
+                                    </button>
+                                )}
+                                <button onClick={() => setIsDark(!isDark)} className="w-full flex items-center px-3 py-2 hover:bg-white/10 rounded-md text-sm space-x-3 transition-colors">
+                                    {isDark ? <LightIcon /> : <DarkIcon />}<span>{isDark ? 'Light' : 'Dark'} Mode</span>
+                                </button>
+                                <div className="border-t border-white/10 my-1"></div>
+                                <button onClick={handleSignOut} className="w-full flex items-center px-3 py-2 hover:bg-red-500/20 text-red-400 rounded-md text-sm space-x-3 transition-colors">
+                                    <SignOutIcon /><span>Sign Out</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </main>
-            
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-grow flex flex-col items-center justify-center p-8 relative">
+                <div className="text-center mb-16 animate-fade-in-up">
+                    <h1 className="text-5xl md:text-7xl font-bold mb-4 text-white drop-shadow-2xl tracking-tight">Welcome Home</h1>
+                    <p className="text-xl text-gray-200 drop-shadow-md max-w-2xl mx-auto">
+                        Your personalized workspace for productivity and creativity.
+                    </p>
+                </div>
+
+                {/* Quick Access Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                    {appsList.filter(app => ['app-files', 'app-browser', 'app-localmail', 'app-chat'].includes(app.id)).map(app => (
+                        <button 
+                            key={app.id} 
+                            onClick={() => handleAppClick(app)}
+                            className="flex flex-col items-center space-y-4 group transition-transform duration-300 hover:scale-110"
+                        >
+                            <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-xl border border-white/10 group-hover:bg-white/20 transition-colors">
+                                {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-10 h-10 text-white" })}
+                            </div>
+                            <span className="text-sm font-medium text-white drop-shadow-md group-hover:text-white/90">{app.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Footer */}
-            <footer className="w-full bg-slate-900/50 backdrop-blur-sm text-gray-400 text-sm py-3 flex-shrink-0">
-                <div className="container mx-auto px-4 flex justify-center items-center space-x-4">
-                    <p>&copy; 2025 Lynix Technology and Coding. All Rights Reserved.</p>
-                    <div className="w-px h-4 bg-gray-600"></div>
-                     <a href="https://www.youtube.com/@DarCodR" target="_blank" rel="noopener noreferrer" className="hover:text-red-500 font-semibold transition-colors flex items-center space-x-1">
-                        <YoutubeIcon />
-                        <span>YouTube</span>
-                    </a>
-                </div>
-            </footer>
-            
-            {/* Help Button */}
-            <div className="fixed bottom-5 right-5 z-50">
-                <button onClick={() => setHelpModalOpen(true)} className="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center text-white hover:bg-purple-700 transition-colors shadow-lg" aria-label="Help and Support">
-                    <HelpIcon />
+            <div className="absolute bottom-6 right-6 flex items-center space-x-6 text-white/60 text-sm z-40">
+                <a href="https://www.youtube.com/@DarCodR" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center space-x-2">
+                    <YoutubeIcon /><span>YouTube</span>
+                </a>
+                <button onClick={() => setHelpModalOpen(true)} className="hover:text-white transition-colors flex items-center space-x-2">
+                    <HelpIcon /><span>Help</span>
                 </button>
             </div>
+            
             <HelpModal isOpen={isHelpModalOpen} onClose={() => setHelpModalOpen(false)} />
         </div>
     );

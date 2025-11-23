@@ -90,11 +90,11 @@ const WinLauncher: React.FC<WinLauncherProps> = ({ navigate, appsList }) => {
                         </div>
                         <h3 className="text-sm font-bold text-white mb-4">Recommended</h3>
                         <div className="space-y-2">
-                            <button onClick={() => navigate('app-calendar')} className="w-full flex items-center p-2 hover:bg-white/5 rounded text-left">
-                                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3"><SettingsIcon /></div>
+                            <button onClick={() => navigate('support')} className="w-full flex items-center p-2 hover:bg-white/5 rounded text-left">
+                                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3 font-bold">?</div>
                                 <div>
-                                    <div className="text-sm font-medium">Calendar</div>
-                                    <div className="text-xs text-gray-400">Recently used</div>
+                                    <div className="text-sm font-medium">Support Center</div>
+                                    <div className="text-xs text-gray-400">Get help</div>
                                 </div>
                             </button>
                         </div>

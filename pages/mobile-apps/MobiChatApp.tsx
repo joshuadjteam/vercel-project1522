@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
@@ -7,15 +6,15 @@ import { chatService } from '../../services/chatService';
 import { geminiService } from '../../services/geminiService';
 import { User, ChatMessage, UserRole } from '../../types';
 
-const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>;
+const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 rotate-90 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>;
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m7 7H3" /></svg>;
+const MoreVertIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>;
+const StartChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>;
 
 const LynixLogo = () => (
-    <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-        <circle cx="16" cy="16" r="14" fill="#C9E1DE"/>
-        <path d="M9 13L19 13L16 23L6 23Z" fill="#EB5B4D"/>
-        <path d="M12 8L22 8L19 18L9 18Z" fill="#F37921"/>
-    </svg>
+    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+        AI
+    </div>
 );
 
 const LYNX_AI_USER: User = { id: -1, username: 'Lynx AI', email: 'ai@lynix.local', role: UserRole.Standard, plan_name: 'System', features: { chat: true, ai: true, mail: false }};
@@ -127,64 +126,89 @@ const MobiChatApp: React.FC<MobiChatAppProps> = ({ initialTargetId }) => {
 
     if (selectedUser) {
         return (
-            <div className="w-full h-full flex flex-col text-white bg-gradient-to-br from-teal-700 to-green-800">
-                <header className="p-3 bg-white/5 flex-shrink-0 border-b border-white/10 flex items-center">
-                    <button onClick={() => setSelectedUser(null)} className="p-2 mr-2 rounded-full hover:bg-white/20"> <BackIcon /> </button>
-                    {selectedUser.id === LYNX_AI_USER.id ? (
-                        <div className="flex items-center text-cyan-300"> <LynixLogo /> <h2 className="text-xl font-bold">{selectedUser.username}</h2> </div>
-                    ) : (
-                        <div className="flex items-center">
-                            <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center mr-3 text-sm font-bold">{selectedUser.username.charAt(0).toUpperCase()}</div>
-                            <h2 className="text-xl font-bold">{selectedUser.username}</h2>
-                        </div>
-                    )}
+            <div className="w-full h-full flex flex-col bg-white dark:bg-[#121212] text-black dark:text-white font-sans">
+                <header className="flex-shrink-0 p-2 flex items-center space-x-2 bg-white dark:bg-[#121212] shadow-sm z-10">
+                    <button onClick={() => setSelectedUser(null)} className="p-3 rounded-full hover:bg-gray-100 dark:hover:bg-white/10"> <BackIcon /> </button>
+                    <div className="flex items-center space-x-3 flex-grow">
+                        {selectedUser.id === LYNX_AI_USER.id ? (
+                            <LynixLogo />
+                        ) : (
+                            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">{selectedUser.username.charAt(0).toUpperCase()}</div>
+                        )}
+                        <h2 className="text-lg font-normal">{selectedUser.username}</h2>
+                    </div>
+                    <button className="p-3 rounded-full hover:bg-gray-100 dark:hover:bg-white/10"><MoreVertIcon/></button>
                 </header>
-                <div className="flex-grow p-4 overflow-y-auto space-y-4 custom-scrollbar">
-                    {isLoadingHistory ? ( <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div> ) : messages.map(msg => (
-                        <div key={msg.id} className={`flex ${msg.senderId === currentUser?.id ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                            <div className={`max-w-[85%] px-5 py-3 rounded-2xl shadow-sm ${msg.senderId === currentUser?.id ? 'bg-blue-600/90 text-white rounded-br-none' : 'bg-slate-700/80 text-white rounded-bl-none'}`}>
-                                <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+
+                <div className="flex-grow p-4 overflow-y-auto space-y-2 bg-[#f3f6fc] dark:bg-[#0b0b0b]">
+                    {isLoadingHistory ? ( <div className="flex justify-center items-center h-full text-gray-500">Loading conversation...</div> ) : messages.map(msg => (
+                        <div key={msg.id} className={`flex ${msg.senderId === currentUser?.id ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[75%] px-5 py-3 text-[15px] leading-snug rounded-3xl ${
+                                msg.senderId === currentUser?.id 
+                                    ? 'bg-[#0b57cf] text-white rounded-br-sm' 
+                                    : 'bg-white dark:bg-[#303030] text-black dark:text-white rounded-bl-sm shadow-sm'
+                            }`}>
+                                {msg.text}
                             </div>
                         </div>
                     ))}
-                    {isAiThinking && ( <div className="flex justify-start animate-fade-in"><div className="px-5 py-4 rounded-2xl bg-slate-700/80 rounded-bl-none flex space-x-2 items-center"><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div></div></div> )}
+                    {isAiThinking && ( <div className="flex justify-start"><div className="bg-white dark:bg-[#303030] px-4 py-3 rounded-3xl rounded-bl-sm shadow-sm"><div className="flex space-x-1"><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div></div></div></div> )}
                     <div ref={messagesEndRef} />
                 </div>
-                <form onSubmit={handleSendMessage} className="p-2 bg-white/5 flex-shrink-0 border-t border-white/10">
-                    <div className="flex items-center relative">
-                        <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={`Message...`} className="flex-grow bg-black/20 border border-white/10 text-white placeholder-white/50 rounded-full py-3 pl-5 pr-12 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-black/30 transition-all" disabled={isAiThinking} />
-                        <button type="submit" disabled={!newMessage.trim() || isAiThinking} className="absolute right-1.5 top-1.5 w-10 h-10 flex items-center justify-center bg-blue-500 hover:bg-blue-600 disabled:bg-white/10 disabled:text-white/30 rounded-full text-white transition-colors"> <SendIcon /> </button>
-                    </div>
+
+                <form onSubmit={handleSendMessage} className="p-2 bg-[#f3f6fc] dark:bg-[#0b0b0b] flex-shrink-0 flex items-center space-x-2">
+                    <input 
+                        type="text" 
+                        value={newMessage} 
+                        onChange={(e) => setNewMessage(e.target.value)} 
+                        placeholder="Text message" 
+                        className="flex-grow bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-[#444] rounded-full px-6 py-3 focus:outline-none focus:border-[#0b57cf] text-black dark:text-white shadow-sm" 
+                        disabled={isAiThinking} 
+                    />
+                    <button type="submit" disabled={!newMessage.trim() || isAiThinking} className="p-3 bg-[#0b57cf] text-white rounded-full shadow disabled:opacity-50 hover:bg-[#0842a0]"> 
+                        <SendIcon /> 
+                    </button>
                 </form>
             </div>
         );
     }
     
     return (
-        <div className="w-full h-full flex flex-col text-white bg-gradient-to-br from-teal-700 to-green-800">
-            <header className="p-4 border-b border-white/10 flex-shrink-0">
-                <h2 className="text-xl font-bold tracking-wide">Chats</h2>
+        <div className="w-full h-full flex flex-col bg-white dark:bg-[#121212] text-black dark:text-white font-sans">
+            <header className="p-4 flex-shrink-0 bg-[#f3f6fc] dark:bg-[#121212]">
+                <div className="bg-white dark:bg-[#1e1e1e] rounded-full px-4 py-3 flex items-center shadow-sm space-x-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <span className="text-gray-500">Search conversations</span>
+                </div>
             </header>
-            <div className="flex-grow overflow-y-auto custom-scrollbar">
-                <nav className="p-2">
+            
+            <div className="flex-grow overflow-y-auto">
+                <div className="px-4 pb-2">
+                    <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Messages</h2>
                     <ul className="space-y-1">
                         {users.map(user => (
                             <li key={user.id}>
-                                <button onClick={() => handleSelectUser(user)} className="w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center hover:bg-white/10">   
+                                <button onClick={() => handleSelectUser(user)} className="w-full text-left p-3 rounded-2xl transition-all duration-200 flex items-center hover:bg-[#f0f4f8] dark:hover:bg-white/5">   
                                     {user.id === LYNX_AI_USER.id ? (
-                                        <span className="flex items-center text-cyan-300"> <LynixLogo /> {user.username} </span>
+                                        <LynixLogo />
                                     ) : (
-                                        <span className="flex items-center">
-                                            <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center mr-3 text-sm font-bold">{user.username.charAt(0).toUpperCase()}</div>
-                                            {user.username}
-                                        </span>
+                                        <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">{user.username.charAt(0).toUpperCase()}</div>
                                     )}
+                                    <div className="ml-4 flex-grow">
+                                        <span className="font-semibold block text-base">{user.username}</span>
+                                        <span className="text-gray-500 text-sm block truncate">Tap to chat</span>
+                                    </div>
                                 </button>
                             </li>
                         ))}
                     </ul>
-                </nav>
+                </div>
             </div>
+
+            <button className="absolute bottom-6 right-6 bg-[#0b57cf] text-white p-4 rounded-2xl shadow-lg hover:bg-[#0842a0] transition-colors flex items-center space-x-2">
+                <StartChatIcon />
+                <span className="font-medium">Start chat</span>
+            </button>
         </div>
     );
 };

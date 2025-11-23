@@ -115,6 +115,10 @@ const COSLaunch: React.FC<COSLaunchProps> = ({ navigate, appsList }) => {
                             <div className="w-12 h-12 bg-gray-600 rounded-full flex items-center justify-center text-white"><SettingsIcon /></div>
                             <span className="text-xs">Profile</span>
                         </button>
+                        <button onClick={() => navigate('support')} className="flex flex-col items-center space-y-2">
+                            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white">?</div>
+                            <span className="text-xs">Support</span>
+                        </button>
                     </div>
                     <div className="border-t border-white/10 pt-4">
                         <h4 className="text-xs font-bold text-gray-400 mb-2 uppercase">Wallpaper</h4>
