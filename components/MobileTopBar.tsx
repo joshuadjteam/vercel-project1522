@@ -60,10 +60,10 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
         <>
             <header 
                 onClick={() => setIsOpen(true)}
-                className="w-full bg-transparent text-white p-2 flex justify-between items-center flex-shrink-0 z-50 cursor-pointer fixed top-0 left-0 right-0 h-8 px-4"
+                className="w-full bg-gradient-to-b from-black/80 to-transparent text-white p-2 flex justify-between items-center flex-shrink-0 z-50 cursor-pointer fixed top-0 left-0 right-0 h-8 px-4"
             >
-                <span className="text-xs font-medium">{timeString}</span>
-                <div className="flex items-center space-x-2">
+                <span className="text-xs font-medium drop-shadow-md">{timeString}</span>
+                <div className="flex items-center space-x-2 drop-shadow-md">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0a1.5 1.5 0 0 1 0 2.121l-9.536 9.536a1.5 1.5 0 0 1-2.121 0L1.393 11.514a1.5 1.5 0 0 1 0-2.121z"/></svg>
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M16.667 4H15V2H9v2H7.333C6.597 4 6 4.597 6 5.333V20.667C6 21.403 6.597 22 7.333 22h9.334c.736 0 1.333-.597 1.333-1.333V5.333C18 4.597 17.403 4 16.667 4z"/></svg>
                 </div>

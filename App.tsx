@@ -178,7 +178,10 @@ const BootScreen: React.FC = () => {
     const [showText, setShowText] = useState(false);
 
     useEffect(() => {
-        const intervals = [2000, 2000, 2000, 2000, 2000]; 
+        // Total time: 15 seconds.
+        // Stages 0-4 (Letters): 2s each = 10s.
+        // Stage 5 (Logo): 5s.
+        // Total = 15s.
         let currentTimeout: any;
 
         const runSequence = (index: number) => {
@@ -187,7 +190,9 @@ const BootScreen: React.FC = () => {
                 return;
             }
             setStage(index);
-            currentTimeout = setTimeout(() => runSequence(index + 1), index < 5 ? 2000 : 100);
+            // Last stage is the logo, show for 5000ms. Others for 2000ms.
+            const delay = index === 5 ? 5000 : 2000;
+            currentTimeout = setTimeout(() => runSequence(index + 1), delay);
         };
 
         runSequence(0);
@@ -285,12 +290,13 @@ const App: React.FC = () => {
     // Handle Boot Animation for Mobile
     useEffect(() => {
         if (isMobileDevice) {
-            // Reset boot screen to true when mobile is detected, then hide it after delay
+            // Reset boot screen to true when mobile is detected, then hide it after delay.
+            // Total sequence is 15s (5 letters * 2s + 5s logo).
             setShowBootScreen(true);
             if ('Notification' in window) {
                 Notification.requestPermission();
             }
-            const timer = setTimeout(() => setShowBootScreen(false), 10500);
+            const timer = setTimeout(() => setShowBootScreen(false), 15500); // Slightly longer than animation to be safe
             return () => clearTimeout(timer);
         } else {
             setShowBootScreen(false);

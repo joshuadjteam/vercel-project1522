@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { useCall } from '../../hooks/useCall';
 import VoiceAssistantWidget from '../../components/VoiceAssistantWidget';
+import { database } from '../../services/database';
 
 // Icons
 const BackSpaceIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>;
@@ -21,16 +21,36 @@ const MobiPhoneApp: React.FC = () => {
         setInput(prev => prev.slice(0, -1));
     };
 
-    const handleCall = () => {
-        if (input.trim()) {
-            startP2PCall(input.trim(), false);
+    const resolveTarget = async (rawInput: string): Promise<string | null> => {
+        const trimmed = rawInput.trim();
+        // Check if it's a 10-digit number starting with 2901
+        if (/^2901\d{6}$/.test(trimmed)) {
+            // Perform server-side verification for status codes 76A/76B
+            const { active, username, error } = await database.checkPhoneNumberStatus(trimmed);
+            
+            if (!active || error) {
+                // Display the specific error from the server (76A or 76B)
+                alert(error || 'The party is unavailable.');
+                return null;
+            }
+            
+            if (username) {
+                return username;
+            }
         }
+        return trimmed;
     };
 
-    const handleVideoCall = () => {
-        if (input.trim()) {
-            startP2PCall(input.trim(), true);
-        }
+    const handleCall = async () => {
+        if (!input.trim()) return;
+        const target = await resolveTarget(input);
+        if (target) startP2PCall(target, false);
+    };
+
+    const handleVideoCall = async () => {
+        if (!input.trim()) return;
+        const target = await resolveTarget(input);
+        if (target) startP2PCall(target, true);
     };
 
     const KeypadButton = ({ num, sub }: { num: string, sub?: string }) => (

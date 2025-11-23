@@ -6,6 +6,9 @@ import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile, WeblyApp }
 // Helper to map DB user to app User
 const mapDbUserToUser = (dbUser: any): User => {
     if (!dbUser) return null as unknown as User;
+    // Generate Phone Number: 2901 + 6 digit padded ID (e.g. ID 5 -> 2901000005)
+    const phoneNumber = `2901${dbUser.id.toString().padStart(6, '0')}`;
+
     return {
         id: dbUser.id,
         auth_id: dbUser.auth_id,
@@ -13,6 +16,7 @@ const mapDbUserToUser = (dbUser: any): User => {
         email: dbUser.email,
         role: dbUser.role,
         plan_name: dbUser.plan_name,
+        phone_number: phoneNumber,
         features: dbUser.features,
         installed_webly_apps: dbUser.installed_webly_apps || [],
     };
@@ -27,6 +31,7 @@ export const database = {
             email: 'guest@lynixity.x10.bz',
             role: UserRole.Trial,
             plan_name: 'Trial',
+            phone_number: '2901000000',
             features: { chat: false, ai: true, mail: false }
         });
     },
@@ -248,6 +253,42 @@ export const database = {
         }
 
         return mapDbUserToUser(data.user);
+    },
+
+    getUserByPhoneNumber: async (phoneNumber: string): Promise<User | null> => {
+        // Validate format: 2901 + 6 digits = 10 digits
+        if (!/^2901\d{6}$/.test(phoneNumber)) return null;
+        
+        const idStr = phoneNumber.slice(4);
+        const id = parseInt(idStr, 10);
+        
+        // Efficiently look up by ID using directory fetch
+        // Note: For large scale, this should be a direct DB query via edge function
+        const allUsers = await database.getUserDirectory();
+        return allUsers.find(u => u.id === id) || null;
+    },
+
+    checkPhoneNumberStatus: async (phoneNumber: string): Promise<{ active: boolean; username?: string; error?: string }> => {
+        const { data, error } = await supabase.functions.invoke('assigned-number-user', {
+            body: { phoneNumber }
+        });
+
+        if (error) {
+            let errorMessage = error.message;
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const body = await error.context.json();
+                    errorMessage = body.error || errorMessage;
+                } catch (e) { /* Parsing error, ignore */ }
+            }
+            return { active: false, error: errorMessage };
+        }
+
+        if (data?.error) {
+            return { active: false, error: data.error };
+        }
+
+        return { active: true, username: data.username };
     },
     
     getAdminStats: async (): Promise<{ messages: number, mails: number, contacts: number }> => {

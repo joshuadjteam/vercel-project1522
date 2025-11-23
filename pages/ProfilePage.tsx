@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Page } from '../types';
@@ -28,6 +29,10 @@ const InfoTabContent = () => {
                 <div className="grid grid-cols-3">
                     <span className="font-semibold text-gray-800 dark:text-gray-100">Role:</span>
                     <span className="col-span-2">{user?.role}</span>
+                </div>
+                <div className="grid grid-cols-3">
+                    <span className="font-semibold text-gray-800 dark:text-gray-100">Phone Number:</span>
+                    <span className="col-span-2 font-mono text-blue-500">{user?.phone_number || 'N/A'}</span>
                 </div>
             </div>
         </div>

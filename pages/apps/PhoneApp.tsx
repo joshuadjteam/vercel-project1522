@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { useCall } from '../../hooks/useCall';
 import VoiceAssistantWidget from '../../components/VoiceAssistantWidget';
+import { database } from '../../services/database';
 
 // Icons
 const DialpadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
@@ -14,12 +14,12 @@ type PhoneView = 'dialer' | 'assistant';
 const DialerTab: React.FC<{ targetUser: string; setTargetUser: (s: string) => void; handleCall: (video: boolean) => void }> = ({ targetUser, setTargetUser, handleCall }) => (
     <div className="flex flex-col items-center justify-center h-full text-center">
         <h2 className="text-2xl font-semibold mb-2">P2P Call</h2>
-        <p className="text-sm text-gray-400 mb-6">Enter a username to start a peer-to-peer call.</p>
+        <p className="text-sm text-gray-400 mb-6">Enter a username or number (e.g. 2901xxxxxx) to start a call.</p>
         <input
             type="text"
             value={targetUser}
             onChange={(e) => setTargetUser(e.target.value)}
-            placeholder="Enter username"
+            placeholder="Enter username or number"
             className="w-full max-w-xs bg-gray-100 dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600 rounded-lg px-4 py-3 text-lg mb-4 text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
             autoFocus
         />
@@ -56,9 +56,26 @@ const PhoneApp: React.FC = () => {
     const { startP2PCall } = useCall();
     const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = useState(false);
 
-    const handleCall = (withVideo: boolean) => {
+    const handleCall = async (withVideo: boolean) => {
         if (targetUser.trim()) {
-            startP2PCall(targetUser.trim(), withVideo);
+            let finalTarget = targetUser.trim();
+            
+            // Check if it's a 10-digit number starting with 2901
+            if (/^2901\d{6}$/.test(finalTarget)) {
+                // Verify number via backend to get specific status codes (76A, 76B)
+                const { active, username, error } = await database.checkPhoneNumberStatus(finalTarget);
+                
+                if (!active || error) {
+                    alert(error || "User not available.");
+                    return;
+                }
+                
+                if (username) {
+                    finalTarget = username;
+                }
+            }
+            
+            startP2PCall(finalTarget, withVideo);
         }
     };
 

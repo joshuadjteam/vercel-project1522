@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme, wallpapers } from '../../hooks/useTheme';
@@ -145,6 +146,7 @@ const MobiProfilePage: React.FC<MobiProfilePageProps> = ({ navigate }) => {
                         <div className="flex justify-between"><span className="font-semibold text-gray-800 dark:text-gray-100">Username:</span><span>{user?.username}</span></div>
                         <div className="flex justify-between"><span className="font-semibold text-gray-800 dark:text-gray-100">Email:</span><span className="truncate">{user?.email}</span></div>
                         <div className="flex justify-between"><span className="font-semibold text-gray-800 dark:text-gray-100">Role:</span><span>{user?.role}</span></div>
+                        <div className="flex justify-between items-center"><span className="font-semibold text-gray-800 dark:text-gray-100">Phone:</span><span className="text-blue-400 font-mono">{user?.phone_number || 'N/A'}</span></div>
                     </div>
                 </section>
 

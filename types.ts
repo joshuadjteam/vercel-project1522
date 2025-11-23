@@ -21,6 +21,7 @@ export interface User {
     email: string;
     role: UserRole;
     plan_name?: string;
+    phone_number?: string;
     features: {
         chat: boolean;
         ai: boolean;
