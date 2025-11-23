@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 // Add DriveFile type to imports
 import { User, UserRole, Mail, Contact, Note, MailAccount, DriveFile, WeblyApp } from '../types';
@@ -256,15 +255,9 @@ export const database = {
     },
 
     getUserByPhoneNumber: async (phoneNumber: string): Promise<User | null> => {
-        // Validate format: 2901 + 6 digits = 10 digits
         if (!/^2901\d{6}$/.test(phoneNumber)) return null;
-        
-        const idStr = phoneNumber.slice(4);
-        const id = parseInt(idStr, 10);
-        
-        // Efficiently look up by ID using directory fetch
-        // Note: For large scale, this should be a direct DB query via edge function
         const allUsers = await database.getUserDirectory();
+        const id = parseInt(phoneNumber.slice(4), 10);
         return allUsers.find(u => u.id === id) || null;
     },
 
@@ -519,12 +512,8 @@ export const database = {
             if (error.context && typeof error.context.json === 'function') {
                 try {
                     const body = await error.context.json();
-                    // If the error is from the function itself (e.g., 500), use it.
-                    // If it's a client-side failure (e.g. network), body might be empty or different.
                     if (body && body.error) errorMessage = body.error;
-                } catch (e) {
-                    // Ignore parse errors for the error body
-                }
+                } catch (e) {}
             }
             console.error('Error fetching proxy content (invoke failed):', errorMessage);
             return { content: '', contentType: '', error: errorMessage };
@@ -771,5 +760,15 @@ export const database = {
         const current = JSON.parse(localStorage.getItem(`lynix_browser_data_${userId}`) || '{"history":[], "bookmarks":[]}');
         const newData = { ...current, ...data };
         localStorage.setItem(`lynix_browser_data_${userId}`, JSON.stringify(newData));
+    },
+
+    // --- NEW: Software Update Check ---
+    checkSoftwareUpdate: async () => {
+        const { data, error } = await supabase.functions.invoke('mobile-software-update');
+        if (error || data?.error) {
+            console.error("Update check failed:", error || data?.error);
+            return null;
+        }
+        return data;
     }
 };
