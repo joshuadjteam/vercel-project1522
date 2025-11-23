@@ -487,7 +487,8 @@ const App: React.FC = () => {
                             <MobileTopBar navigate={navigate} onSleep={() => setIsLocked(true)} />
                         </div>
 
-                        <main className="flex-grow overflow-hidden flex flex-col min-h-0 relative mt-8 pb-12 bg-black">
+                        {/* Removed bg-black and mt-8 to allow wallpaper to show under transparent status bar */}
+                        <main className="flex-grow overflow-hidden flex flex-col min-h-0 relative pb-12">
                             <MobileComponent navigate={navigate} appsList={dynamicAppsList} {...pageParams} />
                         </main>
                         <MobileNavBar navigate={navigate} />

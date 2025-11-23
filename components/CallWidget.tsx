@@ -11,7 +11,7 @@ const CallWidget: React.FC = () => {
     const { 
         isCalling, callee, callStatus, endCall,
         isMuted, toggleMute, 
-        callDuration, localStream, remoteStream, isVideoCall
+        callDuration, localStream, remoteStream, isVideoCall, remoteExtraInfo
     } = useCall();
     
     const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -60,7 +60,7 @@ const CallWidget: React.FC = () => {
         document.addEventListener('mouseup', onMouseUp);
     };
 
-    if (!isCalling || callStatus !== 'Connected') {
+    if (!isCalling || callStatus !== 'Connected' && !callStatus.includes('Ringing') && !callStatus.includes('Calling')) {
         return null;
     }
 
@@ -70,6 +70,10 @@ const CallWidget: React.FC = () => {
         const s = Math.floor(seconds % 60).toString().padStart(2, '0');
         return seconds >= 3600 ? `${h}:${m}:${s}` : `${m}:${s}`;
     };
+
+    // Construct display information
+    const mainDisplay = remoteExtraInfo || callee;
+    const subDisplay = remoteExtraInfo ? `Ringing : ${callee}` : callStatus;
 
     return (
         <div className="fixed inset-0 bg-black flex items-center justify-center z-[100] animate-fade-in">
@@ -88,9 +92,11 @@ const CallWidget: React.FC = () => {
 
             <div className="absolute inset-0 bg-black/50 flex flex-col p-8 items-center justify-between">
                 {/* Top Info */}
-                <div className="text-center text-white z-10">
-                    <h2 className="text-4xl font-semibold drop-shadow-md">{callee}</h2>
-                    <p className="text-lg text-green-400 drop-shadow-sm">{formatDuration(callDuration)}</p>
+                <div className="text-center text-white z-10 mt-12">
+                    <h2 className="text-4xl font-semibold drop-shadow-md">{mainDisplay}</h2>
+                    <p className="text-lg text-green-400 drop-shadow-sm mt-2">
+                        {callStatus === 'Connected' ? formatDuration(callDuration) : subDisplay}
+                    </p>
                 </div>
                 
                 {/* Audio-only Avatar */}
@@ -101,7 +107,7 @@ const CallWidget: React.FC = () => {
                 )}
                 
                 {/* Controls */}
-                <div className="flex justify-center items-center space-x-6 z-10">
+                <div className="flex justify-center items-center space-x-6 z-10 mb-12">
                     <button 
                         onClick={toggleMute} 
                         title={isMuted ? "Unmute" : "Mute"}

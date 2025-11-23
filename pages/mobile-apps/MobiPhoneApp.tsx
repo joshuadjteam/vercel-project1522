@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useCall } from '../../hooks/useCall';
 import VoiceAssistantWidget from '../../components/VoiceAssistantWidget';
@@ -21,7 +22,7 @@ const MobiPhoneApp: React.FC = () => {
         setInput(prev => prev.slice(0, -1));
     };
 
-    const resolveTarget = async (rawInput: string): Promise<string | null> => {
+    const resolveTarget = async (rawInput: string): Promise<{ username: string, original: string } | null> => {
         const trimmed = rawInput.trim();
         // Check if it's a 10-digit number starting with 2901
         if (/^2901\d{6}$/.test(trimmed)) {
@@ -35,22 +36,22 @@ const MobiPhoneApp: React.FC = () => {
             }
             
             if (username) {
-                return username;
+                return { username, original: trimmed };
             }
         }
-        return trimmed;
+        return { username: trimmed, original: trimmed };
     };
 
     const handleCall = async () => {
         if (!input.trim()) return;
-        const target = await resolveTarget(input);
-        if (target) startP2PCall(target, false);
+        const result = await resolveTarget(input);
+        if (result) startP2PCall(result.username, false, result.original);
     };
 
     const handleVideoCall = async () => {
         if (!input.trim()) return;
-        const target = await resolveTarget(input);
-        if (target) startP2PCall(target, true);
+        const result = await resolveTarget(input);
+        if (result) startP2PCall(result.username, true, result.original);
     };
 
     const KeypadButton = ({ num, sub }: { num: string, sub?: string }) => (

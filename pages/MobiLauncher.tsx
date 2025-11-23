@@ -105,9 +105,9 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
             {wallpaper && <div className={`absolute inset-0 ${wallpapers[wallpaper]?.class || 'bg-gray-800'} -z-10 opacity-100`} />}
 
             {/* Scrollable Content Area */}
-            <div className="flex-grow overflow-y-auto p-4 pb-36 no-scrollbar pt-20">
+            <div className="flex-grow overflow-y-auto p-4 pb-36 no-scrollbar pt-12">
                 {/* At a Glance */}
-                <div className="px-2 mb-8">
+                <div className="px-2 mb-8 mt-8">
                     <div className="text-5xl font-normal opacity-90">
                         {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </div>
@@ -137,7 +137,7 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
             </div>
 
             {/* Fixed Bottom Area */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 pb-2 z-30 bg-gradient-to-t from-black/20 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 p-4 pb-14 z-30 bg-gradient-to-t from-black/20 to-transparent">
                 {/* Dock Icons */}
                 <div className="flex justify-between items-center px-2 mb-6">
                     {dockItems.map((item) => (

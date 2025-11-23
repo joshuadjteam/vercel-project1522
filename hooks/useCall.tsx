@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../supabaseClient';
@@ -14,7 +15,8 @@ interface CallContextType {
     remoteStream: MediaStream | null;
     isVideoCall: boolean;
     callDuration: number;
-    startP2PCall: (callee: string, withVideo: boolean) => void;
+    remoteExtraInfo: string | null;
+    startP2PCall: (callee: string, withVideo: boolean, extraInfo?: string) => void;
     acceptCall: () => void;
     declineCall: () => void;
     endCall: (targetOverride?: string) => void;
@@ -41,6 +43,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { user, isLoggedIn } = useAuth();
     const [isCalling, setIsCalling] = useState(false);
     const [callee, setCallee] = useState('');
+    const [remoteExtraInfo, setRemoteExtraInfo] = useState<string | null>(null);
     const [callStatus, setCallStatus] = useState('');
     const [isMuted, setIsMuted] = useState(false);
     const [incomingCall, setIncomingCall] = useState<{ from: string; isVideoCall: boolean; } | null>(null);
@@ -66,8 +69,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log("Initializing P2P Signaling...");
         
         // Join a global signaling channel. 
-        // In a scaled app, you would likely use `user-signaling:${user.username}` and have callers join that temporarily.
-        // For this app, a global channel filtering messages client-side is sufficient and fastest.
         const channel = supabase.channel('lynix-global-signaling');
 
         channel
@@ -77,7 +78,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     console.log(`[Signaling] Received ${payload.type} from ${payload.from}`);
                     handleSignal({
                         type: payload.type,
-                        payload: payload.data, // Map 'data' from broadcast back to 'payload' for internal handler
+                        payload: payload.data,
                         from: payload.from
                     });
                 }
@@ -103,8 +104,8 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 type: 'broadcast',
                 event: 'signal',
                 payload: {
-                    target: target, // Who is this for?
-                    from: stateRef.current.user?.username, // Who is it from?
+                    target: target,
+                    from: stateRef.current.user?.username,
                     type: type,
                     data: data
                 }
@@ -135,7 +136,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (callTimeoutRef.current) { window.clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
         if (callDurationIntervalRef.current) { window.clearInterval(callDurationIntervalRef.current); callDurationIntervalRef.current = null; }
         
-        setRemoteStream(null); setIsVideoCall(false); setIsCalling(false); setCallee(''); setCallStatus(''); setCallDuration(0); setIncomingCall(null);
+        setRemoteStream(null); setIsVideoCall(false); setIsCalling(false); setCallee(''); setCallStatus(''); setCallDuration(0); setIncomingCall(null); setRemoteExtraInfo(null);
         offerForIncomingCall.current = null;
     }, [sendSignal]);
     
@@ -174,9 +175,6 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const handleSignal = async (msg: any) => {
         const { type, payload, from } = msg;
         
-        // Basic presence check simulation using call-declined if busy/unavailable logic
-        // Real presence would require Supabase Presence, but for now we rely on active response.
-
         switch (type) {
             case 'incoming-call': 
                 if (stateRef.current.isCalling) {
@@ -215,7 +213,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const startP2PCall = useCallback(async (calleeUsername: string, withVideo: boolean) => {
+    const startP2PCall = useCallback(async (calleeUsername: string, withVideo: boolean, extraInfo?: string) => {
         try {
             if (!stateRef.current.user) throw new Error("User not logged in.");
             
@@ -247,6 +245,7 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setCallStatus('Initializing...'); 
             setIsVideoCall(withVideo); 
             setCallee(calleeUsername);
+            if (extraInfo) setRemoteExtraInfo(extraInfo);
             
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
             setLocalStream(stream);
@@ -313,7 +312,10 @@ export const CallProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
-    const value = { isCalling, callee, callStatus, isMuted, incomingCall, localStream, remoteStream, isVideoCall, callDuration, startP2PCall, acceptCall, declineCall, endCall: stableEndCall, toggleMute };
+    const value = { 
+        isCalling, callee, callStatus, isMuted, incomingCall, localStream, remoteStream, isVideoCall, callDuration, remoteExtraInfo,
+        startP2PCall, acceptCall, declineCall, endCall: stableEndCall, toggleMute 
+    };
 
     return <CallContext.Provider value={value}>{children}</CallContext.Provider>;
 };
