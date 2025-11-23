@@ -9,29 +9,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
-// FIX: Add helper function to find or create the 'lynix' folder in Google Drive.
-const getLynixFolderId = async (accessToken: string) => {
-    // Check if folder exists
-    let query = "mimeType='application/vnd.google-apps.folder' and name='lynix' and trashed=false";
-    let response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id)`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
-    if (!response.ok) throw { status: response.status, message: `Failed to search for folder: ${await response.text()}` };
-    let data = await response.json();
+// Helper to find or create a folder
+const ensureFolder = async (accessToken: string, parentId: string | null, folderName: string): Promise<string> => {
+    let query = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+    if (parentId) {
+        query += ` and '${parentId}' in parents`;
+    }
+    
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id)`, { 
+        headers: { 'Authorization': `Bearer ${accessToken}` } 
+    });
+    
+    if (!response.ok) throw { status: response.status, message: `Failed to search for folder ${folderName}: ${await response.text()}` };
+    
+    const data = await response.json();
     if (data.files && data.files.length > 0) {
         return data.files[0].id;
     }
 
-    // If not, create it
-    response = await fetch('https://www.googleapis.com/drive/v3/files', {
+    // Create if not exists
+    const createBody: any = {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+    };
+    if (parentId) {
+        createBody.parents = [parentId];
+    }
+
+    const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            name: 'lynix',
-            mimeType: 'application/vnd.google-apps.folder',
-        })
+        body: JSON.stringify(createBody)
     });
-    if (!response.ok) throw { status: response.status, message: `Failed to create folder: ${await response.text()}` };
-    data = await response.json();
-    return data.id;
+    
+    if (!createResponse.ok) throw { status: createResponse.status, message: `Failed to create folder ${folderName}: ${await createResponse.text()}` };
+    const createData = await createResponse.json();
+    return createData.id;
 };
 
 serve(async (req)=>{
@@ -119,67 +132,6 @@ serve(async (req)=>{
       }
     }
 
-    // --- PROXY Service (For bypassing X-Frame-Options) ---
-    // This allows the Lynix Browser to fetch content server-side and render it.
-    if (resource === 'proxy') {
-        const { url } = payload;
-        if (!url) throw { status: 400, message: "URL is required" };
-
-        try {
-            const response = await fetch(url, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
-                }
-            });
-            const contentType = response.headers.get('content-type') || '';
-            
-            // Detect Security Headers to strip
-            const securityHeaders = ['x-frame-options', 'content-security-policy', 'x-content-type-options'];
-            const strippedHeaders: string[] = [];
-            securityHeaders.forEach(header => {
-                if (response.headers.has(header)) {
-                    strippedHeaders.push(header);
-                }
-            });
-
-            // If it's HTML, we need to inject a <base> tag so relative links work
-            if (contentType.includes('text/html')) {
-                let html = await response.text();
-                const urlObj = new URL(url);
-                // Construct the base origin (e.g., https://example.com)
-                const origin = urlObj.origin;
-                
-                // Inject <base> tag right after <head>
-                // This forces the browser to resolve relative paths (like /image.png) against the original site, not our app.
-                if (!html.includes('<base')) {
-                    const baseTag = `<base href="${origin}/" target="_self">`;
-                    html = html.replace(/<head[^>]*>/i, (match) => `${match}${baseTag}`);
-                }
-                
-                // Inject Bypass Comment / Signature
-                // This simulates "editing the HTML" to bypass security as per user request
-                const bypassSignature = `
-                <!-- 
-                    Lynix Proxy: Security Headers Stripped 
-                    Bypassed Headers: ${strippedHeaders.join(', ') || 'None'}
-                    Mode: Inspect Element / DOM Injection
-                -->`;
-                
-                // Inject at start of body or end of head
-                html = html.replace(/<body[^>]*>/i, (match) => `${match}${bypassSignature}`);
-                
-                return new Response(JSON.stringify({ content: html, contentType, strippedHeaders }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-            } else {
-                // For other content types (images, json, etc), just pass through the text/blob
-                const text = await response.text();
-                return new Response(JSON.stringify({ content: text, contentType, strippedHeaders }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-            }
-        } catch (e) {
-            console.error(`Proxy error for ${url}:`, e);
-            throw { status: 500, message: `Failed to fetch website: ${e.message}` };
-        }
-    }
-
     // --- Google Drive Resource ---
     if (resource === 'drive') {
         const { data: { user: driveUser }, error: getDriveUserError } = await supabaseAdmin.auth.admin.getUserById(authUser.id);
@@ -212,6 +164,58 @@ serve(async (req)=>{
         }
 
         switch(action) {
+            case 'upload-photo': {
+                const { name, content } = payload; // content is base64 string
+                
+                // 1. Find or create 'lynix'
+                const lynixId = await ensureFolder(accessToken, null, 'lynix');
+                
+                // 2. Find or create 'photos' inside 'lynix'
+                const photosId = await ensureFolder(accessToken, lynixId, 'photos');
+                
+                // 3. Upload file
+                const metadata = {
+                    name: name,
+                    parents: [photosId],
+                    mimeType: 'image/jpeg'
+                };
+                
+                // Prepare multipart body
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
+                
+                // Base64 is pure data here (without data:image/jpeg;base64, header)
+                const contentType = 'image/jpeg';
+                
+                const multipartBody = 
+                    delimiter +
+                    'Content-Type: application/json\r\n\r\n' +
+                    JSON.stringify(metadata) +
+                    delimiter +
+                    'Content-Type: ' + contentType + '\r\n' +
+                    'Content-Transfer-Encoding: base64\r\n' +
+                    '\r\n' +
+                    content +
+                    close_delim;
+
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': `multipart/related; boundary=${boundary}`
+                    },
+                    body: multipartBody
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw { status: response.status, message: `Upload failed: ${errText}` };
+                }
+                
+                const fileData = await response.json();
+                return new Response(JSON.stringify({ success: true, fileId: fileData.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            }
             case 'list-files': {
                 const query = payload?.query || "trashed=false";
                 const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,modifiedTime,webViewLink,iconLink)`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
@@ -247,59 +251,6 @@ serve(async (req)=>{
                 const { fileId } = payload;
                 await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${accessToken}` } });
                 return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-            }
-            // FIX: Add get-saved-states and save-web-app-state actions.
-            case 'get-saved-states': {
-                const folderId = await getLynixFolderId(accessToken);
-                const query = `'${folderId}' in parents and name contains '.brwselynix' and trashed=false`;
-                const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,modifiedTime,webViewLink,iconLink)`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
-                if (!response.ok) throw { status: response.status, message: await response.text() };
-                const data = await response.json();
-                return new Response(JSON.stringify({ files: data.files }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-            }
-            case 'save-web-app-state': {
-                const { title, url, size, position } = payload;
-                if (!title || !url) {
-                    throw { status: 400, message: 'Title and URL are required to save a session.' };
-                }
-                const folderId = await getLynixFolderId(accessToken);
-                const fileName = `WebApp-${title.replace(/[^a-zA-Z0-9.-]/g, '_')}.brwselynix`;
-                const fileContent = JSON.stringify({ url, title, size, position }, null, 2);
-    
-                // Check if file with same name exists to update it, or create new
-                const searchQuery = `'${folderId}' in parents and name = '${fileName}' and trashed=false`;
-                const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id)`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
-                if (!searchResponse.ok) throw { status: searchResponse.status, message: `Failed to search for existing file: ${await searchResponse.text()}` };
-                const searchData = await searchResponse.json();
-                
-                let fileId;
-                if (searchData.files && searchData.files.length > 0) {
-                    fileId = searchData.files[0].id;
-                } else {
-                    const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            name: fileName,
-                            parents: [folderId],
-                            mimeType: 'application/json'
-                        })
-                    });
-                    if (!createResponse.ok) throw { status: createResponse.status, message: `Failed to create file: ${await createResponse.text()}` };
-                    const fileData = await createResponse.json();
-                    fileId = fileData.id;
-                }
-    
-                // Now update content
-                const updateResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-                    method: 'PATCH',
-                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                    body: fileContent
-                });
-    
-                if (!updateResponse.ok) throw { status: updateResponse.status, message: `Failed to update file content: ${await updateResponse.text()}` };
-                
-                return new Response(JSON.stringify({ success: true, fileId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
             }
             case 'check-status': {
                 return new Response(JSON.stringify({ isLinked: !!refreshToken }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
@@ -402,10 +353,9 @@ serve(async (req)=>{
             break;
         }
         default: {
-          if (resource) { // Only throw error if resource was specified.
+          if (resource) {
             throw { status: 400, message: 'Invalid resource specified.' };
           }
-           // If no resource, it was likely an empty body from a public check, which is fine.
            return new Response(JSON.stringify({ message: "OK" }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
         }
     }

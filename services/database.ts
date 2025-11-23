@@ -358,6 +358,23 @@ export const database = {
         return { file: data.file };
     },
 
+    uploadPhotoToDrive: async (base64Data: string): Promise<{ success: boolean, error?: string }> => {
+        const filename = `Photo_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+        // Strip header if present to send raw base64
+        const content = base64Data.replace(/^data:image\/\w+;base64,/, "");
+        
+        const { data, error } = await supabase.functions.invoke('app-service', {
+            body: { resource: 'drive', action: 'upload-photo', payload: { name: filename, content } }
+        });
+
+        if (error || data?.error) {
+            const errorMessage = (error?.message || data?.error) as string;
+            console.error('Error uploading photo:', errorMessage);
+            return { success: false, error: errorMessage };
+        }
+        return { success: true };
+    },
+
     getDriveFileDetails: async (fileId: string): Promise<{ file?: DriveFile & { content: string }, error?: string }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'drive', action: 'get-file-details', payload: { fileId } }

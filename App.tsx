@@ -245,7 +245,7 @@ const App: React.FC = () => {
     const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
     const nextZIndex = useRef(10);
     const [allWeblyApps, setAllWeblyApps] = useState<WeblyApp[]>([]);
-    const [showBootScreen, setShowBootScreen] = useState(true);
+    const [showBootScreen, setShowBootScreen] = useState(false); // Default false, updated in useEffect
     const [isLocked, setIsLocked] = useState(false);
     const inactivityTimerRef = useRef<any>(null);
 
@@ -282,8 +282,11 @@ const App: React.FC = () => {
         database.getWeblyApps().then(setAllWeblyApps);
     }, []);
 
+    // Handle Boot Animation for Mobile
     useEffect(() => {
         if (isMobileDevice) {
+            // Reset boot screen to true when mobile is detected, then hide it after delay
+            setShowBootScreen(true);
             if ('Notification' in window) {
                 Notification.requestPermission();
             }
@@ -467,7 +470,6 @@ const App: React.FC = () => {
         if (isLoggedIn) {
             if (isMobileDevice) {
                 const MobileComponent = MOBILE_PAGES_MAP[page] || MobiLauncher;
-                const isLauncher = page === 'home';
                 
                 return (
                     <>

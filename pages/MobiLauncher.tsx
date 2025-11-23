@@ -11,8 +11,36 @@ const MicIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5
 // Specific Icons for Dock to match screenshot
 const PhoneIcon = () => <svg viewBox="0 0 24 24" className="w-full h-full p-3 text-[#004a77]" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>;
 const MessageIcon = () => <svg viewBox="0 0 24 24" className="w-full h-full p-3 text-[#004a77]" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>;
-const PlayStoreIcon = () => <svg viewBox="0 0 24 24" className="w-full h-full p-3" fill="none"><path d="M5 20.573V3.427c0-1.1.9-1.5 1.5-.9l14 9c.6.6.6 1.5 0 2.1l-14 9c-.6.6-1.5.2-1.5-.9z" fill="#00d9ff" fillOpacity="0.1"/><path d="M5.9 3.7L18.2 11.2 19.2 12 5.9 20.3V3.7z" fill="#fff"/><path d="M19.2 12L5.9 3.7v16.6L19.2 12z" fill="#fff"/><path d="M5 3.4L11.8 12 5 20.6V3.4z" fill="#00F076"/><path d="M11.8 12L19.2 7.5 15.5 16.7 11.8 12z" fill="#FF3D00"/><path d="M11.8 12L5 20.6 15.5 7.3 11.8 12z" fill="#2962FF"/><path d="M19.2 12L19.2 12 15.5 7.3 11.8 12 19.2 12z" fill="#FFD600"/></svg>;
-const ChromeIcon = () => <svg viewBox="0 0 24 24" className="w-full h-full p-2"><circle cx="12" cy="12" r="9" fill="#fff"/><path d="M12 5.5L9.5 10h5l-2.5-4.5z" fill="#EA4335"/><path d="M12 5.5L14.5 10 20.5 10A8.5 8.5 0 0 0 12 3.5v2z" fill="#EA4335"/><path d="M12 5.5v4.5H7.5L5 10A8.5 8.5 0 0 0 3.5 12h8.5z" fill="#FBBC05"/><path d="M12 18.5v-4.5h4.5l2.5-4.5A8.5 8.5 0 0 1 20.5 12h-8.5z" fill="#34A853"/><circle cx="12" cy="12" r="3.5" fill="#4285F4"/></svg>;
+
+// Updated Chrome Icon (More colorful/accurate)
+const ChromeIcon = () => (
+    <svg viewBox="0 0 100 100" className="w-full h-full p-1">
+        <circle cx="50" cy="50" r="45" fill="white"/>
+        <path d="M50 14 L86 32 L50 50 L14 32 Z" fill="none"/> {/* Spacer */}
+        <path d="M50 50 L86 32 A 40 40 0 0 1 86 68 L50 88 Z" fill="#4CAF50"/>
+        <path d="M50 50 L14 68 A 40 40 0 0 1 14 32 L50 12 Z" fill="#F44336"/>
+        <path d="M50 50 L50 12 A 40 40 0 0 1 86 32 L86 32 Z" fill="#FFC107"/> {/* Patching logic simplification for React SVG without complex clip-paths */}
+        {/* Simplified Accurate Representation */}
+        <circle cx="50" cy="50" r="18" fill="white"/>
+        <circle cx="50" cy="50" r="14" fill="#1A73E8"/>
+        <path d="M50 22 L50 10 A 40 40 0 0 1 84.6 30 L67.3 40 Z" fill="#E53935"/>
+        <path d="M84.6 30 A 40 40 0 0 1 50 90 L50 70 L67.3 40 Z" fill="#4CAF50"/>
+        <path d="M50 90 A 40 40 0 0 1 15.4 30 L32.7 40 L50 70 Z" fill="#FFC107"/>
+        <path d="M15.4 30 A 40 40 0 0 1 50 10 L50 22 L32.7 40 Z" fill="#E53935"/>
+    </svg>
+);
+
+// Updated Play Store Icon
+const PlayStoreIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-full h-full p-2" fill="none">
+        <path d="M4.5 4.5L4.5 19.5L16 12L4.5 4.5Z" fill="#34A853" fillOpacity="0"/> {/* Hitbox */}
+        <path d="M5 3.8C4.8 4 4.7 4.3 4.7 4.6V19.4C4.7 19.7 4.8 20 5 20.2L5.1 20.3L13.5 11.9V11.8L5.1 3.6L5 3.8Z" fill="#00E2F2"/>
+        <path d="M16.7 15.1L13.5 11.9L5.1 20.3C5.6 20.8 6.4 20.9 7.1 20.5L16.7 15.1Z" fill="#FF3A44"/>
+        <path d="M16.7 8.9L7.1 3.5C6.4 3.1 5.6 3.2 5.1 3.7L13.5 12.1L16.7 8.9Z" fill="#00E676"/>
+        <path d="M16.7 15.1L20.2 13.1C21.2 12.5 21.2 11.5 20.2 10.9L16.7 8.9L13.5 12.1L16.7 15.1Z" fill="#FFC400"/>
+    </svg>
+);
+
 const CameraIcon = () => <svg viewBox="0 0 24 24" className="w-full h-full p-3 text-[#004a77]" fill="currentColor"><circle cx="12" cy="12" r="3.2"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>;
 
 interface MobiLauncherProps {
@@ -46,7 +74,7 @@ const MobiLauncher: React.FC<MobiLauncherProps> = ({ navigate, appsList }) => {
         { id: 'app-phone', icon: <PhoneIcon />, bg: 'bg-[#C2E7FF]' },
         { id: 'app-chat', icon: <MessageIcon />, bg: 'bg-[#C2E7FF]' },
         { id: 'app-webly-store', icon: <PlayStoreIcon />, bg: 'bg-white' }, 
-        { id: 'app-browser', icon: <ChromeIcon />, bg: 'bg-transparent' }, 
+        { id: 'app-browser', icon: <ChromeIcon />, bg: 'bg-white' }, 
         { id: 'app-camera', icon: <CameraIcon />, bg: 'bg-[#C2E7FF]' }
     ];
 
