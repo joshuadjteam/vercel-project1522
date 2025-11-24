@@ -41,6 +41,7 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
                 if (mods.customBattery) setBattery({ level: parseInt(mods.customBattery), charging: false });
                 if (mods.customWifi) setNetworkType(mods.customWifi);
                 if (mods.customCell) setCellularGen(mods.customCell);
+                if (mods.signalStrength !== undefined) setSignalStrength(mods.signalStrength);
                 if (mods.customFont) setCustomFont(mods.customFont);
             }
         }, 1000);
@@ -48,26 +49,28 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
     }, [user?.system_version]);
 
     useEffect(() => {
-        // Only use real battery/network if NOT modded
+        // Only use real battery/network if NOT modded (user version check implicitly handled by periodic update above overriding this init)
         const mods = JSON.parse(localStorage.getItem('lynix_mods') || '{}');
+        const isModded = user?.system_version === '14.0';
         
-        if (!mods.customBattery && (navigator as any).getBattery) {
-            (navigator as any).getBattery().then((bat: any) => {
-                const updateBat = () => setBattery({ level: Math.round(bat.level * 100), charging: bat.charging });
-                updateBat();
-                bat.addEventListener('levelchange', updateBat);
-                bat.addEventListener('chargingchange', updateBat);
-            });
-        } else if (!mods.customBattery) {
-            setBattery({ level: 100, charging: false });
+        if (!isModded || !mods.customBattery) {
+            if ((navigator as any).getBattery) {
+                (navigator as any).getBattery().then((bat: any) => {
+                    const updateBat = () => setBattery({ level: Math.round(bat.level * 100), charging: bat.charging });
+                    updateBat();
+                    bat.addEventListener('levelchange', updateBat);
+                    bat.addEventListener('chargingchange', updateBat);
+                });
+            } else {
+                setBattery({ level: 100, charging: false });
+            }
         }
 
-        if (!mods.customWifi && !mods.customCell) {
-            // Real network logic... (simplified)
+        if (!isModded) {
             setNetworkType('wifi');
             setSignalStrength(4);
         }
-    }, []);
+    }, [user?.system_version]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -124,6 +127,12 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
         );
     }
 
+    // Determine which network icons to show
+    const showEthernet = networkType === 'ethernet';
+    const showWifi = networkType === 'wifi' || networkType === 'unknown'; // default fallback
+    const showCellular = networkType === 'cellular';
+    const showOffline = networkType === 'offline';
+
     // Modern Style Top Bar
     return (
         <>
@@ -136,16 +145,19 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ navigate, onSleep }) => {
             >
                 <span className="text-xs font-medium drop-shadow-md">{timeString}</span>
                 <div className="flex items-center space-x-2 drop-shadow-md text-xs font-medium">
-                    {networkType === 'ethernet' ? (
-                        <EthernetIcon />
-                    ) : networkType === 'wifi' || networkType === 'unknown' ? (
-                        <WifiIcon />
-                    ) : (
+                    
+                    {showEthernet && <EthernetIcon />}
+                    
+                    {showWifi && <WifiIcon />}
+                    
+                    {showCellular && (
                         <div className="flex items-center space-x-1">
                             <span>{cellularGen}</span>
                             <SignalIcon strength={signalStrength} />
                         </div>
                     )}
+
+                    {showOffline && <span className="text-gray-400 text-[10px]">Offline</span>}
 
                     {/* Battery Icon */}
                     <div className="flex items-center space-x-1">

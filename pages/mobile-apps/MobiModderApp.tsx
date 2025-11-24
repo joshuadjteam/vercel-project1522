@@ -10,6 +10,7 @@ const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate }) => {
     const [customFont, setCustomFont] = useState('sans-serif');
     const [customCell, setCustomCell] = useState('5G');
     const [customWifi, setCustomWifi] = useState('wifi');
+    const [signalStrength, setSignalStrength] = useState(4);
     const [customBattery, setCustomBattery] = useState('100');
     const [deviceName, setDeviceName] = useState('');
     const [deviceModel, setDeviceModel] = useState('');
@@ -20,6 +21,7 @@ const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate }) => {
         if (mods.customFont) setCustomFont(mods.customFont);
         if (mods.customCell) setCustomCell(mods.customCell);
         if (mods.customWifi) setCustomWifi(mods.customWifi);
+        if (mods.signalStrength !== undefined) setSignalStrength(mods.signalStrength);
         if (mods.customBattery) setCustomBattery(mods.customBattery);
         if (mods.launcherStyle) setLauncherStyle(mods.launcherStyle);
         
@@ -31,16 +33,17 @@ const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate }) => {
         const mods = {
             customFont,
             customCell,
-            customWifi,
+            customWifi, // 'wifi', 'ethernet', 'cellular', 'offline'
+            signalStrength,
             customBattery,
             launcherStyle
         };
         localStorage.setItem('lynix_mods', JSON.stringify(mods));
         localStorage.setItem('lynix_device_name', deviceName);
         localStorage.setItem('lynix_device_model', deviceModel);
-        localStorage.setItem('lynix_launcher_style', launcherStyle);
         
-        alert('Mods Applied! Some changes may require a refresh.');
+        // Force a reload to apply changes at the App level (launcher switching)
+        alert('Mods Applied! Rebooting User Space...');
         window.location.reload();
     };
 
@@ -67,18 +70,29 @@ const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate }) => {
                 <section className="border border-green-900 p-4 rounded-lg bg-green-900/10">
                     <h2 className="text-green-400 font-bold mb-4">Status Bar Override</h2>
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs text-gray-400 mb-1">Signal Text</label>
-                            <input type="text" value={customCell} onChange={e => setCustomCell(e.target.value)} className="w-full bg-black border border-gray-700 p-2 rounded" placeholder="5G, LTE..." />
-                        </div>
-                        <div>
-                            <label className="block text-xs text-gray-400 mb-1">Network Icon</label>
+                        <div className="col-span-2">
+                            <label className="block text-xs text-gray-400 mb-1">Network Mode</label>
                             <select value={customWifi} onChange={e => setCustomWifi(e.target.value)} className="w-full bg-black border border-gray-700 p-2 rounded">
-                                <option value="wifi">WiFi</option>
-                                <option value="ethernet">Ethernet</option>
-                                <option value="unknown">Offline</option>
+                                <option value="wifi">WiFi Enabled</option>
+                                <option value="ethernet">Ethernet (Wired)</option>
+                                <option value="cellular">Cellular Data Only</option>
+                                <option value="offline">Offline / Airplane</option>
                             </select>
                         </div>
+                        
+                        {customWifi === 'cellular' && (
+                            <div className="col-span-2 grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Signal Text</label>
+                                    <input type="text" value={customCell} onChange={e => setCustomCell(e.target.value)} className="w-full bg-black border border-gray-700 p-2 rounded" placeholder="5G, LTE..." />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Strength (0-4)</label>
+                                    <input type="number" max="4" min="0" value={signalStrength} onChange={e => setSignalStrength(parseInt(e.target.value))} className="w-full bg-black border border-gray-700 p-2 rounded" />
+                                </div>
+                            </div>
+                        )}
+
                         <div className="col-span-2">
                             <label className="block text-xs text-gray-400 mb-1">Battery Level (%)</label>
                             <input type="number" max="100" min="0" value={customBattery} onChange={e => setCustomBattery(e.target.value)} className="w-full bg-black border border-gray-700 p-2 rounded" />
@@ -103,7 +117,7 @@ const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate }) => {
                 <section className="border border-green-900 p-4 rounded-lg bg-green-900/10">
                     <h2 className="text-green-400 font-bold mb-4">Launcher Environment</h2>
                     <div className="space-y-2">
-                        <label className="block text-xs text-gray-400">Home Screen Style</label>
+                        <label className="block text-xs text-gray-400">Home Screen Skin</label>
                         <select value={launcherStyle} onChange={e => setLauncherStyle(e.target.value)} className="w-full bg-black border border-gray-700 p-2 rounded text-white">
                             <option value="pixel">Pixel Launcher (Default)</option>
                             <option value="oneui">OneUI 8 (Samsung Style)</option>

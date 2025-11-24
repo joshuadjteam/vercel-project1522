@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { Page, AppLaunchable } from '../../types';
 
-const LegacyLauncher: React.FC<{ navigate: (page: Page) => void, appsList: AppLaunchable[] }> = ({ navigate, appsList }) => {
+const LegacyLauncher: React.FC<{ navigate: (page: Page, params?: any) => void, appsList: AppLaunchable[] }> = ({ navigate, appsList }) => {
     const allApps = useMemo(() => appsList.filter(app => !app.isHidden), [appsList]);
 
     return (

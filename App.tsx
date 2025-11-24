@@ -63,6 +63,8 @@ import MobiUnitConverterApp from './pages/mobile-apps/MobiUnitConverterApp';
 import MobiCalendarApp from './pages/mobile-apps/MobiCalendarApp';
 import MobiLauncher from './pages/MobiLauncher';
 import LegacyLauncher from './pages/mobile-apps/LegacyLauncher';
+import OneUILauncher from './pages/mobile-apps/OneUILauncher';
+import BB10Launcher from './pages/mobile-apps/BB10Launcher';
 import MobiConsoleSwitchApp from './pages/mobile-apps/MobiConsoleSwitchApp';
 import MobiWeblyStoreApp from './pages/mobile-apps/MobiWeblyStoreApp';
 import MobiWebAppViewer from './pages/mobile-apps/MobiWebAppViewer';
@@ -445,7 +447,7 @@ const App: React.FC = () => {
             }
 
             if (isMobileDevice) {
-                // Choose Launcher based on version
+                // Choose Launcher based on version and mods
                 let MobileComponent = MOBILE_PAGES_MAP[page];
                 
                 // Special Handling for Home Page (Launcher) based on version
@@ -453,6 +455,12 @@ const App: React.FC = () => {
                     const version = user.system_version || '12.0.2';
                     if (version.startsWith('10')) {
                         MobileComponent = LegacyLauncher;
+                    } else if (version === '14.0') {
+                        const mods = JSON.parse(localStorage.getItem('lynix_mods') || '{}');
+                        const style = mods.launcherStyle || 'pixel';
+                        if (style === 'oneui') MobileComponent = OneUILauncher;
+                        else if (style === 'bb10') MobileComponent = BB10Launcher;
+                        else MobileComponent = MobiLauncher; // pixel/default
                     } else {
                         MobileComponent = MobiLauncher;
                     }
