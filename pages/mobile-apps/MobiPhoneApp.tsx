@@ -26,23 +26,29 @@ const MobiPhoneApp: React.FC = () => {
         const trimmed = rawInput.trim();
         // Check if it's a 10-digit number starting with 2901
         if (/^2901\d{6}$/.test(trimmed)) {
-            // Perform server-side verification for status codes 76A/76B
             const { active, username, error } = await database.checkPhoneNumberStatus(trimmed);
-            
             if (!active || error) {
-                // Display the specific error from the server (76A or 76B)
                 alert(error || 'The party is unavailable.');
                 return null;
             }
-            
-            if (username) {
-                return { username, original: trimmed };
-            }
+            if (username) return { username, original: trimmed };
         }
         return { username: trimmed, original: trimmed };
     };
 
     const handleCall = async () => {
+        if (input === '') {
+            // Special empty check for Developer Mode unlock
+            const devSteps = localStorage.getItem('lynix_dev_steps_complete');
+            if (devSteps === 'true') {
+                localStorage.setItem('lynix_developer_mode', 'true');
+                alert("Developer Mode Enabled! The Modder App is now available in your drawer.");
+                localStorage.removeItem('lynix_dev_steps_complete'); // Clear step
+                window.location.reload(); // Reload to refresh app list
+                return;
+            }
+        }
+
         if (!input.trim()) return;
         const result = await resolveTarget(input);
         if (result) startP2PCall(result.username, false, result.original);
@@ -67,7 +73,6 @@ const MobiPhoneApp: React.FC = () => {
     return (
         <>
             <div className="w-full h-full flex flex-col bg-white dark:bg-[#121212] text-black dark:text-white font-sans">
-                {/* Top Display */}
                 <div className="flex-grow flex flex-col justify-end items-center pb-8">
                     <input 
                         type="text" 
@@ -84,7 +89,6 @@ const MobiPhoneApp: React.FC = () => {
                     )}
                 </div>
 
-                {/* Keypad */}
                 <div className="px-8 pb-8">
                     <div className="grid grid-cols-3 gap-y-4 justify-items-center mb-6">
                         <KeypadButton num="1" />
@@ -101,7 +105,6 @@ const MobiPhoneApp: React.FC = () => {
                         <KeypadButton num="#" />
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex justify-center items-center space-x-8">
                         {input && (
                             <button onClick={handleVideoCall} className="p-4 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10">

@@ -137,6 +137,7 @@ export type Page =
     | 'app-maps'
     | 'app-music'
     | 'app-gallery'
+    | 'app-modder'
     | 'mobi-app-webview'
     | 'auth-callback';
 

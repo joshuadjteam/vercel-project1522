@@ -8,43 +8,53 @@ const corsHeaders = {
 
 const RELEASES = [
     {
+        version: "14.0",
+        codeName: "Baltecz",
+        releaseDate: "2026-02-10",
+        size: "1.2 GB",
+        summary: "Android 15.1.0 Simulation. Unlocks the ultimate customization experience.",
+        changes: [
+            "Modder App (Developer Only)",
+            "System-wide Font Customization",
+            "Status Bar Modding",
+            "Launcher Switching Capability"
+        ],
+        rank: 5
+    },
+    {
         version: "13.0",
-        codeName: "VanillaIce",
+        codeName: "Jabaseion",
         releaseDate: "2025-12-01",
         size: "850 MB",
-        summary: "Welcome to Android 15 Simulation. This major update introduces a new App Drawer, Multi-language support (EN/FR/ES), new Maps, Music, and Gallery apps, and enhanced stability.",
+        summary: "Android 15 Simulation. Multi-language support and new native media apps.",
         changes: [
-            "Android 15 UI styling",
-            "New App Drawer (Swipe Up)",
-            "Language Support (English, French, Spanish)",
             "New Native Apps: Maps, Music, Gallery",
-            "Faster Refresh Cycle (90s)",
-            "Improved Camera Integration"
+            "Language Support (EN/FR/ES)",
+            "Improved Performance"
         ],
         rank: 4
     },
     {
         version: "12.5",
-        codeName: "Refined",
+        codeName: "Haraise",
         releaseDate: "2025-06-15",
         size: "450 MB",
-        summary: "A bridge update bringing enhanced stability and UI refinements before the major 13.0 overhaul.",
+        summary: "Enhanced stability and the introduction of the Webly Store.",
         changes: [
-            "Improved UI responsiveness",
-            "Security patches",
-            "Preparation for Android 15 style update"
+            "Webly Store App",
+            "UI Refinements"
         ],
         rank: 3
     },
     {
         version: "12.0.2",
-        codeName: "Foundation",
+        codeName: "Martin",
         releaseDate: "2025-01-20",
         size: "600 MB",
-        summary: "The standard mobile experience.",
+        summary: "The standard mobile experience with core applications.",
         changes: [
             "Initial Release",
-            "Core Apps"
+            "Core Apps Only (No Store)"
         ],
         rank: 2
     },
@@ -53,10 +63,11 @@ const RELEASES = [
         codeName: "Legacy",
         releaseDate: "2024-08-10",
         size: "300 MB",
-        summary: "The original operating system before the modern Android lookalike redesign. Downgrade to experience the classic interface.",
+        summary: "The original operating system interface.",
         changes: [
-            "Original UI",
-            "Legacy Feature Set"
+            "Classic Grid UI",
+            "Legacy Icon Set",
+            "Basic Functionality"
         ],
         rank: 1
     }
@@ -68,7 +79,7 @@ serve(async (req) => {
   }
 
   try {
-    // We simply return the full list of releases now to allow the frontend to handle Upgrade/Downgrade logic
+    // Return full list to allow upgrade/downgrade logic on client
     return new Response(JSON.stringify({
         releases: RELEASES
     }), { 

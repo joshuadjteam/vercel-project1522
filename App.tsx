@@ -62,6 +62,7 @@ import MobiEditorApp from './pages/mobile-apps/MobiEditorApp';
 import MobiUnitConverterApp from './pages/mobile-apps/MobiUnitConverterApp';
 import MobiCalendarApp from './pages/mobile-apps/MobiCalendarApp';
 import MobiLauncher from './pages/MobiLauncher';
+import LegacyLauncher from './pages/mobile-apps/LegacyLauncher';
 import MobiConsoleSwitchApp from './pages/mobile-apps/MobiConsoleSwitchApp';
 import MobiWeblyStoreApp from './pages/mobile-apps/MobiWeblyStoreApp';
 import MobiWebAppViewer from './pages/mobile-apps/MobiWebAppViewer';
@@ -72,6 +73,7 @@ import MobiSettingsApp from './pages/mobile-apps/MobiSettingsApp';
 import MobiMapsApp from './pages/mobile-apps/MobiMapsApp';
 import MobiMusicApp from './pages/mobile-apps/MobiMusicApp';
 import MobiGalleryApp from './pages/mobile-apps/MobiGalleryApp';
+import MobiModderApp from './pages/mobile-apps/MobiModderApp';
 
 import CallWidget from './components/CallWidget';
 import CallNotificationWidget from './components/CallNotificationWidget';
@@ -87,6 +89,7 @@ const SettingsAppIcon = (props: { className?: string }) => <svg xmlns="http://ww
 const MapsIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>;
 const MusicIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>;
 const GalleryIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
+const ModderIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 
 export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: { width: number, height: number } }> = {
     'app-phone': { component: PhoneApp, defaultSize: { width: 450, height: 700 } },
@@ -161,6 +164,7 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-maps': MobiMapsApp,
     'app-music': MobiMusicApp,
     'app-gallery': MobiGalleryApp,
+    'app-modder': MobiModderApp,
 };
 
 export const APPS_LIST: AppLaunchable[] = [
@@ -172,6 +176,7 @@ export const APPS_LIST: AppLaunchable[] = [
   { id: 'app-maps', label: 'Maps', icon: <MapsIcon />, page: 'app-maps' },
   { id: 'app-music', label: 'Music', icon: <MusicIcon />, page: 'app-music' },
   { id: 'app-gallery', label: 'Gallery', icon: <GalleryIcon />, page: 'app-gallery' },
+  { id: 'app-modder', label: 'Modder', icon: <ModderIcon />, page: 'app-modder', isHidden: true },
 ];
 
 const BootScreen: React.FC = () => {
@@ -328,10 +333,27 @@ const App: React.FC = () => {
         const coreApps = APPS_LIST;
         let availableApps: AppLaunchable[] = coreApps;
 
-        // Software Update Check using database/user system_version instead of local storage
         const currentVersion = user?.system_version || '12.0.2';
-        if (currentVersion !== '13.0') {
-            availableApps = availableApps.filter(app => !['app-maps', 'app-music', 'app-gallery'].includes(app.id));
+        const isDevMode = localStorage.getItem('lynix_developer_mode') === 'true';
+
+        // Version Filtering Logic
+        if (currentVersion.startsWith('10')) {
+            // 10 Quartz: Basic apps only
+            availableApps = availableApps.filter(app => ['app-phone', 'app-chat', 'app-contacts', 'app-localmail', 'app-settings', 'app-help', 'app-camera'].includes(app.id));
+        } else if (currentVersion === '12.0.2') {
+            // 12.0.2 Martin: No Store, No New Media Apps
+            availableApps = availableApps.filter(app => !['app-webly-store', 'app-maps', 'app-music', 'app-gallery', 'app-modder'].includes(app.id));
+        } else if (currentVersion === '12.5') {
+            // 12.5 Haraise: Store included, No New Media Apps
+            availableApps = availableApps.filter(app => !['app-maps', 'app-music', 'app-gallery', 'app-modder'].includes(app.id));
+        } else if (currentVersion === '13.0') {
+            // 13.0 Jabaseion: All standard apps, No Modder
+            availableApps = availableApps.filter(app => app.id !== 'app-modder');
+        } else if (currentVersion === '14.0') {
+            // 14.0 Baltecz: Modder app available IF dev mode is on
+            if (isDevMode) {
+                availableApps = availableApps.map(app => app.id === 'app-modder' ? { ...app, isHidden: false } : app);
+            }
         }
 
         if (user?.installed_webly_apps && allWeblyApps.length > 0) {
@@ -423,9 +445,24 @@ const App: React.FC = () => {
             }
 
             if (isMobileDevice) {
-                const MobileComponent = MOBILE_PAGES_MAP[page] || MobiLauncher;
+                // Choose Launcher based on version
+                let MobileComponent = MOBILE_PAGES_MAP[page];
+                
+                // Special Handling for Home Page (Launcher) based on version
+                if (page === 'home') {
+                    const version = user.system_version || '12.0.2';
+                    if (version.startsWith('10')) {
+                        MobileComponent = LegacyLauncher;
+                    } else {
+                        MobileComponent = MobiLauncher;
+                    }
+                }
+                
+                // Ensure custom font is applied if on 14.0 and modded
+                const customFont = user.system_version === '14.0' ? JSON.parse(localStorage.getItem('lynix_mods') || '{}').customFont : undefined;
+
                 return (
-                    <div className="absolute inset-0 flex flex-col overflow-hidden">
+                    <div className="absolute inset-0 flex flex-col overflow-hidden" style={{ fontFamily: customFont }}>
                         {showBootScreen && <BootScreen />}
                         {showOnboarding && <MobileOnboarding onComplete={handleOnboardingComplete} />}
                         {showUpdateScreen && <MobileUpdateInfo version={updateVersion} onComplete={handleUpdateInfoComplete} />}
@@ -435,7 +472,7 @@ const App: React.FC = () => {
                         <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none"><div className="pointer-events-auto"><MobileTopBar navigate={navigate} onSleep={() => setIsLocked(true)} /></div></div>
                         <main className="flex-grow relative w-full h-full overflow-hidden"><MobileComponent navigate={navigate} appsList={dynamicAppsList} {...pageParams} /></main>
                         {showRecents && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md z-[60] flex flex-col p-6 animate-fade-in"><div className="flex justify-between items-center mb-6"><h2 className="text-white text-2xl font-bold">Recent Apps</h2><button onClick={() => setShowRecents(false)} className="text-white bg-white/10 px-4 py-2 rounded-full text-sm">Close</button></div>{recentApps.length === 0 ? ( <div className="flex-grow flex items-center justify-center text-gray-500">No recent apps</div> ) : ( <div className="flex-grow overflow-y-auto space-y-4 pb-20"> {recentApps.map(app => ( <div key={app.id} onClick={(e) => { e.stopPropagation(); navigate(app.page, { ...app.params, appData: app }); setShowRecents(false); }} className="bg-[#303030] p-4 rounded-2xl flex items-center space-x-4 shadow-lg active:scale-95 transition-transform"> <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center"> {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8" })} </div> <span className="text-white font-bold text-lg">{app.label}</span> </div> ))} </div> )}<button onClick={() => { setRecentApps([]); setShowRecents(false); }} className="w-full py-3 bg-red-600/80 text-white rounded-xl font-semibold mt-4">Clear All</button></div>)}
-                        <div className="relative z-50"><MobileNavBar navigate={navigate} onRecents={() => setShowRecents(true)} /></div>
+                        {!page.startsWith('app-modder') && <div className="relative z-50"><MobileNavBar navigate={navigate} onRecents={() => setShowRecents(true)} /></div>}
                     </div>
                 );
             }

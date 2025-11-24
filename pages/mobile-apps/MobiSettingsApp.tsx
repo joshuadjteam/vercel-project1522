@@ -31,6 +31,7 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
     const [pin, setPin] = useState('');
     const [confirmPin, setConfirmPin] = useState('');
     const [status, setStatus] = useState('');
+    const [devTapCount, setDevTapCount] = useState(0);
     
     const [releases, setReleases] = useState<any[]>([]);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -56,6 +57,16 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
     const handleReset = () => {
         if (window.confirm("Are you sure you want to reset all local data? This will sign you out.")) {
             localStorage.clear(); logout(); navigate('signin');
+        }
+    };
+
+    const handleVersionTap = () => {
+        const newCount = devTapCount + 1;
+        setDevTapCount(newCount);
+        if (newCount === 5) {
+            localStorage.setItem('lynix_dev_steps_complete', 'true');
+            alert("You are now 1 step away from Developer Mode. Dial '' in Phone to unlock.");
+            setDevTapCount(0);
         }
     };
 
@@ -95,12 +106,12 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
     const getActionLabel = (release: any) => {
         if (release.version === currentVersion) return 'Current';
         
-        // Simple rank check based on known versions
         const getRank = (v: string) => {
             if (v === '10 Quartz') return 1;
             if (v === '12.0.2') return 2;
             if (v === '12.5') return 3;
             if (v === '13.0') return 4;
+            if (v === '14.0') return 5;
             return 0;
         };
         
@@ -110,7 +121,10 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
         return releaseRank > currentRank ? 'Upgrade' : 'Downgrade';
     };
 
+    // ... [View renders mostly the same, update 'about' to include tap logic] ...
+
     if (view === 'update') {
+        // ... (same update render code as before) ...
         return (
             <div className="w-full h-full flex flex-col bg-[#121212] text-white font-sans">
                 <header className="p-4 flex items-center space-x-4 border-b border-white/10">
@@ -135,21 +149,17 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                                         const action = getActionLabel(release);
                                         const isCurrent = action === 'Current';
                                         const isUpgrade = action === 'Upgrade';
-                                        const isDowngrade = action === 'Downgrade';
                                         
                                         return (
                                             <div key={release.version} className={`rounded-2xl p-6 border ${isCurrent ? 'border-green-500/50 bg-green-900/10' : 'border-white/10 bg-[#1e1e1e]'} relative overflow-hidden`}>
                                                 {isCurrent && <div className="absolute top-0 right-0 bg-green-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">RUNNING</div>}
-                                                
                                                 <div className="flex justify-between items-start mb-2">
                                                     <div>
                                                         <h3 className="text-xl font-bold">{release.version} <span className="text-sm font-normal text-gray-400 ml-1">{release.codeName}</span></h3>
                                                         <p className="text-xs text-gray-500">{release.releaseDate} • {release.size}</p>
                                                     </div>
                                                 </div>
-                                                
                                                 <p className="text-sm text-gray-300 mb-4">{release.summary}</p>
-                                                
                                                 <div className="bg-black/20 p-3 rounded-lg mb-4">
                                                     <ul className="list-disc pl-4 space-y-1 text-xs text-gray-400">
                                                         {release.changes?.map((change: string, i: number) => (
@@ -157,49 +167,23 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                                                         ))}
                                                     </ul>
                                                 </div>
-
                                                 {!isCurrent && (
-                                                    <button 
-                                                        onClick={() => handleInstallVersion(release.version)}
-                                                        className={`w-full py-3 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all active:scale-95 ${
-                                                            isUpgrade 
-                                                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                                                                : 'bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-600/50'
-                                                        }`}
-                                                    >
+                                                    <button onClick={() => handleInstallVersion(release.version)} className={`w-full py-3 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all active:scale-95 ${isUpgrade ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-600/50'}`}>
                                                         <DownloadIcon />
                                                         <span>{isUpgrade ? 'Download & Install' : 'Downgrade'}</span>
                                                     </button>
-                                                )}
-                                                {isCurrent && (
-                                                    <div className="w-full py-3 text-center text-green-500 font-bold text-sm">
-                                                        System is up to date
-                                                    </div>
                                                 )}
                                             </div>
                                         );
                                     })}
                                 </div>
                             )}
-                            
-                            {releases.length === 0 && !checkingUpdate && (
-                                <div className="text-center mt-10">
-                                    <p className="text-gray-500">Tap "Refresh List" to see available versions.</p>
-                                </div>
-                            )}
                         </>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-center">
-                            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                                <DownloadIcon />
-                            </div>
+                            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-pulse"><DownloadIcon /></div>
                             <h3 className="text-2xl font-bold mb-2 capitalize">{updateStatus}...</h3>
-                            <p className="text-blue-400 mb-8 font-mono">{targetVersion}</p>
-                            
-                            <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-500 transition-all duration-300" style={{width: `${progress}%`}}></div>
-                            </div>
-                            <p className="text-gray-500 text-xs mt-4">Do not turn off your device</p>
+                            <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-300" style={{width: `${progress}%`}}></div></div>
                         </div>
                     )}
                 </div>
@@ -217,24 +201,17 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                 <div className="p-6 space-y-6 overflow-y-auto">
                     <div className="space-y-1">
                         <h2 className="text-sm text-gray-400">Device name</h2>
-                        <p className="text-lg font-medium">Generic Lynix Mobile Simulation</p>
+                        <p className="text-lg font-medium">{localStorage.getItem('lynix_device_name') || 'Generic Lynix Mobile'}</p>
                     </div>
                     <div className="space-y-1">
-                        <h2 className="text-sm text-gray-400">Phone number</h2>
-                        <p className="text-lg font-medium">{user?.phone_number || 'Unknown'}</p>
-                    </div>
-                    <div className="space-y-1">
-                        <h2 className="text-sm text-gray-400">Account</h2>
-                        <p className="text-lg font-medium">{user?.username}</p>
+                        <h2 className="text-sm text-gray-400">Device Model</h2>
+                        <p className="text-lg font-medium">{localStorage.getItem('lynix_device_model') || 'LNX-M1'}</p>
                     </div>
                     <div className="w-full h-px bg-white/10 my-4"></div>
-                    <div className="space-y-1">
-                        <h2 className="text-sm text-gray-400">Lynix Version</h2>
-                        <p className="text-lg font-medium">{currentVersion}</p>
-                    </div>
-                    <div className="space-y-1">
-                        <h2 className="text-sm text-gray-400">Android Version (Simulation)</h2>
-                        <p className="text-lg font-medium">{currentVersion.startsWith('10') ? '10' : '15'}</p>
+                    <div className="space-y-1" onClick={handleVersionTap}>
+                        <h2 className="text-sm text-gray-400">Lynix OS Version</h2>
+                        <p className="text-lg font-medium text-blue-400">{currentVersion}</p>
+                        <p className="text-xs text-gray-600">Build 250120.002</p>
                     </div>
                 </div>
             </div>
@@ -242,6 +219,7 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
     }
 
     if (view === 'language') {
+        // ... (same language render)
         return (
             <div className="w-full h-full flex flex-col bg-[#121212] text-white font-sans">
                 <header className="p-4 flex items-center space-x-4 border-b border-white/10">
@@ -249,18 +227,9 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                     <h1 className="text-xl font-medium">{t('language')}</h1>
                 </header>
                 <div className="p-4 space-y-2">
-                    <button onClick={() => setLanguage('en')} className={`w-full p-4 rounded-2xl text-left flex justify-between items-center ${language === 'en' ? 'bg-[#a8c7fa] text-[#041e49]' : 'bg-[#1e1e1e] text-white'}`}>
-                        <span>English</span>
-                        {language === 'en' && <span>✓</span>}
-                    </button>
-                    <button onClick={() => setLanguage('fr')} className={`w-full p-4 rounded-2xl text-left flex justify-between items-center ${language === 'fr' ? 'bg-[#a8c7fa] text-[#041e49]' : 'bg-[#1e1e1e] text-white'}`}>
-                        <span>Français</span>
-                        {language === 'fr' && <span>✓</span>}
-                    </button>
-                    <button onClick={() => setLanguage('es')} className={`w-full p-4 rounded-2xl text-left flex justify-between items-center ${language === 'es' ? 'bg-[#a8c7fa] text-[#041e49]' : 'bg-[#1e1e1e] text-white'}`}>
-                        <span>Español</span>
-                        {language === 'es' && <span>✓</span>}
-                    </button>
+                    <button onClick={() => setLanguage('en')} className={`w-full p-4 rounded-2xl text-left flex justify-between items-center ${language === 'en' ? 'bg-[#a8c7fa] text-[#041e49]' : 'bg-[#1e1e1e] text-white'}`}><span>English</span>{language === 'en' && <span>✓</span>}</button>
+                    <button onClick={() => setLanguage('fr')} className={`w-full p-4 rounded-2xl text-left flex justify-between items-center ${language === 'fr' ? 'bg-[#a8c7fa] text-[#041e49]' : 'bg-[#1e1e1e] text-white'}`}><span>Français</span>{language === 'fr' && <span>✓</span>}</button>
+                    <button onClick={() => setLanguage('es')} className={`w-full p-4 rounded-2xl text-left flex justify-between items-center ${language === 'es' ? 'bg-[#a8c7fa] text-[#041e49]' : 'bg-[#1e1e1e] text-white'}`}><span>Español</span>{language === 'es' && <span>✓</span>}</button>
                 </div>
             </div>
         );
@@ -274,51 +243,18 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
             <header className="p-6 pb-2">
                 <h1 className="text-3xl font-normal">{t('settings')}</h1>
             </header>
-            
             <div className="p-4 space-y-4 flex-grow overflow-y-auto">
                 <div className="bg-[#1e1e1e] rounded-3xl p-4 flex items-center space-x-4 mb-6">
                     <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-xl font-bold">{user?.username.charAt(0).toUpperCase()}</div>
-                    <div className="flex-grow">
-                        <h2 className="font-medium text-lg">{user?.username}</h2>
-                        <p className="text-sm text-gray-400">Lynix Account</p>
-                    </div>
+                    <div className="flex-grow"><h2 className="font-medium text-lg">{user?.username}</h2><p className="text-sm text-gray-400">Lynix Account</p></div>
                 </div>
-
-                <button onClick={() => setView('wallpaper')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
-                    <div className="p-2 bg-orange-500/20 text-orange-400 rounded-full"><PaintIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('wallpaper')}</div><div className="text-xs text-gray-400">Colors, themes, icons</div></div>
-                </button>
-
-                <button onClick={() => setView('security')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
-                    <div className="p-2 bg-green-500/20 text-green-400 rounded-full"><LockIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('security')}</div><div className="text-xs text-gray-400">Screen lock, PIN</div></div>
-                </button>
-
-                <button onClick={() => setView('language')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
-                    <div className="p-2 bg-purple-500/20 text-purple-400 rounded-full"><GlobeIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('language')}</div><div className="text-xs text-gray-400">{language.toUpperCase()}</div></div>
-                </button>
-
-                <button onClick={() => setView('update')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
-                    <div className="p-2 bg-blue-500/20 text-blue-400 rounded-full"><UpdateIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('systemUpdate')}</div><div className="text-xs text-gray-400">{currentVersion}</div></div>
-                </button>
-
-                <button onClick={handleReset} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
-                    <div className="p-2 bg-red-500/20 text-red-400 rounded-full"><TrashIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('reset')}</div><div className="text-xs text-gray-400">Erase all data, cookies</div></div>
-                </button>
-
-                <button onClick={() => setView('about')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
-                    <div className="p-2 bg-gray-500/20 text-gray-400 rounded-full"><InfoIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('aboutPhone')}</div><div className="text-xs text-gray-400">{user?.role}</div></div>
-                </button>
-                
-                <div className="pt-8">
-                    <button onClick={() => logout()} className="w-full border border-gray-700 text-gray-300 py-3 rounded-full font-medium hover:bg-white/5">
-                        {t('signOut')}
-                    </button>
-                </div>
+                <button onClick={() => setView('wallpaper')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]"><div className="p-2 bg-orange-500/20 text-orange-400 rounded-full"><PaintIcon /></div><div className="text-left flex-grow"><div className="font-medium">{t('wallpaper')}</div><div className="text-xs text-gray-400">Colors, themes, icons</div></div></button>
+                <button onClick={() => setView('security')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]"><div className="p-2 bg-green-500/20 text-green-400 rounded-full"><LockIcon /></div><div className="text-left flex-grow"><div className="font-medium">{t('security')}</div><div className="text-xs text-gray-400">Screen lock, PIN</div></div></button>
+                <button onClick={() => setView('language')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]"><div className="p-2 bg-purple-500/20 text-purple-400 rounded-full"><GlobeIcon /></div><div className="text-left flex-grow"><div className="font-medium">{t('language')}</div><div className="text-xs text-gray-400">{language.toUpperCase()}</div></div></button>
+                <button onClick={() => setView('update')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]"><div className="p-2 bg-blue-500/20 text-blue-400 rounded-full"><UpdateIcon /></div><div className="text-left flex-grow"><div className="font-medium">{t('systemUpdate')}</div><div className="text-xs text-gray-400">{currentVersion}</div></div></button>
+                <button onClick={handleReset} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]"><div className="p-2 bg-red-500/20 text-red-400 rounded-full"><TrashIcon /></div><div className="text-left flex-grow"><div className="font-medium">{t('reset')}</div><div className="text-xs text-gray-400">Erase all data</div></div></button>
+                <button onClick={() => setView('about')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]"><div className="p-2 bg-gray-500/20 text-gray-400 rounded-full"><InfoIcon /></div><div className="text-left flex-grow"><div className="font-medium">{t('aboutPhone')}</div><div className="text-xs text-gray-400">Model, version</div></div></button>
+                <div className="pt-8"><button onClick={() => logout()} className="w-full border border-gray-700 text-gray-300 py-3 rounded-full font-medium hover:bg-white/5">{t('signOut')}</button></div>
             </div>
         </div>
     );
