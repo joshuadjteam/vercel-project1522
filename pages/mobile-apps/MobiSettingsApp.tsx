@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme, wallpapers } from '../../hooks/useTheme';
@@ -59,7 +60,8 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
 
     const checkForUpdate = async () => {
         setCheckingUpdate(true);
-        const info = await database.checkSoftwareUpdate();
+        // Pass the current version to the update check
+        const info = await database.checkSoftwareUpdate(currentVersion);
         setUpdateInfo(info);
         setCheckingUpdate(false);
     };
@@ -88,6 +90,8 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
     };
 
     if (view === 'update') {
+        const isUpdateAvailable = updateInfo && updateInfo.latestVersion !== currentVersion;
+
         return (
             <div className="w-full h-full flex flex-col bg-[#121212] text-white font-sans">
                 <header className="p-4 flex items-center space-x-4 border-b border-white/10">
@@ -101,13 +105,17 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                                 <UpdateIcon />
                             </div>
                             <h2 className="text-2xl font-light mb-2">LynixOS {currentVersion}</h2>
-                            <p className="text-gray-400 mb-8">Your system is up to date</p>
+                            <p className="text-gray-400 mb-8">
+                                {checkingUpdate 
+                                    ? 'Checking for updates...' 
+                                    : (isUpdateAvailable ? 'New version available' : 'Your system is up to date')}
+                            </p>
                             
                             {!updateInfo ? (
                                 <button onClick={checkForUpdate} disabled={checkingUpdate} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-medium transition-colors">
                                     {checkingUpdate ? 'Checking...' : 'Check for update'}
                                 </button>
-                            ) : (
+                            ) : isUpdateAvailable ? (
                                 <div className="w-full max-w-sm bg-[#1e1e1e] rounded-2xl p-6 text-left shadow-lg border border-white/10">
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
@@ -122,6 +130,10 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                                         <span>Download and Install</span>
                                     </button>
                                 </div>
+                            ) : (
+                                <button onClick={checkForUpdate} className="bg-[#303030] hover:bg-[#404040] text-white px-8 py-3 rounded-full font-medium transition-colors">
+                                    Check again
+                                </button>
                             )}
                         </>
                     )}

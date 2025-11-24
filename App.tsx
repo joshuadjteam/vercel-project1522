@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ThemeProvider, useTheme, wallpapers } from './hooks/useTheme';
@@ -13,6 +14,9 @@ import MobileTopBar from './components/MobileTopBar';
 import MobileNavBar from './components/MobileNavBar';
 import LockScreen from './components/LockScreen';
 import NotificationToast, { NotificationProps, DatabaseIcon } from './components/NotificationToast';
+import AccountInvalidScreen from './components/AccountInvalidScreen';
+import MobileOnboarding from './components/MobileOnboarding';
+import MobileUpdateInfo from './components/MobileUpdateInfo';
 
 import HomePage from './pages/HomePage';
 import ConsolePage from './pages/ConsolePage';
@@ -232,21 +236,44 @@ const App: React.FC = () => {
     const [recentApps, setRecentApps] = useState<AppLaunchable[]>([]);
     const [showRecents, setShowRecents] = useState(false);
     const [notification, setNotification] = useState<NotificationProps | null>(null);
+    
+    // State for lifecycle overlays
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showUpdateScreen, setShowUpdateScreen] = useState(false);
+    const [updateVersion, setUpdateVersion] = useState('');
 
     useEffect(() => {
         if (!isLoggedIn || !user?.auth_id) return;
         const handlePeriodicRefresh = async () => {
-            setNotification({ title: 'Database', message: 'Refreshing apps... Services are going to be inactive for 5 seconds', icon: <DatabaseIcon /> });
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            // Silent refresh: No notification
             try {
                 const { profile } = await database.getUserProfile(user.auth_id!);
                 if (profile) updateUserProfile(profile);
-            } catch(e) { console.error("Refresh failed", e); }
-            setNotification(null);
+            } catch(e) { console.error("Silent refresh failed", e); }
         };
         const intervalId = setInterval(handlePeriodicRefresh, 90000); 
         return () => clearInterval(intervalId);
     }, [isLoggedIn, user?.auth_id, updateUserProfile]);
+
+    // Lifecycle Check: Onboarding and Updates
+    useEffect(() => {
+        if (isLoggedIn && user && isMobileDevice) {
+            // 1. Check Onboarding
+            const hasOnboarded = localStorage.getItem(`lynix_onboarding_complete_${user.id}`);
+            if (!hasOnboarded) {
+                setShowOnboarding(true);
+            }
+
+            // 2. Check Updates
+            const lastSeenVersion = localStorage.getItem(`lynix_last_version_${user.id}`);
+            const currentSystemVersion = user.system_version || '12.0.2';
+            
+            if (lastSeenVersion !== currentSystemVersion) {
+                setUpdateVersion(currentSystemVersion);
+                setShowUpdateScreen(true);
+            }
+        }
+    }, [isLoggedIn, user, isMobileDevice]);
 
     useEffect(() => {
         if (!isMobileDevice || !isLoggedIn) return;
@@ -282,6 +309,20 @@ const App: React.FC = () => {
             setShowBootScreen(false);
         }
     }, [isMobileDevice]);
+
+    const handleOnboardingComplete = () => {
+        if (user) {
+            localStorage.setItem(`lynix_onboarding_complete_${user.id}`, 'true');
+            setShowOnboarding(false);
+        }
+    };
+
+    const handleUpdateInfoComplete = () => {
+        if (user) {
+            localStorage.setItem(`lynix_last_version_${user.id}`, user.system_version || '12.0.2');
+            setShowUpdateScreen(false);
+        }
+    };
 
     const dynamicAppsList = useMemo(() => {
         const coreApps = APPS_LIST;
@@ -376,11 +417,19 @@ const App: React.FC = () => {
         }
 
         if (isLoggedIn) {
+            // Check for invalid account status before anything else
+            if (user?.role === UserRole.Suspended || user?.role === UserRole.Invalid || user?.role === UserRole.Overdue) {
+                return <AccountInvalidScreen />;
+            }
+
             if (isMobileDevice) {
                 const MobileComponent = MOBILE_PAGES_MAP[page] || MobiLauncher;
                 return (
                     <div className="absolute inset-0 flex flex-col overflow-hidden">
                         {showBootScreen && <BootScreen />}
+                        {showOnboarding && <MobileOnboarding onComplete={handleOnboardingComplete} />}
+                        {showUpdateScreen && <MobileUpdateInfo version={updateVersion} onComplete={handleUpdateInfoComplete} />}
+                        
                         <LockScreen isLocked={isLocked} onUnlock={() => setIsLocked(false)} />
                         <NotificationToast notification={notification} />
                         <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none"><div className="pointer-events-auto"><MobileTopBar navigate={navigate} onSleep={() => setIsLocked(true)} /></div></div>

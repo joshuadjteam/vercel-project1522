@@ -763,8 +763,10 @@ export const database = {
     },
 
     // --- NEW: Software Update Check ---
-    checkSoftwareUpdate: async () => {
-        const { data, error } = await supabase.functions.invoke('mobile-software-update');
+    checkSoftwareUpdate: async (currentVersion: string) => {
+        const { data, error } = await supabase.functions.invoke('mobile-software-update', {
+            body: { currentVersion }
+        });
         if (error || data?.error) {
             console.error("Update check failed:", error || data?.error);
             return null;

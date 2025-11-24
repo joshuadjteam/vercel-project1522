@@ -1,3 +1,4 @@
+
 import type { ReactNode } from 'react';
 
 export enum UserRole {
@@ -11,6 +12,8 @@ export enum UserRole {
     Overdue = 'overdue',
     Trial = 'trial',
     Guest = 'Guest',
+    Suspended = 'suspended',
+    Invalid = 'invalid',
 }
 
 export interface User {
