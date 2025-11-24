@@ -32,9 +32,10 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
     const [confirmPin, setConfirmPin] = useState('');
     const [status, setStatus] = useState('');
     
-    const [updateInfo, setUpdateInfo] = useState<any>(null);
+    const [releases, setReleases] = useState<any[]>([]);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
     const [updateStatus, setUpdateStatus] = useState<'idle' | 'downloading' | 'installing' | 'rebooting'>('idle');
+    const [targetVersion, setTargetVersion] = useState('');
     const [progress, setProgress] = useState(0);
     const [currentVersion, setCurrentVersion] = useState('12.0.2');
 
@@ -60,14 +61,17 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
 
     const checkForUpdate = async () => {
         setCheckingUpdate(true);
-        // Pass the current version to the update check
-        const info = await database.checkSoftwareUpdate(currentVersion);
-        setUpdateInfo(info);
+        const data = await database.checkSoftwareUpdate(currentVersion);
+        if (data && data.releases) {
+            // Sort releases by rank descending
+            setReleases(data.releases.sort((a: any, b: any) => b.rank - a.rank));
+        }
         setCheckingUpdate(false);
     };
 
-    const handleUpdate = () => {
-        if (!updateInfo || !user) return;
+    const handleInstallVersion = (version: string) => {
+        if (!user) return;
+        setTargetVersion(version);
         setUpdateStatus('downloading');
         let p = 0;
         const interval = setInterval(() => {
@@ -78,73 +82,124 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                 setUpdateStatus('installing');
                 setTimeout(async () => {
                     // Persist update to database
-                    await database.updateUser({ id: user.id, system_version: updateInfo.latestVersion });
-                    
+                    await database.updateUser({ id: user.id, system_version: version });
                     setUpdateStatus('rebooting');
                     setTimeout(() => window.location.reload(), 2000);
-                }, 3000);
+                }, 2000);
             } else {
                 setProgress(Math.min(p, 99));
             }
         }, 300);
     };
 
-    if (view === 'update') {
-        const isUpdateAvailable = updateInfo && updateInfo.latestVersion !== currentVersion;
+    const getActionLabel = (release: any) => {
+        if (release.version === currentVersion) return 'Current';
+        
+        // Simple rank check based on known versions
+        const getRank = (v: string) => {
+            if (v === '10 Quartz') return 1;
+            if (v === '12.0.2') return 2;
+            if (v === '12.5') return 3;
+            if (v === '13.0') return 4;
+            return 0;
+        };
+        
+        const currentRank = getRank(currentVersion);
+        const releaseRank = getRank(release.version);
+        
+        return releaseRank > currentRank ? 'Upgrade' : 'Downgrade';
+    };
 
+    if (view === 'update') {
         return (
             <div className="w-full h-full flex flex-col bg-[#121212] text-white font-sans">
                 <header className="p-4 flex items-center space-x-4 border-b border-white/10">
                     <button onClick={() => setView('main')} className="p-2 rounded-full hover:bg-white/10"><BackIcon /></button>
                     <h1 className="text-xl font-medium">{t('systemUpdate')}</h1>
                 </header>
-                <div className="p-6 flex-grow flex flex-col items-center justify-center text-center">
-                    {updateStatus === 'idle' && (
+                
+                <div className="flex-grow overflow-y-auto p-6">
+                    {updateStatus === 'idle' ? (
                         <>
-                            <div className="w-24 h-24 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center mb-6">
-                                <UpdateIcon />
+                            <div className="text-center mb-8">
+                                <p className="text-gray-400 mb-2">Current Version</p>
+                                <h2 className="text-3xl font-bold text-white">{currentVersion}</h2>
+                                <button onClick={checkForUpdate} disabled={checkingUpdate} className="mt-4 text-blue-400 text-sm font-bold uppercase tracking-wider hover:text-blue-300">
+                                    {checkingUpdate ? 'Checking...' : 'Refresh List'}
+                                </button>
                             </div>
-                            <h2 className="text-2xl font-light mb-2">LynixOS {currentVersion}</h2>
-                            <p className="text-gray-400 mb-8">
-                                {checkingUpdate 
-                                    ? 'Checking for updates...' 
-                                    : (isUpdateAvailable ? 'New version available' : 'Your system is up to date')}
-                            </p>
-                            
-                            {!updateInfo ? (
-                                <button onClick={checkForUpdate} disabled={checkingUpdate} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-medium transition-colors">
-                                    {checkingUpdate ? 'Checking...' : 'Check for update'}
-                                </button>
-                            ) : isUpdateAvailable ? (
-                                <div className="w-full max-w-sm bg-[#1e1e1e] rounded-2xl p-6 text-left shadow-lg border border-white/10">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <h3 className="font-bold text-lg text-white">Update Available</h3>
-                                            <p className="text-blue-400 font-medium">{updateInfo.latestVersion} {updateInfo.latestCodeName}</p>
-                                        </div>
-                                        <span className="text-xs bg-white/10 px-2 py-1 rounded">{updateInfo.size}</span>
-                                    </div>
-                                    <p className="text-sm text-gray-300 mb-4 leading-relaxed">{updateInfo.summary}</p>
-                                    <button onClick={handleUpdate} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold flex items-center justify-center space-x-2">
-                                        <DownloadIcon />
-                                        <span>Download and Install</span>
-                                    </button>
+
+                            {releases.length > 0 && (
+                                <div className="space-y-6 animate-fade-in">
+                                    {releases.map((release) => {
+                                        const action = getActionLabel(release);
+                                        const isCurrent = action === 'Current';
+                                        const isUpgrade = action === 'Upgrade';
+                                        const isDowngrade = action === 'Downgrade';
+                                        
+                                        return (
+                                            <div key={release.version} className={`rounded-2xl p-6 border ${isCurrent ? 'border-green-500/50 bg-green-900/10' : 'border-white/10 bg-[#1e1e1e]'} relative overflow-hidden`}>
+                                                {isCurrent && <div className="absolute top-0 right-0 bg-green-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">RUNNING</div>}
+                                                
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <h3 className="text-xl font-bold">{release.version} <span className="text-sm font-normal text-gray-400 ml-1">{release.codeName}</span></h3>
+                                                        <p className="text-xs text-gray-500">{release.releaseDate} • {release.size}</p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <p className="text-sm text-gray-300 mb-4">{release.summary}</p>
+                                                
+                                                <div className="bg-black/20 p-3 rounded-lg mb-4">
+                                                    <ul className="list-disc pl-4 space-y-1 text-xs text-gray-400">
+                                                        {release.changes?.map((change: string, i: number) => (
+                                                            <li key={i}>{change}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+
+                                                {!isCurrent && (
+                                                    <button 
+                                                        onClick={() => handleInstallVersion(release.version)}
+                                                        className={`w-full py-3 rounded-xl font-bold flex items-center justify-center space-x-2 transition-all active:scale-95 ${
+                                                            isUpgrade 
+                                                                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                                                : 'bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-600/50'
+                                                        }`}
+                                                    >
+                                                        <DownloadIcon />
+                                                        <span>{isUpgrade ? 'Download & Install' : 'Downgrade'}</span>
+                                                    </button>
+                                                )}
+                                                {isCurrent && (
+                                                    <div className="w-full py-3 text-center text-green-500 font-bold text-sm">
+                                                        System is up to date
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            ) : (
-                                <button onClick={checkForUpdate} className="bg-[#303030] hover:bg-[#404040] text-white px-8 py-3 rounded-full font-medium transition-colors">
-                                    Check again
-                                </button>
+                            )}
+                            
+                            {releases.length === 0 && !checkingUpdate && (
+                                <div className="text-center mt-10">
+                                    <p className="text-gray-500">Tap "Refresh List" to see available versions.</p>
+                                </div>
                             )}
                         </>
-                    )}
-
-                    {updateStatus !== 'idle' && (
-                        <div className="w-full max-w-xs text-center">
-                            <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden mb-4">
-                                <div className="bg-green-500 h-full transition-all duration-300" style={{width: `${progress}%`}}></div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-center">
+                            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                                <DownloadIcon />
                             </div>
-                            <h3 className="text-xl font-medium mb-1 capitalize">{updateStatus}...</h3>
-                            <p className="text-gray-400 text-sm">{updateStatus === 'rebooting' ? 'Restarting system' : 'Please do not turn off your device'}</p>
+                            <h3 className="text-2xl font-bold mb-2 capitalize">{updateStatus}...</h3>
+                            <p className="text-blue-400 mb-8 font-mono">{targetVersion}</p>
+                            
+                            <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500 transition-all duration-300" style={{width: `${progress}%`}}></div>
+                            </div>
+                            <p className="text-gray-500 text-xs mt-4">Do not turn off your device</p>
                         </div>
                     )}
                 </div>
@@ -179,7 +234,7 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                     </div>
                     <div className="space-y-1">
                         <h2 className="text-sm text-gray-400">Android Version (Simulation)</h2>
-                        <p className="text-lg font-medium">15</p>
+                        <p className="text-lg font-medium">{currentVersion.startsWith('10') ? '10' : '15'}</p>
                     </div>
                 </div>
             </div>
@@ -231,12 +286,12 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
 
                 <button onClick={() => setView('wallpaper')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
                     <div className="p-2 bg-orange-500/20 text-orange-400 rounded-full"><PaintIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('wallpaper')}</div></div>
+                    <div className="text-left flex-grow"><div className="font-medium">{t('wallpaper')}</div><div className="text-xs text-gray-400">Colors, themes, icons</div></div>
                 </button>
 
                 <button onClick={() => setView('security')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
                     <div className="p-2 bg-green-500/20 text-green-400 rounded-full"><LockIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('security')}</div></div>
+                    <div className="text-left flex-grow"><div className="font-medium">{t('security')}</div><div className="text-xs text-gray-400">Screen lock, PIN</div></div>
                 </button>
 
                 <button onClick={() => setView('language')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
@@ -251,12 +306,12 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
 
                 <button onClick={handleReset} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
                     <div className="p-2 bg-red-500/20 text-red-400 rounded-full"><TrashIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('reset')}</div></div>
+                    <div className="text-left flex-grow"><div className="font-medium">{t('reset')}</div><div className="text-xs text-gray-400">Erase all data, cookies</div></div>
                 </button>
 
                 <button onClick={() => setView('about')} className="w-full bg-[#1e1e1e] p-4 rounded-2xl flex items-center space-x-4 hover:bg-[#2c2c2c]">
                     <div className="p-2 bg-gray-500/20 text-gray-400 rounded-full"><InfoIcon /></div>
-                    <div className="text-left flex-grow"><div className="font-medium">{t('aboutPhone')}</div></div>
+                    <div className="text-left flex-grow"><div className="font-medium">{t('aboutPhone')}</div><div className="text-xs text-gray-400">{user?.role}</div></div>
                 </button>
                 
                 <div className="pt-8">

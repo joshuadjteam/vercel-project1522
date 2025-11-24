@@ -8,26 +8,6 @@ const corsHeaders = {
 
 const RELEASES = [
     {
-        version: "12.0.2",
-        codeName: "Classic",
-        releaseDate: "2024-01-01",
-        size: "N/A",
-        summary: "Initial stable release.",
-        changes: []
-    },
-    {
-        version: "12.5",
-        codeName: "Refined",
-        releaseDate: "2025-06-15",
-        size: "450 MB",
-        summary: "A bridge update bringing enhanced stability and UI refinements before the major 13.0 overhaul.",
-        changes: [
-            "Improved UI responsiveness",
-            "Security patches",
-            "Preparation for Android 15 style update"
-        ]
-    },
-    {
         version: "13.0",
         codeName: "VanillaIce",
         releaseDate: "2025-12-01",
@@ -40,7 +20,45 @@ const RELEASES = [
             "New Native Apps: Maps, Music, Gallery",
             "Faster Refresh Cycle (90s)",
             "Improved Camera Integration"
-        ]
+        ],
+        rank: 4
+    },
+    {
+        version: "12.5",
+        codeName: "Refined",
+        releaseDate: "2025-06-15",
+        size: "450 MB",
+        summary: "A bridge update bringing enhanced stability and UI refinements before the major 13.0 overhaul.",
+        changes: [
+            "Improved UI responsiveness",
+            "Security patches",
+            "Preparation for Android 15 style update"
+        ],
+        rank: 3
+    },
+    {
+        version: "12.0.2",
+        codeName: "Foundation",
+        releaseDate: "2025-01-20",
+        size: "600 MB",
+        summary: "The standard mobile experience.",
+        changes: [
+            "Initial Release",
+            "Core Apps"
+        ],
+        rank: 2
+    },
+    {
+        version: "10 Quartz",
+        codeName: "Legacy",
+        releaseDate: "2024-08-10",
+        size: "300 MB",
+        summary: "The original operating system before the modern Android lookalike redesign. Downgrade to experience the classic interface.",
+        changes: [
+            "Original UI",
+            "Legacy Feature Set"
+        ],
+        rank: 1
     }
 ];
 
@@ -50,32 +68,9 @@ serve(async (req) => {
   }
 
   try {
-    const { currentVersion } = await req.json().catch(() => ({ currentVersion: '12.0.2' }));
-    
-    // Find the index of the current version
-    const currentIndex = RELEASES.findIndex(r => r.version === currentVersion);
-    
-    let nextRelease;
-    
-    // If current version isn't found, assume the latest.
-    // If it is found, check if there is a next one.
-    if (currentIndex === -1) {
-        // If version is unknown (e.g., 11.0), offer latest.
-        nextRelease = RELEASES[RELEASES.length - 1];
-    } else if (currentIndex < RELEASES.length - 1) {
-        nextRelease = RELEASES[currentIndex + 1];
-    } else {
-        // Already at latest
-        nextRelease = RELEASES[currentIndex];
-    }
-
+    // We simply return the full list of releases now to allow the frontend to handle Upgrade/Downgrade logic
     return new Response(JSON.stringify({
-        latestVersion: nextRelease.version,
-        latestCodeName: nextRelease.codeName,
-        releaseDate: nextRelease.releaseDate,
-        size: nextRelease.size,
-        summary: nextRelease.summary,
-        changes: nextRelease.changes
+        releases: RELEASES
     }), { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
         status: 200 
