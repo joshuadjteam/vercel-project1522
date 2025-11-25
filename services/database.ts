@@ -381,6 +381,15 @@ export const database = {
         return { files: data.files || [] };
     },
 
+    // New Helper: Find a specific file by name (for syncing)
+    findDriveFileByName: async (name: string): Promise<DriveFile | null> => {
+        const { files } = await database.getDriveFiles(`name = '${name}' and trashed = false`);
+        if (files && files.length > 0) {
+            return files[0];
+        }
+        return null;
+    },
+
     createDriveFile: async (name: string): Promise<{ file?: DriveFile, error?: string }> => {
         const { data, error } = await supabase.functions.invoke('app-service', {
             body: { resource: 'drive', action: 'create-file', payload: { name } }
