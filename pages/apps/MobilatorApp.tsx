@@ -27,16 +27,19 @@ import MobiMapsApp from '../mobile-apps/MobiMapsApp';
 import MobiMusicApp from '../mobile-apps/MobiMusicApp';
 import MobiGalleryApp from '../mobile-apps/MobiGalleryApp';
 import MobiModderApp from '../mobile-apps/MobiModderApp';
+import LegacyLauncher from '../mobile-apps/LegacyLauncher';
+import OneUILauncher from '../mobile-apps/OneUILauncher';
+import BB10Launcher from '../mobile-apps/BB10Launcher';
+import RecoveryMode from '../mobile-apps/RecoveryMode';
 import MobileTopBar from '../../components/MobileTopBar';
 import MobileNavBar from '../../components/MobileNavBar';
 import MobileBootScreen from '../../components/MobileBootScreen';
-import { APPS_LIST, MOBILE_PAGES_MAP, APPS_MAP } from '../../App';
+import { APPS_LIST, APPS_MAP } from '../../App';
 
 const DriveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>;
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 const LoadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m-4-4v12" /></svg>;
 
-// Create a localized mapping for the emulator (although imported from App, kept explicit for clarity)
 const MOBILATOR_PAGES_MAP: Record<string, React.FC<any>> = {
     'home': MobiLauncher,
     'profile': MobiProfilePage,
@@ -65,6 +68,7 @@ const MOBILATOR_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-music': MobiMusicApp,
     'app-gallery': MobiGalleryApp,
     'app-modder': MobiModderApp,
+    'recovery-mode': RecoveryMode,
 };
 
 interface MobilatorAppProps {
@@ -79,10 +83,15 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
     const [isDriveLinked, setIsDriveLinked] = useState(false);
     const [allWeblyApps, setAllWeblyApps] = useState<WeblyApp[]>([]);
     const [isBooting, setIsBooting] = useState(false);
+    const [launcherStyle, setLauncherStyle] = useState('pixel');
 
     useEffect(() => {
         database.isDriveLinked().then(setIsDriveLinked);
         database.getWeblyApps().then(setAllWeblyApps);
+        
+        // Load initial launcher preference
+        const mods = JSON.parse(localStorage.getItem('lynix_mods') || '{}');
+        setLauncherStyle(mods.launcherStyle || 'pixel');
     }, []);
 
     // Local navigation function for inside the emulator
@@ -94,9 +103,16 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
     // Soft Reboot Function exposed to internal apps
     const handleSoftReboot = () => {
         setIsBooting(true);
+        // Reset state while screen is hidden by boot animation
         setCurrentPage('home');
         setPageParams({});
-        // Force re-render effect will happen via isBooting toggling
+    };
+
+    const handleBootComplete = () => {
+        setIsBooting(false);
+        // Refresh launcher preference from storage in case it changed
+        const mods = JSON.parse(localStorage.getItem('lynix_mods') || '{}');
+        setLauncherStyle(mods.launcherStyle || 'pixel');
     };
 
     // Sync Logic
@@ -104,7 +120,6 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
         if (!isDriveLinked) { setStatus('Drive not linked.'); return; }
         setStatus('Saving...');
         
-        // Collect relevant localStorage items
         const dataToSave: any = {};
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -113,13 +128,10 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
             }
         }
         
-        // Save as JSON file
         const fileName = 'mobilator_backup.json';
         const content = JSON.stringify(dataToSave);
         
-        // Check if file exists to update, else create
         const existingFile = await database.findDriveFileByName(fileName);
-        
         if (existingFile) {
             await database.updateDriveFile(existingFile.id, { content });
         } else {
@@ -148,7 +160,6 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
                     });
                     setStatus('Data loaded! Rebooting...');
                     
-                    // Soft Reboot logic instead of page reload
                     setTimeout(() => {
                         handleSoftReboot();
                     }, 1000);
@@ -163,9 +174,24 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
         setTimeout(() => setStatus(''), 3000);
     };
 
-    const CurrentComponent = MOBILATOR_PAGES_MAP[currentPage] || MobiLauncher;
+    // Determine Component to Render
+    let CurrentComponent = MOBILATOR_PAGES_MAP[currentPage] || MobiLauncher;
 
-    // Filter apps for the emulator (Dynamic logic duplicated from App.tsx to emulate OS versions)
+    // Override 'home' with specific launcher based on version and mods
+    if (currentPage === 'home') {
+        const version = user?.system_version || '12.0.2';
+        if (version.startsWith('10')) {
+            CurrentComponent = LegacyLauncher;
+        } else if (version === '14.0') {
+            if (launcherStyle === 'oneui') CurrentComponent = OneUILauncher;
+            else if (launcherStyle === 'bb10') CurrentComponent = BB10Launcher;
+            else CurrentComponent = MobiLauncher; // Default Pixel
+        } else {
+            CurrentComponent = MobiLauncher;
+        }
+    }
+
+    // Filter apps for the emulator
     const dynamicAppsList = useMemo(() => {
         const coreApps = APPS_LIST;
         let availableApps: AppLaunchable[] = coreApps;
@@ -173,21 +199,15 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
         const currentVersion = user?.system_version || '12.0.2';
         const isDevMode = localStorage.getItem('lynix_developer_mode') === 'true';
 
-        // Version Filtering Logic
         if (currentVersion.startsWith('10')) {
-            // 10 Quartz: Basic apps only
             availableApps = availableApps.filter(app => ['app-phone', 'app-chat', 'app-contacts', 'app-localmail', 'app-settings', 'app-help', 'app-camera', 'app-browser'].includes(app.id));
         } else if (currentVersion === '12.0.2') {
-            // 12.0.2 Martin: No Store, No New Media Apps
             availableApps = availableApps.filter(app => !['app-webly-store', 'app-maps', 'app-music', 'app-gallery', 'app-modder', 'app-mobilator'].includes(app.id));
         } else if (currentVersion === '12.5') {
-            // 12.5 Haraise: Store included, No New Media Apps
             availableApps = availableApps.filter(app => !['app-maps', 'app-music', 'app-gallery', 'app-modder'].includes(app.id));
         } else if (currentVersion === '13.0') {
-            // 13.0 Jabaseion: All standard apps, No Modder
             availableApps = availableApps.filter(app => app.id !== 'app-modder');
         } else if (currentVersion === '14.0') {
-            // 14.0 Baltecz: Modder app available IF dev mode is on
             if (isDevMode) {
                 availableApps = availableApps.map(app => app.id === 'app-modder' ? { ...app, isHidden: false } : app);
             }
@@ -199,7 +219,6 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
                     const appData = allWeblyApps.find(app => app.id === appId);
                     if (!appData) return null;
                     const isNative = !!APPS_MAP[appData.id];
-                    // Use Mobi Webview identifier for native apps that are just wrapped
                     return {
                         id: appData.id,
                         label: appData.name,
@@ -258,7 +277,7 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
                 
                 {/* Screen Content */}
                 <div className="w-full h-full bg-white dark:bg-black relative overflow-hidden flex flex-col">
-                    {isBooting && <MobileBootScreen onComplete={() => setIsBooting(false)} />}
+                    {isBooting && <MobileBootScreen onComplete={handleBootComplete} />}
                     
                     <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none">
                         <div className="pointer-events-auto">
@@ -267,7 +286,7 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
                     </div>
                     
                     <main className="flex-grow relative w-full h-full overflow-hidden pt-8 pb-12">
-                        {/* Pass onReboot to the current component if it accepts it (like MobiModderApp) */}
+                        {/* Pass onReboot to apps that support it */}
                         <CurrentComponent navigate={emulatorNavigate} appsList={dynamicAppsList} {...pageParams} onReboot={handleSoftReboot} />
                     </main>
 
