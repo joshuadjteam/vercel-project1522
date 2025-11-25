@@ -52,7 +52,7 @@ const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate }) => {
             <h1 className="text-3xl font-bold mb-2 text-green-500">System Modder</h1>
             <p className="text-xs text-gray-500 mb-8">ROOT ACCESS GRANTED - VER 14.0</p>
 
-            <div className="space-y-6">
+            <div className="space-y-6 pb-20">
                 <section className="border border-green-900 p-4 rounded-lg bg-green-900/10">
                     <h2 className="text-green-400 font-bold mb-4">Display & Typography</h2>
                     <div className="space-y-2">
@@ -129,6 +129,12 @@ const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate }) => {
                 <button onClick={saveMods} className="w-full py-4 bg-green-600 hover:bg-green-700 text-black font-bold rounded-lg shadow-lg text-lg">
                     APPLY MODS & REBOOT
                 </button>
+
+                <div className="pt-8 border-t border-gray-800">
+                    <button onClick={() => navigate('recovery-mode' as any)} className="w-full py-3 bg-red-900/50 hover:bg-red-800 border border-red-600 text-red-400 font-bold rounded-lg text-sm">
+                        Boot to Recovery
+                    </button>
+                </div>
             </div>
         </div>
     );

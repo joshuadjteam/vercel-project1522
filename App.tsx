@@ -76,6 +76,7 @@ import MobiMapsApp from './pages/mobile-apps/MobiMapsApp';
 import MobiMusicApp from './pages/mobile-apps/MobiMusicApp';
 import MobiGalleryApp from './pages/mobile-apps/MobiGalleryApp';
 import MobiModderApp from './pages/mobile-apps/MobiModderApp';
+import RecoveryMode from './pages/mobile-apps/RecoveryMode';
 
 import CallWidget from './components/CallWidget';
 import CallNotificationWidget from './components/CallNotificationWidget';
@@ -167,6 +168,7 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-music': MobiMusicApp,
     'app-gallery': MobiGalleryApp,
     'app-modder': MobiModderApp,
+    'recovery-mode': RecoveryMode,
 };
 
 export const APPS_LIST: AppLaunchable[] = [
@@ -480,7 +482,7 @@ const App: React.FC = () => {
                         <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none"><div className="pointer-events-auto"><MobileTopBar navigate={navigate} onSleep={() => setIsLocked(true)} /></div></div>
                         <main className="flex-grow relative w-full h-full overflow-hidden"><MobileComponent navigate={navigate} appsList={dynamicAppsList} {...pageParams} /></main>
                         {showRecents && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md z-[60] flex flex-col p-6 animate-fade-in"><div className="flex justify-between items-center mb-6"><h2 className="text-white text-2xl font-bold">Recent Apps</h2><button onClick={() => setShowRecents(false)} className="text-white bg-white/10 px-4 py-2 rounded-full text-sm">Close</button></div>{recentApps.length === 0 ? ( <div className="flex-grow flex items-center justify-center text-gray-500">No recent apps</div> ) : ( <div className="flex-grow overflow-y-auto space-y-4 pb-20"> {recentApps.map(app => ( <div key={app.id} onClick={(e) => { e.stopPropagation(); navigate(app.page, { ...app.params, appData: app }); setShowRecents(false); }} className="bg-[#303030] p-4 rounded-2xl flex items-center space-x-4 shadow-lg active:scale-95 transition-transform"> <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center"> {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8" })} </div> <span className="text-white font-bold text-lg">{app.label}</span> </div> ))} </div> )}<button onClick={() => { setRecentApps([]); setShowRecents(false); }} className="w-full py-3 bg-red-600/80 text-white rounded-xl font-semibold mt-4">Clear All</button></div>)}
-                        {!page.startsWith('app-modder') && <div className="relative z-50"><MobileNavBar navigate={navigate} onRecents={() => setShowRecents(true)} /></div>}
+                        {!page.startsWith('app-modder') && !page.startsWith('recovery-mode') && <div className="relative z-50"><MobileNavBar navigate={navigate} onRecents={() => setShowRecents(true)} /></div>}
                     </div>
                 );
             }
