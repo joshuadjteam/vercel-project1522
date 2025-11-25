@@ -29,9 +29,10 @@ import MobiGalleryApp from '../mobile-apps/MobiGalleryApp';
 import MobiModderApp from '../mobile-apps/MobiModderApp';
 import MobileTopBar from '../../components/MobileTopBar';
 import MobileNavBar from '../../components/MobileNavBar';
+import MobileBootScreen from '../../components/MobileBootScreen';
 import { APPS_LIST, MOBILE_PAGES_MAP, APPS_MAP } from '../../App';
 
-const DriveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1-4-10z" /></svg>;
+const DriveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>;
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 const LoadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m-4-4v12" /></svg>;
 
@@ -77,6 +78,7 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
     const [status, setStatus] = useState('');
     const [isDriveLinked, setIsDriveLinked] = useState(false);
     const [allWeblyApps, setAllWeblyApps] = useState<WeblyApp[]>([]);
+    const [isBooting, setIsBooting] = useState(false);
 
     useEffect(() => {
         database.isDriveLinked().then(setIsDriveLinked);
@@ -136,8 +138,15 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
                     Object.keys(data).forEach(key => {
                         localStorage.setItem(key, data[key]);
                     });
-                    setStatus('Data loaded! Reloading...');
-                    setTimeout(() => window.location.reload(), 1000);
+                    setStatus('Data loaded! Rebooting...');
+                    
+                    // Soft Reboot logic instead of page reload
+                    setTimeout(() => {
+                        setIsBooting(true);
+                        setCurrentPage('home');
+                        setPageParams({});
+                    }, 1000);
+
                 } catch (e) {
                     setStatus('Error parsing data.');
                 }
@@ -239,6 +248,8 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
                 
                 {/* Screen Content */}
                 <div className="w-full h-full bg-white dark:bg-black relative overflow-hidden flex flex-col">
+                    {isBooting && <MobileBootScreen onComplete={() => setIsBooting(false)} />}
+                    
                     <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none">
                         <div className="pointer-events-auto">
                             <MobileTopBar navigate={emulatorNavigate} onSleep={() => {}} />

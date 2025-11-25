@@ -17,6 +17,7 @@ import NotificationToast, { NotificationProps, DatabaseIcon } from './components
 import AccountInvalidScreen from './components/AccountInvalidScreen';
 import MobileOnboarding from './components/MobileOnboarding';
 import MobileUpdateInfo from './components/MobileUpdateInfo';
+import MobileBootScreen from './components/MobileBootScreen';
 
 import HomePage from './pages/HomePage';
 import ConsolePage from './pages/ConsolePage';
@@ -214,51 +215,6 @@ export const APPS_LIST: AppLaunchable[] = [
   { id: 'app-mobilator', label: 'Mobilator', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>, page: 'app-mobilator' },
 ];
 
-const BootScreen: React.FC = () => {
-    const [stage, setStage] = useState(0);
-    const [showText, setShowText] = useState(false);
-
-    useEffect(() => {
-        let currentTimeout: any;
-        const runSequence = (index: number) => {
-            if (index > 5) { setShowText(true); return; }
-            setStage(index);
-            const delay = index === 5 ? 5000 : 2000;
-            currentTimeout = setTimeout(() => runSequence(index + 1), delay);
-        };
-        runSequence(0);
-        return () => clearTimeout(currentTimeout);
-    }, []);
-
-    const renderStage = () => {
-        switch (stage) {
-            case 0: return <span className="text-9xl font-bold text-purple-600 animate-pulse">L</span>;
-            case 1: return <span className="text-9xl font-bold text-green-500 animate-pulse">Y</span>;
-            case 2: return <span className="text-9xl font-bold text-orange-500 animate-pulse">N</span>;
-            case 3: return <span className="text-9xl font-bold text-teal-400 animate-pulse">I</span>;
-            case 4: return <span className="text-9xl font-bold text-purple-500 animate-pulse">X</span>;
-            case 5: 
-            default:
-                return (
-                    <div className="flex flex-col items-center animate-fade-in">
-                        <div className="w-32 h-32 bg-orange-500 rounded-xl flex items-center justify-center mb-8 relative overflow-hidden">
-                            <div className="absolute inset-0 flex items-center justify-center"><div className="w-0 h-0 border-l-[40px] border-l-transparent border-r-[40px] border-r-transparent border-t-[60px] border-t-black/80 transform rotate-45"></div></div>
-                            <div className="absolute inset-0 flex items-center justify-center"><div className="w-0 h-0 border-l-[40px] border-l-transparent border-r-[40px] border-r-transparent border-b-[60px] border-b-black/80 transform -rotate-45"></div></div>
-                        </div>
-                        <h1 className="text-2xl font-medium tracking-widest text-white mt-4">Powered by Lynix</h1>
-                    </div>
-                );
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-[9999] text-white">
-            <div className="flex-grow flex items-center justify-center">{renderStage()}</div>
-            {showText && <div className="absolute bottom-16 text-white/80 text-sm animate-pulse">Lynix is starting...</div>}
-        </div>
-    );
-};
-
 const App: React.FC = () => {
     const { user, isLoggedIn, isLoading, updateUserProfile } = useAuth();
     const { view: consoleView, isInitialChoice } = useConsoleView();
@@ -343,6 +299,7 @@ const App: React.FC = () => {
         if (isMobileDevice) {
             setShowBootScreen(true);
             if ('Notification' in window) Notification.requestPermission();
+            // Boot screen handles its own timeout via callback, but as a fallback safety:
             const timer = setTimeout(() => setShowBootScreen(false), 15500);
             return () => clearTimeout(timer);
         } else {
@@ -470,7 +427,7 @@ const App: React.FC = () => {
 
     const renderLayout = () => {
         if (isLoading) {
-            return isMobileDevice && showBootScreen ? <BootScreen /> : ( <div className="flex-grow flex items-center justify-center bg-black text-white"> <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div> </div> );
+            return isMobileDevice && showBootScreen ? <MobileBootScreen onComplete={() => setShowBootScreen(false)} /> : ( <div className="flex-grow flex items-center justify-center bg-black text-white"> <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div> </div> );
         }
 
         if (isLoggedIn) {
@@ -504,7 +461,7 @@ const App: React.FC = () => {
 
                 return (
                     <div className="absolute inset-0 flex flex-col overflow-hidden" style={{ fontFamily: customFont }}>
-                        {showBootScreen && <BootScreen />}
+                        {showBootScreen && <MobileBootScreen onComplete={() => setShowBootScreen(false)} />}
                         {showOnboarding && <MobileOnboarding onComplete={handleOnboardingComplete} />}
                         {showUpdateScreen && <MobileUpdateInfo version={updateVersion} onComplete={handleUpdateInfoComplete} />}
                         
@@ -526,7 +483,7 @@ const App: React.FC = () => {
         }
 
         if (page === 'auth-callback') { const PageToRender = FULL_PAGE_MAP[page]; return <div className="flex-grow flex items-center justify-center p-4"><PageToRender navigate={navigate} /></div>; }
-        if (isMobileDevice) { return ( <div className="flex-grow flex flex-col bg-black text-white"> {showBootScreen && <BootScreen />} <main className="flex-grow overflow-y-auto"> <SignInPage navigate={navigate} hideGuest={true} /> </main> </div> ) }
+        if (isMobileDevice) { return ( <div className="flex-grow flex flex-col bg-black text-white"> {showBootScreen && <MobileBootScreen onComplete={() => setShowBootScreen(false)} />} <main className="flex-grow overflow-y-auto"> <SignInPage navigate={navigate} hideGuest={true} /> </main> </div> ) }
         const PageToRender = page === 'signin' ? SignInPage : FULL_PAGE_MAP[page] || HomePage;
         return ( <div className="flex flex-col min-h-screen w-full"> <Header navigate={navigate} /> <main className="flex-grow flex items-center justify-center p-4 w-full"> <PageToRender navigate={navigate} /> </main> <Footer /> </div> );
     };
