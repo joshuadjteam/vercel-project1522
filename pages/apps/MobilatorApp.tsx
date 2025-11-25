@@ -277,22 +277,26 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
                 
                 {/* Screen Content */}
                 <div className="w-full h-full bg-white dark:bg-black relative overflow-hidden flex flex-col">
-                    {isBooting && <MobileBootScreen onComplete={handleBootComplete} />}
-                    
-                    <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none">
-                        <div className="pointer-events-auto">
-                            <MobileTopBar navigate={emulatorNavigate} onSleep={() => {}} />
-                        </div>
-                    </div>
-                    
-                    <main className="flex-grow relative w-full h-full overflow-hidden pt-8 pb-12">
-                        {/* Pass onReboot to apps that support it */}
-                        <CurrentComponent navigate={emulatorNavigate} appsList={dynamicAppsList} {...pageParams} onReboot={handleSoftReboot} />
-                    </main>
+                    {isBooting ? (
+                        <MobileBootScreen onComplete={handleBootComplete} />
+                    ) : (
+                        <>
+                            <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none">
+                                <div className="pointer-events-auto">
+                                    <MobileTopBar navigate={emulatorNavigate} onSleep={() => {}} />
+                                </div>
+                            </div>
+                            
+                            <main className="flex-grow relative w-full h-full overflow-hidden pt-8 pb-12">
+                                {/* Pass onReboot to apps that support it */}
+                                <CurrentComponent navigate={emulatorNavigate} appsList={dynamicAppsList} {...pageParams} onReboot={handleSoftReboot} />
+                            </main>
 
-                    <div className="absolute bottom-0 left-0 right-0 z-50">
-                        <MobileNavBar navigate={emulatorNavigate} />
-                    </div>
+                            <div className="absolute bottom-0 left-0 right-0 z-50">
+                                <MobileNavBar navigate={emulatorNavigate} />
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

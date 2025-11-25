@@ -12,9 +12,10 @@ const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-12 
 
 interface RecoveryModeProps {
     navigate: (page: Page) => void;
+    onReboot?: () => void;
 }
 
-const RecoveryMode: React.FC<RecoveryModeProps> = ({ navigate }) => {
+const RecoveryMode: React.FC<RecoveryModeProps> = ({ navigate, onReboot }) => {
     const { user, logout } = useAuth();
     const [view, setView] = useState<'main' | 'version' | 'files' | 'reset_confirm'>('main');
     const [fileStats, setFileStats] = useState<{ count: number, size: string }>({ count: 0, size: '0 KB' });
@@ -39,7 +40,11 @@ const RecoveryMode: React.FC<RecoveryModeProps> = ({ navigate }) => {
     };
 
     const handleReboot = () => {
-        window.location.reload();
+        if (onReboot) {
+            onReboot();
+        } else {
+            window.location.reload();
+        }
     };
 
     const handleShutdown = () => {
