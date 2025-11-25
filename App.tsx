@@ -127,7 +127,7 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
     'app-webview': { component: WebAppViewer, defaultSize: { width: 1024, height: 768 } },
     'app-browser': { component: LynixBrowserApp, defaultSize: { width: 1000, height: 700 } },
     'app-settings': { component: SettingsApp, defaultSize: { width: 800, height: 600 } },
-    'app-mobilator': { component: MobilatorApp, defaultSize: { width: 450, height: 850 } }, // New Mobilator App
+    'app-mobilator': { component: MobilatorApp, defaultSize: { width: 450, height: 850 } }, 
 };
 
 export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
@@ -221,7 +221,7 @@ const App: React.FC = () => {
     const [page, setPage] = useState<Page>('home');
     const [pageParams, setPageParams] = useState<any>({});
     const { isDark, wallpaper } = useTheme();
-    const isMobileDevice = useIsMobileDevice();
+    const isRealMobileDevice = useIsMobileDevice();
     const [windows, setWindows] = useState<WindowInstance[]>([]);
     const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
     const nextZIndex = useRef(10);
@@ -233,15 +233,40 @@ const App: React.FC = () => {
     const [showRecents, setShowRecents] = useState(false);
     const [notification, setNotification] = useState<NotificationProps | null>(null);
     
-    // State for lifecycle overlays
+    // Port-based Mode State
+    const [forcedView, setForcedView] = useState<'default' | 'mobile' | 'mobilator' | 'desktop' | 'app'>('default');
+    
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [showUpdateScreen, setShowUpdateScreen] = useState(false);
     const [updateVersion, setUpdateVersion] = useState('');
 
+    // Port Detection Logic
+    useEffect(() => {
+        const port = window.location.port;
+        
+        if (port === '1091') {
+            setForcedView('mobile');
+        } else if (port === '1092') {
+            setForcedView('mobilator');
+        } else if (port === '10211') {
+            setForcedView('desktop');
+        } else if (port === '1822') {
+            setForcedView('app');
+        } else {
+            setForcedView('default');
+        }
+    }, []);
+
+    // Determine if we should render as Mobile Device
+    const isMobileDevice = useMemo(() => {
+        if (forcedView === 'mobile') return true;
+        if (forcedView === 'desktop' || forcedView === 'mobilator' || forcedView === 'app') return false;
+        return isRealMobileDevice;
+    }, [forcedView, isRealMobileDevice]);
+
     useEffect(() => {
         if (!isLoggedIn || !user?.auth_id) return;
         const handlePeriodicRefresh = async () => {
-            // Silent refresh: No notification
             try {
                 const { profile } = await database.getUserProfile(user.auth_id!);
                 if (profile) updateUserProfile(profile);
@@ -251,16 +276,12 @@ const App: React.FC = () => {
         return () => clearInterval(intervalId);
     }, [isLoggedIn, user?.auth_id, updateUserProfile]);
 
-    // Lifecycle Check: Onboarding and Updates
+    // Lifecycle Check
     useEffect(() => {
         if (isLoggedIn && user && isMobileDevice) {
-            // 1. Check Onboarding
             const hasOnboarded = localStorage.getItem(`lynix_onboarding_complete_${user.id}`);
-            if (!hasOnboarded) {
-                setShowOnboarding(true);
-            }
+            if (!hasOnboarded) setShowOnboarding(true);
 
-            // 2. Check Updates
             const lastSeenVersion = localStorage.getItem(`lynix_last_version_${user.id}`);
             const currentSystemVersion = user.system_version || '12.0.2';
             
@@ -271,6 +292,7 @@ const App: React.FC = () => {
         }
     }, [isLoggedIn, user, isMobileDevice]);
 
+    // Inactivity Timer for Mobile
     useEffect(() => {
         if (!isMobileDevice || !isLoggedIn) return;
         const resetTimer = () => {
@@ -296,16 +318,16 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (isMobileDevice) {
+        // Boot screen logic: Only show on mobile view or mobilator view on initial load
+        if (isMobileDevice || forcedView === 'mobilator') {
             setShowBootScreen(true);
             if ('Notification' in window) Notification.requestPermission();
-            // Boot screen handles its own timeout via callback, but as a fallback safety:
             const timer = setTimeout(() => setShowBootScreen(false), 15500);
             return () => clearTimeout(timer);
         } else {
             setShowBootScreen(false);
         }
-    }, [isMobileDevice]);
+    }, [isMobileDevice, forcedView]);
 
     const handleOnboardingComplete = () => {
         if (user) {
@@ -328,21 +350,15 @@ const App: React.FC = () => {
         const currentVersion = user?.system_version || '12.0.2';
         const isDevMode = localStorage.getItem('lynix_developer_mode') === 'true';
 
-        // Version Filtering Logic
         if (currentVersion.startsWith('10')) {
-            // 10 Quartz: Basic apps only
             availableApps = availableApps.filter(app => ['app-phone', 'app-chat', 'app-contacts', 'app-localmail', 'app-settings', 'app-help', 'app-camera', 'app-browser'].includes(app.id));
         } else if (currentVersion === '12.0.2') {
-            // 12.0.2 Martin: No Store, No New Media Apps
             availableApps = availableApps.filter(app => !['app-webly-store', 'app-maps', 'app-music', 'app-gallery', 'app-modder', 'app-mobilator'].includes(app.id));
         } else if (currentVersion === '12.5') {
-            // 12.5 Haraise: Store included, No New Media Apps
             availableApps = availableApps.filter(app => !['app-maps', 'app-music', 'app-gallery', 'app-modder'].includes(app.id));
         } else if (currentVersion === '13.0') {
-            // 13.0 Jabaseion: All standard apps, No Modder
             availableApps = availableApps.filter(app => app.id !== 'app-modder');
         } else if (currentVersion === '14.0') {
-            // 14.0 Baltecz: Modder app available IF dev mode is on
             if (isDevMode) {
                 availableApps = availableApps.map(app => app.id === 'app-modder' ? { ...app, isHidden: false } : app);
             }
@@ -384,13 +400,28 @@ const App: React.FC = () => {
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
         const state = params.get('state');
+        
+        // Handle Specific App Port :1822/localmail logic
+        if (forcedView === 'app') {
+             // Map pathname to app id roughly
+             const appPath = path.substring(1); // e.g. localmail
+             const appMapKey = `app-${appPath}`;
+             if (APPS_MAP[appMapKey]) {
+                 setPage(appMapKey as Page);
+             } else {
+                 // If invalid app path, maybe show a list or default to something
+                 setPage('home'); 
+             }
+             return;
+        }
+
         if ((path === '/auth/callback' || path.startsWith('/auth/callback/')) && code && state) { setPage('auth-callback'); } else {
             const pageFromPath = path.substring(1) as Page;
             if (Object.keys(FULL_PAGE_MAP).includes(pageFromPath) || Object.keys(APPS_MAP).includes(pageFromPath)) {
                 if (pageFromPath !== 'signin' && pageFromPath !== 'contact' && pageFromPath !== 'support') setPage(pageFromPath);
             } else { setPage('home'); }
         }
-    }, []);
+    }, [forcedView]);
 
     const navigate = useCallback((newPage: Page, params: any = {}) => {
         const appData = params?.appData as AppLaunchable | undefined;
@@ -398,6 +429,8 @@ const App: React.FC = () => {
             setRecentApps(prev => { const filtered = prev.filter(app => app.id !== appData.id); return [appData, ...filtered].slice(0, 10); });
         }
         if (appData?.isWebApp && appData.url && appData.load_in_console === false) { window.open(appData.url, '_blank'); return; }
+        
+        // If in forced desktop view or standard desktop
         const isWindowedConsole = isLoggedIn && !isMobileDevice && ['syno', 'fais', 'win', 'mac', 'cos'].includes(consoleView);
         const isApp = !!APPS_MAP[newPage as keyof typeof APPS_MAP];
         const isWindowablePage = ['contact', 'support', 'profile', 'admin'].includes(newPage);
@@ -427,36 +460,50 @@ const App: React.FC = () => {
 
     const renderLayout = () => {
         if (isLoading) {
-            return isMobileDevice && showBootScreen ? <MobileBootScreen onComplete={() => setShowBootScreen(false)} /> : ( <div className="flex-grow flex items-center justify-center bg-black text-white"> <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div> </div> );
+            // If Forced Mobilator or Mobile, use boot screen loader
+            if ((isMobileDevice || forcedView === 'mobilator') && showBootScreen) return <MobileBootScreen onComplete={() => setShowBootScreen(false)} />;
+            return ( <div className="flex-grow flex items-center justify-center bg-black text-white"> <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div> </div> );
         }
 
         if (isLoggedIn) {
-            // Check for invalid account status before anything else
             if (user?.role === UserRole.Suspended || user?.role === UserRole.Invalid || user?.role === UserRole.Overdue) {
                 return <AccountInvalidScreen />;
             }
 
+            // 1092: Mobilator Standalone Mode
+            if (forcedView === 'mobilator') {
+                return (
+                    <div className="flex-grow flex flex-col h-screen bg-[#1a1a1a]">
+                        {showBootScreen && <MobileBootScreen onComplete={() => setShowBootScreen(false)} />}
+                        <MobilatorApp navigate={navigate} />
+                    </div>
+                );
+            }
+
+            // 1822: Specific App Standalone Mode
+            if (forcedView === 'app') {
+                const AppContent = APPS_MAP[page as keyof typeof APPS_MAP]?.component;
+                if (AppContent) {
+                    return <div className="flex-grow h-screen"><AppContent navigate={navigate} {...pageParams} /></div>
+                }
+                return <div className="flex-grow flex items-center justify-center text-white">App not found for port 1822 path.</div>
+            }
+
+            // 1091 (Mobile) or Detected Mobile
             if (isMobileDevice) {
-                // Choose Launcher based on version and mods
                 let MobileComponent = MOBILE_PAGES_MAP[page];
-                
-                // Special Handling for Home Page (Launcher) based on version
                 if (page === 'home') {
                     const version = user.system_version || '12.0.2';
-                    if (version.startsWith('10')) {
-                        MobileComponent = LegacyLauncher;
-                    } else if (version === '14.0') {
+                    if (version.startsWith('10')) MobileComponent = LegacyLauncher;
+                    else if (version === '14.0') {
                         const mods = JSON.parse(localStorage.getItem('lynix_mods') || '{}');
                         const style = mods.launcherStyle || 'pixel';
                         if (style === 'oneui') MobileComponent = OneUILauncher;
                         else if (style === 'bb10') MobileComponent = BB10Launcher;
-                        else MobileComponent = MobiLauncher; // pixel/default
-                    } else {
-                        MobileComponent = MobiLauncher;
-                    }
+                        else MobileComponent = MobiLauncher;
+                    } else { MobileComponent = MobiLauncher; }
                 }
                 
-                // Ensure custom font is applied if on 14.0 and modded
                 const customFont = user.system_version === '14.0' ? JSON.parse(localStorage.getItem('lynix_mods') || '{}').customFont : undefined;
 
                 return (
@@ -475,6 +522,7 @@ const App: React.FC = () => {
                 );
             }
 
+            // Default Desktop / Console Mode (443/8080 or 10211)
             let ConsoleComponent;
             switch (consoleView) { case 'fais': ConsoleComponent = FaisConsole; break; case 'lega': ConsoleComponent = LegaLauncher; break; case 'con': ConsoleComponent = ConConsole; break; case 'win': ConsoleComponent = WinLauncher; break; case 'mac': ConsoleComponent = MacLaunch; break; case 'cos': ConsoleComponent = COSLaunch; break; default: ConsoleComponent = ConsolePage; }
             const windowedConsoles = ['syno', 'fais', 'win', 'mac', 'cos']; const isWindowedEnvironment = windowedConsoles.includes(consoleView); const isFullScreenOverride = page === 'app-console-switch'; const PageToRender = FULL_PAGE_MAP[page]; const isShowingAppPage = page !== 'home' && PageToRender && (!isWindowedEnvironment || isFullScreenOverride);
@@ -483,7 +531,10 @@ const App: React.FC = () => {
         }
 
         if (page === 'auth-callback') { const PageToRender = FULL_PAGE_MAP[page]; return <div className="flex-grow flex items-center justify-center p-4"><PageToRender navigate={navigate} /></div>; }
-        if (isMobileDevice) { return ( <div className="flex-grow flex flex-col bg-black text-white"> {showBootScreen && <MobileBootScreen onComplete={() => setShowBootScreen(false)} />} <main className="flex-grow overflow-y-auto"> <SignInPage navigate={navigate} hideGuest={true} /> </main> </div> ) }
+        
+        // If explicitly Mobile Port 1091 or Mobilator 1092 and not logged in, show full screen sign in styled for mobile
+        if (isMobileDevice || forcedView === 'mobilator') { return ( <div className="flex-grow flex flex-col bg-black text-white"> {showBootScreen && <MobileBootScreen onComplete={() => setShowBootScreen(false)} />} <main className="flex-grow overflow-y-auto"> <SignInPage navigate={navigate} hideGuest={true} /> </main> </div> ) }
+        
         const PageToRender = page === 'signin' ? SignInPage : FULL_PAGE_MAP[page] || HomePage;
         return ( <div className="flex flex-col min-h-screen w-full"> <Header navigate={navigate} /> <main className="flex-grow flex items-center justify-center p-4 w-full"> <PageToRender navigate={navigate} /> </main> <Footer /> </div> );
     };

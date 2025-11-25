@@ -4,9 +4,10 @@ import { Page } from '../../types';
 
 interface MobiModderAppProps {
     navigate: (page: Page) => void;
+    onReboot?: () => void; // Optional prop for soft reboot
 }
 
-const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate }) => {
+const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate, onReboot }) => {
     const [customFont, setCustomFont] = useState('sans-serif');
     const [customCell, setCustomCell] = useState('5G');
     const [customWifi, setCustomWifi] = useState('wifi');
@@ -43,8 +44,14 @@ const MobiModderApp: React.FC<MobiModderAppProps> = ({ navigate }) => {
         localStorage.setItem('lynix_device_model', deviceModel);
         
         // Force a reload to apply changes at the App level (launcher switching)
-        alert('Mods Applied! Rebooting User Space...');
-        window.location.reload();
+        if (onReboot) {
+            // Soft reboot for Mobilator
+            onReboot();
+        } else {
+            // Full reload for real mobile device
+            alert('Mods Applied! Rebooting User Space...');
+            window.location.reload();
+        }
     };
 
     return (
