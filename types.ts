@@ -138,6 +138,7 @@ export type Page =
     | 'app-music'
     | 'app-gallery'
     | 'app-modder'
+    | 'app-mobilator'
     | 'mobi-app-webview'
     | 'auth-callback';
 

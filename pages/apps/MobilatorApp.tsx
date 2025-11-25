@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Page, AppLaunchable, UserRole } from '../../types';
+import { Page, AppLaunchable, UserRole, WeblyApp } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../services/database';
 import MobiLauncher from '../MobiLauncher';
@@ -28,13 +29,13 @@ import MobiGalleryApp from '../mobile-apps/MobiGalleryApp';
 import MobiModderApp from '../mobile-apps/MobiModderApp';
 import MobileTopBar from '../../components/MobileTopBar';
 import MobileNavBar from '../../components/MobileNavBar';
-import { APPS_LIST, MOBILE_PAGES_MAP } from '../../App';
+import { APPS_LIST, MOBILE_PAGES_MAP, APPS_MAP } from '../../App';
 
 const DriveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1-4-10z" /></svg>;
 const SaveIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 const LoadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m-4-4v12" /></svg>;
 
-// Create a localized mapping for the emulator
+// Create a localized mapping for the emulator (although imported from App, kept explicit for clarity)
 const MOBILATOR_PAGES_MAP: Record<string, React.FC<any>> = {
     'home': MobiLauncher,
     'profile': MobiProfilePage,
@@ -75,9 +76,11 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
     const [pageParams, setPageParams] = useState<any>({});
     const [status, setStatus] = useState('');
     const [isDriveLinked, setIsDriveLinked] = useState(false);
+    const [allWeblyApps, setAllWeblyApps] = useState<WeblyApp[]>([]);
 
     useEffect(() => {
         database.isDriveLinked().then(setIsDriveLinked);
+        database.getWeblyApps().then(setAllWeblyApps);
     }, []);
 
     // Local navigation function for inside the emulator
@@ -147,11 +150,65 @@ const MobilatorApp: React.FC<MobilatorAppProps> = ({ navigate: globalNavigate })
 
     const CurrentComponent = MOBILATOR_PAGES_MAP[currentPage] || MobiLauncher;
 
-    // Filter apps for the emulator (same logic as App.tsx but static context)
+    // Filter apps for the emulator (Dynamic logic duplicated from App.tsx to emulate OS versions)
     const dynamicAppsList = useMemo(() => {
-        // Simply return full list for emulator, maybe filter by version if we want strict emulation
-        return APPS_LIST; 
-    }, []);
+        const coreApps = APPS_LIST;
+        let availableApps: AppLaunchable[] = coreApps;
+
+        const currentVersion = user?.system_version || '12.0.2';
+        const isDevMode = localStorage.getItem('lynix_developer_mode') === 'true';
+
+        // Version Filtering Logic
+        if (currentVersion.startsWith('10')) {
+            // 10 Quartz: Basic apps only
+            availableApps = availableApps.filter(app => ['app-phone', 'app-chat', 'app-contacts', 'app-localmail', 'app-settings', 'app-help', 'app-camera', 'app-browser'].includes(app.id));
+        } else if (currentVersion === '12.0.2') {
+            // 12.0.2 Martin: No Store, No New Media Apps
+            availableApps = availableApps.filter(app => !['app-webly-store', 'app-maps', 'app-music', 'app-gallery', 'app-modder', 'app-mobilator'].includes(app.id));
+        } else if (currentVersion === '12.5') {
+            // 12.5 Haraise: Store included, No New Media Apps
+            availableApps = availableApps.filter(app => !['app-maps', 'app-music', 'app-gallery', 'app-modder'].includes(app.id));
+        } else if (currentVersion === '13.0') {
+            // 13.0 Jabaseion: All standard apps, No Modder
+            availableApps = availableApps.filter(app => app.id !== 'app-modder');
+        } else if (currentVersion === '14.0') {
+            // 14.0 Baltecz: Modder app available IF dev mode is on
+            if (isDevMode) {
+                availableApps = availableApps.map(app => app.id === 'app-modder' ? { ...app, isHidden: false } : app);
+            }
+        }
+
+        if (user?.installed_webly_apps && allWeblyApps.length > 0) {
+             const installedApps: AppLaunchable[] = user.installed_webly_apps
+                .map((appId): AppLaunchable | null => {
+                    const appData = allWeblyApps.find(app => app.id === appId);
+                    if (!appData) return null;
+                    const isNative = !!APPS_MAP[appData.id];
+                    // Use Mobi Webview identifier for native apps that are just wrapped
+                    return {
+                        id: appData.id,
+                        label: appData.name,
+                        icon: <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: appData.icon_svg }} />,
+                        page: isNative ? (appData.id as Page) : 'mobi-app-webview',
+                        isWebApp: !isNative,
+                        url: appData.url,
+                        load_in_console: appData.load_in_console,
+                        params: isNative ? {} : { url: appData.url, title: appData.name, isWebApp: true, iconSvg: appData.icon_svg } 
+                    };
+                })
+                .filter((app): app is AppLaunchable => app !== null);
+            availableApps = [...availableApps, ...installedApps];
+        }
+
+        if (user) {
+            if (user.role === UserRole.Overdue) return availableApps.filter(app => ['profile', 'contact', 'support', 'app-console-switch', 'app-help'].includes(app.id));
+            if (user.role === UserRole.NoChat) availableApps = availableApps.filter(app => app.id !== 'app-chat');
+            if (user.role === UserRole.NoStore) availableApps = availableApps.filter(app => { if (app.id === 'app-webly-store') return false; if (app.id === 'profile' || app.id === 'app-help' || app.id === 'app-camera' || app.id === 'app-settings') return true; if (app.isWebApp) return false; return true; });
+            if (user.role === UserRole.NoMail) availableApps = availableApps.filter(app => app.id !== 'app-localmail');
+            if (user.role === UserRole.NoTelephony) availableApps = availableApps.filter(app => app.id !== 'app-phone');
+        }
+        return availableApps;
+    }, [user, allWeblyApps]);
 
     return (
         <div className="w-full h-full flex items-center justify-center bg-[#1a1a1a] relative overflow-hidden">
