@@ -3,13 +3,19 @@ import React, { useState } from 'react';
 import { useCall } from '../../hooks/useCall';
 import VoiceAssistantWidget from '../../components/VoiceAssistantWidget';
 import { database } from '../../services/database';
+import { Page } from '../../types';
 
 // Icons
 const BackSpaceIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>;
 const VideoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>;
 const PhoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
 
-const MobiPhoneApp: React.FC = () => {
+interface MobiPhoneAppProps {
+    navigate?: (page: Page) => void;
+    onReboot?: () => void;
+}
+
+const MobiPhoneApp: React.FC<MobiPhoneAppProps> = ({ onReboot }) => {
     const [input, setInput] = useState('');
     const { startP2PCall } = useCall();
     const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = useState(false);
@@ -44,7 +50,12 @@ const MobiPhoneApp: React.FC = () => {
                 localStorage.setItem('lynix_developer_mode', 'true');
                 alert("Developer Mode Enabled! The Modder App is now available in your drawer.");
                 localStorage.removeItem('lynix_dev_steps_complete'); // Clear step
-                window.location.reload(); // Reload to refresh app list
+                
+                if (onReboot) {
+                    onReboot();
+                } else {
+                    window.location.reload(); // Reload to refresh app list if on real device
+                }
                 return;
             }
         }

@@ -20,9 +20,10 @@ const GlobeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w
 
 interface MobiSettingsAppProps {
     navigate: (page: Page) => void;
+    onReboot?: () => void;
 }
 
-const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
+const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate, onReboot }) => {
     const { user, logout } = useAuth();
     const { wallpaper, setWallpaper } = useTheme();
     const { language, setLanguage, t } = useLanguage();
@@ -95,7 +96,13 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
                     // Persist update to database
                     await database.updateUser({ id: user.id, system_version: version });
                     setUpdateStatus('rebooting');
-                    setTimeout(() => window.location.reload(), 2000);
+                    setTimeout(() => {
+                        if (onReboot) {
+                            onReboot();
+                        } else {
+                            window.location.reload();
+                        }
+                    }, 2000);
                 }, 2000);
             } else {
                 setProgress(Math.min(p, 99));
@@ -121,10 +128,7 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
         return releaseRank > currentRank ? 'Upgrade' : 'Downgrade';
     };
 
-    // ... [View renders mostly the same, update 'about' to include tap logic] ...
-
     if (view === 'update') {
-        // ... (same update render code as before) ...
         return (
             <div className="w-full h-full flex flex-col bg-[#121212] text-white font-sans">
                 <header className="p-4 flex items-center space-x-4 border-b border-white/10">
@@ -219,7 +223,6 @@ const MobiSettingsApp: React.FC<MobiSettingsAppProps> = ({ navigate }) => {
     }
 
     if (view === 'language') {
-        // ... (same language render)
         return (
             <div className="w-full h-full flex flex-col bg-[#121212] text-white font-sans">
                 <header className="p-4 flex items-center space-x-4 border-b border-white/10">
