@@ -50,6 +50,7 @@ import WebAppViewer from './pages/apps/WebAppViewer';
 import LynixBrowserApp from './pages/apps/LynixBrowserApp';
 import SettingsApp from './pages/apps/SettingsApp';
 import MobilatorApp from './pages/apps/MobilatorApp';
+import AndroidApp from './pages/apps/AndroidApp';
 
 // Mobile App Imports
 import MobiProfilePage from './pages/mobile-apps/MobiProfilePage';
@@ -110,6 +111,7 @@ const ConverterAppIcon = (props: { className?: string }) => <svg xmlns="http://w
 const CalendarAppIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 const BrowserAppIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><circle cx="12" cy="12" r="10" /><path strokeLinecap="round" strokeLinejoin="round" d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>;
 const ConsoleSwitchIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
+const AndroidIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 0 0-.1521-.5676.416.416 0 0 0-.5676.1521l-2.0225 3.503c-1.4669-.6632-3.1135-1.0602-4.8866-1.0602-1.7419 0-3.3586.3865-4.8114 1.0276L5.446 5.4143a.416.416 0 0 0-.5676-.1521.4157.4157 0 0 0-.1521.5676l1.9703 3.4124C3.1354 10.975 1.0366 14.8773 1 19.343h22c-.0366-4.5065-2.1799-8.4435-5.1185-10.0216"/></svg>;
 
 export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: { width: number, height: number } }> = {
     'app-phone': { component: PhoneApp, defaultSize: { width: 450, height: 700 } },
@@ -129,6 +131,7 @@ export const APPS_MAP: Record<string, { component: React.FC<any>, defaultSize?: 
     'app-browser': { component: LynixBrowserApp, defaultSize: { width: 1000, height: 700 } },
     'app-settings': { component: SettingsApp, defaultSize: { width: 800, height: 600 } },
     'app-mobilator': { component: MobilatorApp, defaultSize: { width: 450, height: 850 } }, 
+    'app-android': { component: AndroidApp, defaultSize: { width: 360, height: 640 } },
 };
 
 export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
@@ -156,6 +159,7 @@ export const FULL_PAGE_MAP: Record<string, React.FC<any>> = {
     'app-browser': LynixBrowserApp,
     'app-settings': SettingsApp,
     'app-mobilator': MobilatorApp,
+    'app-android': AndroidApp,
 };
 
 export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
@@ -188,6 +192,7 @@ export const MOBILE_PAGES_MAP: Record<string, React.FC<any>> = {
     'app-gallery': MobiGalleryApp,
     'app-modder': MobiModderApp,
     'recovery-mode': RecoveryMode,
+    'app-android': AndroidApp,
 };
 
 export const APPS_LIST: AppLaunchable[] = [
@@ -214,6 +219,7 @@ export const APPS_LIST: AppLaunchable[] = [
   { id: 'app-gallery', label: 'Gallery', icon: <GalleryIcon />, page: 'app-gallery' },
   { id: 'app-modder', label: 'Modder', icon: <ModderIcon />, page: 'app-modder', isHidden: true },
   { id: 'app-mobilator', label: 'Mobilator', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>, page: 'app-mobilator' },
+  { id: 'app-android', label: 'Android', icon: <AndroidIcon />, page: 'app-android' },
 ];
 
 const App: React.FC = () => {
@@ -377,7 +383,7 @@ const App: React.FC = () => {
         const isDevMode = localStorage.getItem('lynix_developer_mode') === 'true';
 
         if (currentVersion.startsWith('10')) {
-            availableApps = availableApps.filter(app => ['app-phone', 'app-chat', 'app-contacts', 'app-localmail', 'app-settings', 'app-help', 'app-camera', 'app-browser'].includes(app.id));
+            availableApps = availableApps.filter(app => ['app-phone', 'app-chat', 'app-contacts', 'app-localmail', 'app-settings', 'app-help', 'app-camera', 'app-browser', 'app-android'].includes(app.id));
         } else if (currentVersion === '12.0.2') {
             availableApps = availableApps.filter(app => !['app-webly-store', 'app-maps', 'app-music', 'app-gallery', 'app-modder', 'app-mobilator'].includes(app.id));
         } else if (currentVersion === '12.5') {
@@ -532,10 +538,12 @@ const App: React.FC = () => {
                         
                         <LockScreen isLocked={isLocked} onUnlock={() => setIsLocked(false)} />
                         <NotificationToast notification={notification} />
-                        <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none"><div className="pointer-events-auto"><MobileTopBar navigate={navigate} onSleep={() => setIsLocked(true)} /></div></div>
+                        {!page.startsWith('app-android') && (
+                            <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none"><div className="pointer-events-auto"><MobileTopBar navigate={navigate} onSleep={() => setIsLocked(true)} /></div></div>
+                        )}
                         <main className="flex-grow relative w-full h-full overflow-hidden"><MobileComponent navigate={navigate} appsList={dynamicAppsList} {...pageParams} /></main>
                         {showRecents && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md z-[60] flex flex-col p-6 animate-fade-in"><div className="flex justify-between items-center mb-6"><h2 className="text-white text-2xl font-bold">Recent Apps</h2><button onClick={() => setShowRecents(false)} className="text-white bg-white/10 px-4 py-2 rounded-full text-sm">Close</button></div>{recentApps.length === 0 ? ( <div className="flex-grow flex items-center justify-center text-gray-500">No recent apps</div> ) : ( <div className="flex-grow overflow-y-auto space-y-4 pb-20"> {recentApps.map(app => ( <div key={app.id} onClick={(e) => { e.stopPropagation(); navigate(app.page, { ...app.params, appData: app }); setShowRecents(false); }} className="bg-[#303030] p-4 rounded-2xl flex items-center space-x-4 shadow-lg active:scale-95 transition-transform"> <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center"> {React.cloneElement(app.icon as React.ReactElement<any>, { className: "w-8 h-8" })} </div> <span className="text-white font-bold text-lg">{app.label}</span> </div> ))} </div> )}<button onClick={() => { setRecentApps([]); setShowRecents(false); }} className="w-full py-3 bg-red-600/80 text-white rounded-xl font-semibold mt-4">Clear All</button></div>)}
-                        {!page.startsWith('app-modder') && !page.startsWith('recovery-mode') && <div className="relative z-50"><MobileNavBar navigate={navigate} onRecents={() => setShowRecents(true)} /></div>}
+                        {!page.startsWith('app-modder') && !page.startsWith('recovery-mode') && !page.startsWith('app-android') && <div className="relative z-50"><MobileNavBar navigate={navigate} onRecents={() => setShowRecents(true)} /></div>}
                     </div>
                 );
             }

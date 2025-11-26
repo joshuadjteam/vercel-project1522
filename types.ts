@@ -139,6 +139,7 @@ export type Page =
     | 'app-gallery'
     | 'app-modder'
     | 'app-mobilator'
+    | 'app-android'
     | 'mobi-app-webview'
     | 'auth-callback';
 
