@@ -18,6 +18,7 @@ import AccountInvalidScreen from './components/AccountInvalidScreen';
 import MobileOnboarding from './components/MobileOnboarding';
 import MobileUpdateInfo from './components/MobileUpdateInfo';
 import MobileBootScreen from './components/MobileBootScreen';
+import DeviceSelectionModal from './components/DeviceSelectionModal';
 
 import HomePage from './pages/HomePage';
 import ConsolePage from './pages/ConsolePage';
@@ -236,11 +237,14 @@ const App: React.FC = () => {
     // Port-based Mode State
     const [forcedView, setForcedView] = useState<'default' | 'mobile' | 'mobilator' | 'desktop' | 'app'>('default');
     
+    // Device Selection Prompt
+    const [showDeviceSelection, setShowDeviceSelection] = useState(false);
+    
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [showUpdateScreen, setShowUpdateScreen] = useState(false);
     const [updateVersion, setUpdateVersion] = useState('');
 
-    // Port Detection Logic
+    // Port Detection & Device Prompt Logic
     useEffect(() => {
         const port = window.location.port;
         
@@ -253,9 +257,29 @@ const App: React.FC = () => {
         } else if (port === '1822') {
             setForcedView('app');
         } else {
-            setForcedView('default');
+            // Check for small screen on default port
+            const savedPref = localStorage.getItem('lynix_device_preference');
+            if (savedPref === 'mobile') {
+                setForcedView('mobile');
+            } else if (savedPref === 'desktop') {
+                setForcedView('desktop');
+            } else if (window.innerWidth <= 768) {
+                setShowDeviceSelection(true);
+            } else {
+                setForcedView('default');
+            }
         }
     }, []);
+
+    const handleDeviceSelect = (type: 'mobile' | 'desktop') => {
+        localStorage.setItem('lynix_device_preference', type);
+        setForcedView(type);
+        setShowDeviceSelection(false);
+        // If mobile selected, trigger boot screen which requires interaction for audio
+        if (type === 'mobile') {
+            setShowBootScreen(true);
+        }
+    };
 
     // Determine if we should render as Mobile Device
     const isMobileDevice = useMemo(() => {
@@ -318,16 +342,18 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        // Boot screen logic: Only show on mobile view or mobilator view on initial load
-        if (isMobileDevice || forcedView === 'mobilator') {
-            setShowBootScreen(true);
-            if ('Notification' in window) Notification.requestPermission();
-            const timer = setTimeout(() => setShowBootScreen(false), 15500);
-            return () => clearTimeout(timer);
+        // Boot screen logic: Show on mobile/mobilator start.
+        // If coming from Device Selection, it's handled in handleDeviceSelect.
+        // This effect handles direct loads if preference exists.
+        if ((isMobileDevice || forcedView === 'mobilator') && !showDeviceSelection) {
+             // Only show if not already shown by modal logic (checking if it's already true to avoid double set)
+             // Actually, just set it true on mount if conditions met.
+             setShowBootScreen(true);
+             if ('Notification' in window) Notification.requestPermission();
         } else {
             setShowBootScreen(false);
         }
-    }, [isMobileDevice, forcedView]);
+    }, [isMobileDevice, forcedView, showDeviceSelection]);
 
     const handleOnboardingComplete = () => {
         if (user) {
@@ -401,15 +427,12 @@ const App: React.FC = () => {
         const code = params.get('code');
         const state = params.get('state');
         
-        // Handle Specific App Port :1822/localmail logic
         if (forcedView === 'app') {
-             // Map pathname to app id roughly
-             const appPath = path.substring(1); // e.g. localmail
+             const appPath = path.substring(1); 
              const appMapKey = `app-${appPath}`;
              if (APPS_MAP[appMapKey]) {
                  setPage(appMapKey as Page);
              } else {
-                 // If invalid app path, maybe show a list or default to something
                  setPage('home'); 
              }
              return;
@@ -430,7 +453,6 @@ const App: React.FC = () => {
         }
         if (appData?.isWebApp && appData.url && appData.load_in_console === false) { window.open(appData.url, '_blank'); return; }
         
-        // If in forced desktop view or standard desktop
         const isWindowedConsole = isLoggedIn && !isMobileDevice && ['syno', 'fais', 'win', 'mac', 'cos'].includes(consoleView);
         const isApp = !!APPS_MAP[newPage as keyof typeof APPS_MAP];
         const isWindowablePage = ['contact', 'support', 'profile', 'admin'].includes(newPage);
@@ -460,7 +482,6 @@ const App: React.FC = () => {
 
     const renderLayout = () => {
         if (isLoading) {
-            // If Forced Mobilator or Mobile, use boot screen loader
             if ((isMobileDevice || forcedView === 'mobilator') && showBootScreen) return <MobileBootScreen onComplete={() => setShowBootScreen(false)} />;
             return ( <div className="flex-grow flex items-center justify-center bg-black text-white"> <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div> </div> );
         }
@@ -470,7 +491,6 @@ const App: React.FC = () => {
                 return <AccountInvalidScreen />;
             }
 
-            // 1092: Mobilator Standalone Mode
             if (forcedView === 'mobilator') {
                 return (
                     <div className="flex-grow flex flex-col h-screen bg-[#1a1a1a]">
@@ -480,7 +500,6 @@ const App: React.FC = () => {
                 );
             }
 
-            // 1822: Specific App Standalone Mode
             if (forcedView === 'app') {
                 const AppContent = APPS_MAP[page as keyof typeof APPS_MAP]?.component;
                 if (AppContent) {
@@ -489,7 +508,6 @@ const App: React.FC = () => {
                 return <div className="flex-grow flex items-center justify-center text-white">App not found for port 1822 path.</div>
             }
 
-            // 1091 (Mobile) or Detected Mobile
             if (isMobileDevice) {
                 let MobileComponent = MOBILE_PAGES_MAP[page];
                 if (page === 'home') {
@@ -522,7 +540,6 @@ const App: React.FC = () => {
                 );
             }
 
-            // Default Desktop / Console Mode (443/8080 or 10211)
             let ConsoleComponent;
             switch (consoleView) { case 'fais': ConsoleComponent = FaisConsole; break; case 'lega': ConsoleComponent = LegaLauncher; break; case 'con': ConsoleComponent = ConConsole; break; case 'win': ConsoleComponent = WinLauncher; break; case 'mac': ConsoleComponent = MacLaunch; break; case 'cos': ConsoleComponent = COSLaunch; break; default: ConsoleComponent = ConsolePage; }
             const windowedConsoles = ['syno', 'fais', 'win', 'mac', 'cos']; const isWindowedEnvironment = windowedConsoles.includes(consoleView); const isFullScreenOverride = page === 'app-console-switch'; const PageToRender = FULL_PAGE_MAP[page]; const isShowingAppPage = page !== 'home' && PageToRender && (!isWindowedEnvironment || isFullScreenOverride);
@@ -532,7 +549,6 @@ const App: React.FC = () => {
 
         if (page === 'auth-callback') { const PageToRender = FULL_PAGE_MAP[page]; return <div className="flex-grow flex items-center justify-center p-4"><PageToRender navigate={navigate} /></div>; }
         
-        // If explicitly Mobile Port 1091 or Mobilator 1092 and not logged in, show full screen sign in styled for mobile
         if (isMobileDevice || forcedView === 'mobilator') { return ( <div className="flex-grow flex flex-col bg-black text-white"> {showBootScreen && <MobileBootScreen onComplete={() => setShowBootScreen(false)} />} <main className="flex-grow overflow-y-auto"> <SignInPage navigate={navigate} hideGuest={true} /> </main> </div> ) }
         
         const PageToRender = page === 'signin' ? SignInPage : FULL_PAGE_MAP[page] || HomePage;
@@ -543,6 +559,7 @@ const App: React.FC = () => {
 
     return (
         <LanguageProvider>
+            {showDeviceSelection && <DeviceSelectionModal onSelect={handleDeviceSelect} />}
             <div className={`flex flex-col min-h-screen ${isDark ? 'dark' : ''} ${wallpaperClass} font-sans transition-all duration-500`}>
                 {renderLayout()}
                 <CallWidget />

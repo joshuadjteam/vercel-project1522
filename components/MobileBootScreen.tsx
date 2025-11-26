@@ -10,12 +10,19 @@ const MobileBootScreen: React.FC<MobileBootScreenProps> = ({ onComplete }) => {
 
     useEffect(() => {
         // Play Boot Sound
-        const playSound = () => {
+        const playSound = async () => {
             try {
                 const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
                 if (!AudioContext) return;
                 
                 const ctx = new AudioContext();
+                
+                // Attempt to resume audio context. 
+                // This works if the component mount is preceded by a user gesture (click).
+                if (ctx.state === 'suspended') {
+                    await ctx.resume();
+                }
+
                 const t = ctx.currentTime;
                 
                 // Primary Tone (Rising)
