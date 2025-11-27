@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const PowerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white opacity-50 hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
 
@@ -11,10 +11,11 @@ const MobileBootScreen: React.FC<MobileBootScreenProps> = ({ onComplete }) => {
     const [isPoweredOn, setIsPoweredOn] = useState(false);
     const [step, setStep] = useState(0);
     const audioCtxRef = useRef<AudioContext | null>(null);
+    const isStartingRef = useRef(false); // Guard against double taps
 
     const runBootSequence = (ctx: AudioContext | null) => {
-        // Play Sound if context exists
-        if (ctx) {
+        // Play Sound if context exists and is running
+        if (ctx && ctx.state === 'running') {
             try {
                 const t = ctx.currentTime;
                 
@@ -32,7 +33,7 @@ const MobileBootScreen: React.FC<MobileBootScreenProps> = ({ onComplete }) => {
                 osc1.start(t);
                 osc1.stop(t + 2.5);
 
-                // Harmony Tone (Slower Rise)
+                // Harmony Tone
                 const osc2 = ctx.createOscillator();
                 const gain2 = ctx.createGain();
                 osc2.type = 'triangle';
@@ -59,19 +60,19 @@ const MobileBootScreen: React.FC<MobileBootScreenProps> = ({ onComplete }) => {
                 osc3.start(t);
                 osc3.stop(t + 2);
             } catch (e) {
-                console.error("Boot audio error:", e);
+                console.error("Boot audio playback error:", e);
             }
         }
 
-        // Sequence timings
+        // Sequence timings for L Y N I X + Square
         const timings = [
-            100,  // L
-            600,  // Y
-            1100, // N
-            1600, // I
-            2100, // X
-            3100, // Loader appears
-            6000  // Finish
+            200,  // L
+            800,  // Y
+            1400, // N
+            2000, // I
+            2600, // X
+            3200, // Red Square
+            5000  // Finish
         ];
 
         timings.forEach((time, index) => {
@@ -84,19 +85,34 @@ const MobileBootScreen: React.FC<MobileBootScreenProps> = ({ onComplete }) => {
         });
     };
 
-    const handlePowerOn = () => {
-        setIsPoweredOn(true);
-        
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContext) {
-            const ctx = new AudioContext();
-            audioCtxRef.current = ctx;
-            // Resume context inside the click handler to satisfy browser policies
-            ctx.resume().then(() => {
-                runBootSequence(ctx);
-            });
-        } else {
-            runBootSequence(null);
+    const handlePowerOn = async () => {
+        // Prevent double invocation
+        if (isStartingRef.current) return;
+        isStartingRef.current = true;
+
+        let ctx: AudioContext | null = null;
+
+        try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContext) {
+                ctx = new AudioContext();
+                audioCtxRef.current = ctx;
+
+                // Attempt to resume audio context with a safety timeout.
+                // If browser blocks it or it takes too long, we proceed anyway to avoid black screen.
+                const resumePromise = ctx.resume();
+                const timeoutPromise = new Promise(resolve => setTimeout(resolve, 500));
+
+                await Promise.race([resumePromise, timeoutPromise]);
+            }
+        } catch (e) {
+            console.error("Audio Context Initialization Failed", e);
+            // We swallow the error to ensure visuals still run
+        } finally {
+            // Always trigger the visual sequence
+            setIsPoweredOn(true);
+            // Pass the context (if it exists) to the sequence runner
+            runBootSequence(ctx);
         }
     };
 
@@ -117,23 +133,25 @@ const MobileBootScreen: React.FC<MobileBootScreenProps> = ({ onComplete }) => {
 
     return (
         <div className="absolute inset-0 bg-black z-[99999] flex flex-col items-center justify-center overflow-hidden">
-            <div className="relative flex items-center justify-center mb-20">
-                {/* Letters */}
-                <div className="flex space-x-1 text-6xl font-bold tracking-widest select-none">
-                    <span className={`transition-opacity duration-700 ${step >= 1 ? 'opacity-100 text-[#ff6b00]' : 'opacity-0'}`}>L</span>
-                    <span className={`transition-opacity duration-700 ${step >= 2 ? 'opacity-100 text-[#00c853]' : 'opacity-0'}`}>Y</span>
-                    <span className={`transition-opacity duration-700 ${step >= 3 ? 'opacity-100 text-white' : 'opacity-0'}`}>N</span>
-                    <span className={`transition-opacity duration-700 ${step >= 4 ? 'opacity-100 text-[#6200ea]' : 'opacity-0'}`}>I</span>
-                    <span className={`transition-opacity duration-700 ${step >= 5 ? 'opacity-100 text-[#00e5ff]' : 'opacity-0'}`}>X</span>
+            <div className="relative flex items-center justify-center mb-10">
+                {/* Letters L Y N I X */}
+                <div className="flex items-baseline space-x-2 text-7xl font-bold select-none">
+                    <span className={`transition-opacity duration-700 ${step >= 1 ? 'opacity-100 text-[#b91c1c]' : 'opacity-0'}`}>L</span>
+                    <span className={`transition-opacity duration-700 ${step >= 2 ? 'opacity-100 text-[#3b82f6]' : 'opacity-0'}`}>Y</span>
+                    <span className={`transition-opacity duration-700 ${step >= 3 ? 'opacity-100 text-[#9ca3af]' : 'opacity-0'}`}>N</span>
+                    <span className={`transition-opacity duration-700 ${step >= 4 ? 'opacity-100 text-[#7f1d1d]' : 'opacity-0'}`}>I</span>
+                    <span className={`transition-opacity duration-700 ${step >= 5 ? 'opacity-100 text-[#4b5563]' : 'opacity-0'}`}>X</span>
+                    
+                    {/* Red Square Block */}
+                    <div className={`w-12 h-12 bg-[#991b1b] ml-4 self-center transition-opacity duration-700 ${step >= 6 ? 'opacity-100' : 'opacity-0'}`}></div>
                 </div>
             </div>
 
-            {/* Loading Arc */}
-            <div className={`transition-opacity duration-1000 ${step >= 6 ? 'opacity-100' : 'opacity-0'}`}>
-                <div className="relative w-16 h-16 animate-spin">
-                    <div className="absolute inset-0 rounded-full border-4 border-t-[#ff6b00] border-r-[#00c853] border-b-[#6200ea] border-l-[#00e5ff] border-solid h-full w-full"></div>
-                </div>
-                <p className="text-white text-xs font-mono mt-8 text-center opacity-70 animate-pulse">Starting Lynix...</p>
+            {/* Footer Text */}
+            <div className={`absolute bottom-12 text-center transition-opacity duration-1000 ${step >= 6 ? 'opacity-100' : 'opacity-0'}`}>
+                <p className="text-white/30 text-[10px] font-sans tracking-wide uppercase">
+                    A powered by eCode Lynix Device - Made with React and Love!
+                </p>
             </div>
         </div>
     );
