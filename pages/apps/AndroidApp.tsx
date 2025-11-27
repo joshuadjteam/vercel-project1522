@@ -7,6 +7,7 @@ const WifiIcon = () => <svg className="w-4 h-4 text-white" fill="currentColor" v
 const BatteryIcon = () => <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>;
 const SignalIcon = () => <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2 22h20V2z" /></svg>;
 const BackButton = () => <svg className="w-6 h-6 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>;
+const AppsIcon = () => <svg className="w-6 h-6 text-white/70" viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>;
 const SettingsIcon = () => <svg className="w-full h-full text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.04 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.48.48 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>;
 const ChromeIcon = () => <svg className="w-full h-full" viewBox="0 0 24 24"><path fill="#4285F4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>;
 const PlayIcon = () => <svg className="w-full h-full" viewBox="0 0 24 24" fill="none"><path d="M5 3.8C4.8 4 4.7 4.3 4.7 4.6V19.4C4.7 19.7 4.8 20 5 20.2L5.1 20.3L13.5 11.9V11.8L5.1 3.6L5 3.8Z" fill="#00E2F2"/><path d="M16.7 15.1L13.5 11.9L5.1 20.3C5.6 20.8 6.4 20.9 7.1 20.5L16.7 15.1Z" fill="#FF3A44"/><path d="M16.7 8.9L7.1 3.5C6.4 3.1 5.6 3.2 5.1 3.7L13.5 12.1L16.7 8.9Z" fill="#00E676"/><path d="M16.7 15.1L20.2 13.1C21.2 12.5 21.2 11.5 20.2 10.9L16.7 8.9L13.5 12.1L16.7 15.1Z" fill="#FFC400"/></svg>;
@@ -240,6 +241,11 @@ const AndroidApp: React.FC<AndroidAppProps> = ({ navigate }) => {
                     onContextMenu={(e) => { e.preventDefault(); setCurrentScreen('drawer'); }}
                     className="w-16 h-3 bg-white/80 rounded-full cursor-pointer active:scale-90 transition-transform"
                 ></div>
+
+                {/* Apps Button */}
+                <button onClick={() => setCurrentScreen('drawer')} className="absolute right-8 p-2 active:bg-white/10 rounded-full">
+                    <AppsIcon />
+                </button>
             </div>
         </div>
     );

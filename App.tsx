@@ -19,6 +19,7 @@ import MobileOnboarding from './components/MobileOnboarding';
 import MobileUpdateInfo from './components/MobileUpdateInfo';
 import MobileBootScreen from './components/MobileBootScreen';
 import DeviceSelectionModal from './components/DeviceSelectionModal';
+import MobileLoginSetup from './components/MobileLoginSetup';
 
 import HomePage from './pages/HomePage';
 import ConsolePage from './pages/ConsolePage';
@@ -97,7 +98,6 @@ const MapsIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.or
 const MusicIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>;
 const GalleryIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 const ModderIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-// New Icons for Core Apps
 const PhoneAppIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
 const ChatAppIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
 const MailAppIcon = (props: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
@@ -352,8 +352,9 @@ const App: React.FC = () => {
         // If coming from Device Selection, it's handled in handleDeviceSelect.
         // This effect handles direct loads if preference exists.
         if ((isMobileDevice || forcedView === 'mobilator') && !showDeviceSelection) {
-             // Only show if not already shown by modal logic (checking if it's already true to avoid double set)
-             // Actually, just set it true on mount if conditions met.
+             // Check if we've already "booted" this session to avoid redundant boots on hot reload, 
+             // but ensure full reload triggers it.
+             // Simple approach: Just set true. MobileBootScreen handles "suspended" state now.
              setShowBootScreen(true);
              if ('Notification' in window) Notification.requestPermission();
         } else {
@@ -488,6 +489,7 @@ const App: React.FC = () => {
 
     const renderLayout = () => {
         if (isLoading) {
+            // We let the MobileBootScreen handle its own display logic if needed, but if we are genuinely loading data:
             if ((isMobileDevice || forcedView === 'mobilator') && showBootScreen) return <MobileBootScreen onComplete={() => setShowBootScreen(false)} />;
             return ( <div className="flex-grow flex items-center justify-center bg-black text-white"> <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div> </div> );
         }
@@ -557,7 +559,16 @@ const App: React.FC = () => {
 
         if (page === 'auth-callback') { const PageToRender = FULL_PAGE_MAP[page]; return <div className="flex-grow flex items-center justify-center p-4"><PageToRender navigate={navigate} /></div>; }
         
-        if (isMobileDevice || forcedView === 'mobilator') { return ( <div className="flex-grow flex flex-col bg-black text-white"> {showBootScreen && <MobileBootScreen onComplete={() => setShowBootScreen(false)} />} <main className="flex-grow overflow-y-auto"> <SignInPage navigate={navigate} hideGuest={true} /> </main> </div> ) }
+        if (isMobileDevice || forcedView === 'mobilator') { 
+            return ( 
+                <div className="flex-grow flex flex-col bg-black text-white"> 
+                    {showBootScreen && <MobileBootScreen onComplete={() => setShowBootScreen(false)} />} 
+                    <main className="flex-grow overflow-y-auto"> 
+                        <MobileLoginSetup />
+                    </main> 
+                </div> 
+            ) 
+        }
         
         const PageToRender = page === 'signin' ? SignInPage : FULL_PAGE_MAP[page] || HomePage;
         return ( <div className="flex flex-col min-h-screen w-full"> <Header navigate={navigate} /> <main className="flex-grow flex items-center justify-center p-4 w-full"> <PageToRender navigate={navigate} /> </main> <Footer /> </div> );
