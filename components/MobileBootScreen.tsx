@@ -1,11 +1,14 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+
+const PowerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white opacity-50 hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
 
 interface MobileBootScreenProps {
     onComplete?: () => void;
 }
 
 const MobileBootScreen: React.FC<MobileBootScreenProps> = ({ onComplete }) => {
+    const [isPoweredOn, setIsPoweredOn] = useState(false);
     const [step, setStep] = useState(0);
     const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -81,27 +84,36 @@ const MobileBootScreen: React.FC<MobileBootScreenProps> = ({ onComplete }) => {
         });
     };
 
-    useEffect(() => {
+    const handlePowerOn = () => {
+        setIsPoweredOn(true);
+        
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (AudioContext) {
             const ctx = new AudioContext();
             audioCtxRef.current = ctx;
-            
-            // Attempt to resume immediately. Browsers may block this without interaction,
-            // but we prioritize visuals starting over waiting for input.
-            ctx.resume().catch(() => {}); 
-            
-            runBootSequence(ctx);
+            // Resume context inside the click handler to satisfy browser policies
+            ctx.resume().then(() => {
+                runBootSequence(ctx);
+            });
         } else {
             runBootSequence(null);
         }
+    };
 
-        return () => {
-            if (audioCtxRef.current) {
-                audioCtxRef.current.close();
-            }
-        };
-    }, []);
+    if (!isPoweredOn) {
+        return (
+            <div className="absolute inset-0 bg-black z-[99999] flex items-center justify-center">
+                <button 
+                    onClick={handlePowerOn}
+                    className="p-8 rounded-full border-4 border-white/20 hover:border-white/50 hover:bg-white/10 transition-all active:scale-95 group"
+                >
+                   <PowerIcon />
+                   <span className="sr-only">Power On</span>
+                </button>
+                <p className="absolute bottom-10 text-white/30 text-xs font-mono">Tap to Power On</p>
+            </div>
+        );
+    }
 
     return (
         <div className="absolute inset-0 bg-black z-[99999] flex flex-col items-center justify-center overflow-hidden">
